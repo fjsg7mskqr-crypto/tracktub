@@ -52,7 +52,7 @@ export default function Cockpit() {
 
       {me.role === "owner" && (
         <div className="note">
-          You're viewing TrackTub as a property owner — a read-only window into
+          You&apos;re viewing TrackTub as a property owner — a read-only window into
           the proof for your properties. Owners never edit records.
         </div>
       )}

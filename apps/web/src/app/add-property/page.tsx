@@ -20,7 +20,7 @@ export default function AddProperty() {
       <h1>Add a property</h1>
 
       <div className="note">
-        You're on the <strong>Free plan</strong> (1 property included).
+        You&apos;re on the <strong>Free plan</strong> (1 property included).
         Additional properties are <strong>$12 / property / month</strong>.
       </div>
 
@@ -69,7 +69,7 @@ export default function AddProperty() {
       ) : (
         <div className="card pad stack">
           <span className="badge ok" style={{ alignSelf: "flex-start" }}>
-            ✓ You're on the list
+            ✓ You&apos;re on the list
           </span>
           <p style={{ margin: 0 }}>
             Thanks — we logged interest in adding <strong>{name}</strong> at
