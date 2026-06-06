@@ -33,5 +33,9 @@ coverage/
 # Deploy
 .vercel/
 
+# Claude Code — local worktrees & per-machine overrides (keep settings.json tracked)
+.claude/worktrees/
+.claude/settings.local.json
+
 # Visual brainstorming companion
 .superpowers/
