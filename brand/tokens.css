@@ -1,0 +1,45 @@
+/* TrackTub design tokens — minimal/sharp, dark-first.
+   Light is default; add data-theme="dark" (or .dark) for dark mode.
+   Tailwind v4: map these into an @theme block in apps/web global.css. */
+
+:root {
+  /* surfaces */
+  --tt-bg:        #FFFFFF;
+  --tt-surface:   #F6F7F8;
+  --tt-surface-2: #EEF0F2;
+  --tt-border:    rgba(8, 9, 10, 0.10);
+
+  /* text */
+  --tt-text-hi:   #08090A;
+  --tt-text-lo:   #5A5F6A;
+
+  /* accent + semantic */
+  --tt-verified:      #34D399; /* success/verified ONLY */
+  --tt-verified-ink:  #0A7A55; /* accessible green text on light */
+  --tt-pending:       #E8A33D; /* cloudy / awaiting */
+  --tt-urgent:        #EF4444; /* urgent / geofence fail */
+  --tt-accent-alt:    #5E6AD2; /* Linear indigo, swap-in */
+
+  /* type */
+  --tt-font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --tt-font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  --tt-tracking-tight: -0.02em;
+  --tt-tracking-tighter: -0.035em;
+
+  /* radius */
+  --tt-radius:    12px;
+  --tt-radius-sm: 8px;
+}
+
+[data-theme="dark"], .dark {
+  --tt-bg:        #08090A;
+  --tt-surface:   #131417;
+  --tt-surface-2: #191B20;
+  --tt-border:    rgba(255, 255, 255, 0.09);
+
+  --tt-text-hi:   #EDEDEF;
+  --tt-text-lo:   #8A8F98;
+
+  --tt-verified:      #34D399;
+  --tt-verified-ink:  #34D399; /* accent reads on dark as-is */
+}
