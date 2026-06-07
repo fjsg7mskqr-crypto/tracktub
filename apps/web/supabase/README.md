@@ -16,6 +16,7 @@ so this directory matches the cloud's applied history one-to-one:
 | `20260607022847_rls_policies.sql` | `rls_policies` | RLS helper fns + `enable row level security` + policies (PRD §9) |
 | `20260607022901_triggers.sql` | `triggers` | profile-on-signup + turnover immutability lock |
 | `20260607023127_harden_functions.sql` | `harden_functions` | pin `search_path`, revoke PUBLIC execute on helpers |
+| `20260607031214_immutability_child_guards.sql` | `immutability_child_guards` | extend the locked-turnover immutability to `photo` + `issue_tag` writes |
 
 To re-apply to a *fresh* project, run them in version order.
 
@@ -33,6 +34,11 @@ file — do **not** hand-edit it.
   It is intentionally **not** reproduced in these files: every M1 table already calls
   `enable row level security` explicitly in `20260607022847_rls_policies.sql`, so the
   schema is fully secured without it.
+- **`profile` SELECT is self-only in M1** (`profile_self_select`: `id = auth.uid()`).
+  Resolving other people's names (e.g. "submitted by …", an operator's staff roster)
+  needs a co-member read path — a `SECURITY DEFINER` `app_shares_org()` helper plus a
+  widened policy. That is deferred to M2 (no M1 screen joins `profile`, so nothing is
+  broken today). Tracked so it isn't forgotten when M2 cockpit screens land.
 - **Remaining security-advisor WARNs** are low-risk and expected: the `app_*` RLS
   helper functions are `SECURITY DEFINER` and callable by the `authenticated` role
   (required for policy evaluation). They are all `auth.uid()`-scoped. A full fix
