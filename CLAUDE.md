@@ -18,7 +18,26 @@ feature branch. Do not treat the demo as the real codebase.
 - `apps/web` — Next.js app (the only app today).
 - `brand/` — identity spec, tokens, logo/icon SVGs.
 - `docs/` — PRD, design specs, validation collateral.
+- `vault/` — local Obsidian "second brain" (git-ignored; agent working memory — see below).
 - `.github/workflows/ci.yml` — CI: install → lint → typecheck → build.
+
+## Agent working memory — the Obsidian vault (`vault/`)
+A local Obsidian vault lives at `vault/` (git-ignored — your private operating + thinking
+layer; synced to its **own** private repo, not this one). It's a founder "second brain"
+(domain hubs + Maps of Content). See `vault/README.md` and `vault/AGENTS.md`.
+
+**Rule — every agent, both directions:**
+1. **Read it for context** before planning/designing/researching — start at `vault/Home.md`,
+   then the relevant hub MOC (Strategy/Validation/Build/Brand/GTM/Operations).
+2. **Write planning there, not as loose files.** Any non-code artifact (plans, design
+   iterations, brainstorming, research, decisions, interview/meeting notes) goes in the right
+   `vault/` hub (or `vault/00 Inbox/` if unsure), from a template, linked from the hub MOC.
+   Do **not** scatter planning markdown across the repo.
+3. **Code + graduated specs stay in the repo.** Code, configs, and matured canonical specs
+   live in `apps/`, `docs/`, etc. Graduate a vault draft to `docs/` via the normal worktree→PR flow.
+
+The vault is local context (not in CI or fresh clones). A curator agent, **Hermes**, runs
+off-machine to keep it tidy (`vault/_hermes/`). Tool scratch (`.superpowers/`) stays put.
 
 ## Branch & deploy model — code flows ONE direction
 ```
