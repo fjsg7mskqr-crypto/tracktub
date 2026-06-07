@@ -19,9 +19,11 @@ if (!ready) {
 }
 
 describe.skipIf(!ready)("RLS isolation", () => {
-  const admin = createClient<Database>(url!, service!, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  // NOTE: a describe body still RUNS at collection time even when skipIf is true
+  // (only the tests/hooks are skipped). So the admin client must be created in
+  // beforeAll, not here — createClient throws on an empty URL, which would crash
+  // collection in CI when the secrets are absent.
+  let admin!: SupabaseClient<Database>;
 
   // One password for all ephemeral test users; emails are unique per run.
   const password = `pw-${randomUUID()}`;
@@ -62,6 +64,10 @@ describe.skipIf(!ready)("RLS isolation", () => {
   let propB: string;
 
   beforeAll(async () => {
+    admin = createClient<Database>(url!, service!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
     // Recover from any data leaked by a previously-interrupted run (shared project).
     await admin.from("org").delete().like("name", "RLS Test Org%");
     const { data: stale } = await admin.auth.admin.listUsers();
