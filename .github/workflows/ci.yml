@@ -32,3 +32,14 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Runs env unit tests always; the RLS isolation suite runs only when the
+      # Supabase secrets are configured (otherwise it skips). To enforce RLS in
+      # CI, add NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY /
+      # SUPABASE_SERVICE_ROLE_KEY as repository secrets.
+      - name: Test
+        run: npm run test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
