@@ -28,6 +28,12 @@
   --urgent: #ef4444; /* urgent / geofence fail */
   --urgent-dim: rgba(239, 68, 68, 0.13);
   --urgent-line: rgba(239, 68, 68, 0.32);
+
+  /* brand = the hot-tub water (blue). Green stays verified-only. */
+  --brand-blue: #3b82f6;
+  --brand-blue-2: #60a5fa;
+  --brand-blue-dim: rgba(59, 130, 246, 0.13);
+  --brand-blue-line: rgba(59, 130, 246, 0.32);
   --accent-alt: #5e6ad2; /* Linear indigo, swap-in */
 
   /* type */
@@ -62,8 +68,8 @@
   --ox: var(--urgent);
   --ox-2: var(--urgent);
   --ox-soft: var(--urgent-dim);
-  --brand: var(--verified);
-  --brand-soft: var(--verified-dim);
+  --brand: var(--brand-blue);
+  --brand-soft: var(--brand-blue-dim);
   --ok: var(--verified);
   --warn: var(--pending);
   --danger: var(--urgent);
@@ -95,7 +101,7 @@ body::before {
   pointer-events: none;
   background:
     radial-gradient(900px 520px at 50% -8%, rgba(255, 255, 255, 0.045), transparent 70%),
-    radial-gradient(700px 500px at 92% 0%, rgba(52, 211, 153, 0.04), transparent 60%);
+    radial-gradient(700px 500px at 92% 0%, rgba(59, 130, 246, 0.05), transparent 60%);
 }
 
 a {
@@ -262,6 +268,7 @@ button {
 }
 .brand .word b {
   font-weight: 600;
+  color: var(--brand-blue);
 }
 .navlinks {
   display: flex;
@@ -413,11 +420,15 @@ button {
   color: var(--text-lo);
   border: 1px solid var(--border);
 }
-.badge.ok,
-.badge.brand {
+.badge.ok {
   background: var(--verified-dim);
   color: var(--verified);
   border-color: var(--verified-line);
+}
+.badge.brand {
+  background: var(--brand-blue-dim);
+  color: var(--brand-blue);
+  border-color: var(--brand-blue-line);
 }
 .badge.warn {
   background: var(--pending-dim);

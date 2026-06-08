@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="16" viewBox="0 0 256 16" fill="none" role="img" aria-label="TrackTub waterline">
+  <!-- reusable brand device: a tileable waterline wave (dividers, footers, section breaks).
+       Swap stroke to currentColor to theme it. -->
+  <path d="M0 8 q8 -4 16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0" stroke="#3B82F6" stroke-width="1.6" fill="none"/>
+</svg>

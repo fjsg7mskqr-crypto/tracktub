@@ -17,9 +17,23 @@ const jbMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "TrackTub — guest-ready hot tub proof",
   description:
     "Dispute-grade turnover proof for short-term-rental operators. Capture, prove, share.",
+  openGraph: {
+    title: "TrackTub — guest-ready hot tub proof",
+    description:
+      "The dispute-grade evidence layer for short-term-rental hot-tub turnovers.",
+    siteName: "TrackTub",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TrackTub — guest-ready hot tub proof",
+    description:
+      "The dispute-grade evidence layer for short-term-rental hot-tub turnovers.",
+  },
 };
 
 export const viewport: Viewport = {
