@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useDB, addTurnover } from "@/lib/store";
+import { useDB, addTurnover, QuotaError } from "@/lib/store";
 import { propertyById, currentUser, canCapture } from "@/lib/selectors";
 import { PHOTO_SLOTS } from "@/lib/types";
 import type { IssueTag, Photo, PhotoSlot } from "@/lib/types";
 import { slotTint, tagLabel } from "@/lib/format";
+import { fileToCompressedDataUrl, ImageDecodeError } from "@/lib/image";
 import { PhotoThumb } from "@/components/PhotoThumb";
 import { Icon } from "@/components/Icon";
 
@@ -23,11 +25,15 @@ export default function NewTurnover() {
   const router = useRouter();
   const db = useDB();
 
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const [step, setStep] = useState(0);
   const [photos, setPhotos] = useState<(Photo | null)[]>(() =>
     PHOTO_SLOTS.map(() => null)
   );
   const [simIssue, setSimIssue] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [urgent, setUrgent] = useState(false);
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
@@ -49,19 +55,42 @@ export default function NewTurnover() {
   const capturedHere = !onReview && photos[step] != null;
   const allCaptured = photos.every((x) => x != null);
 
-  function capture() {
-    if (!slot) return;
-    const ph: Photo = {
-      slot: slot.slot,
-      dataUrl: null,
-      capturedAt: new Date().toISOString(),
-      suggestedTags: suggestFor(slot.slot, simIssue),
-      confirmedTags: [],
-    };
-    setPhotos((prev) => prev.map((x, i) => (i === step ? ph : x)));
+  function openPicker() {
+    setCaptureError(null);
+    fileRef.current?.click();
   }
+
+  async function onFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file || !slot) return;
+    setProcessing(true);
+    setCaptureError(null);
+    try {
+      const dataUrl = await fileToCompressedDataUrl(file);
+      const ph: Photo = {
+        slot: slot.slot,
+        dataUrl,
+        capturedAt: new Date().toISOString(),
+        suggestedTags: suggestFor(slot.slot, simIssue),
+        confirmedTags: [],
+      };
+      setPhotos((prev) => prev.map((x, i) => (i === step ? ph : x)));
+    } catch (err) {
+      setCaptureError(
+        err instanceof ImageDecodeError
+          ? "Couldn't read that image — try another (HEIC isn't supported here)."
+          : "Something went wrong adding that photo. Try again."
+      );
+    } finally {
+      setProcessing(false);
+    }
+  }
+
   function retake() {
     setPhotos((prev) => prev.map((x, i) => (i === step ? null : x)));
+    setCaptureError(null);
+    openPicker();
   }
 
   const suggestions = photos.flatMap((ph) =>
@@ -87,16 +116,33 @@ export default function NewTurnover() {
         ),
       }));
     const anyConfirmed = finalPhotos.some((ph) => ph.confirmedTags.length > 0);
-    const tid = addTurnover(pid, currentUser(db).id, {
-      photos: finalPhotos,
-      notes,
-      urgent: urgent || anyConfirmed,
-    });
-    router.push(`/t/${tid}`);
+    try {
+      const tid = addTurnover(pid, currentUser(db).id, {
+        photos: finalPhotos,
+        notes,
+        urgent: urgent || anyConfirmed,
+      });
+      router.push(`/t/${tid}`);
+    } catch (err) {
+      setSaveError(
+        err instanceof QuotaError
+          ? "Storage is full — reset the demo (top-right) to free space, then resubmit."
+          : "Couldn't save this turnover. Try again."
+      );
+    }
   }
 
   return (
     <div className="stack" style={{ maxWidth: 480, margin: "0 auto" }}>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={onFile}
+      />
+
       <div className="crumb">
         <Link href={`/p/${pid}`}>{p.name}</Link> / New turnover
       </div>
@@ -115,8 +161,8 @@ export default function NewTurnover() {
                 i < step || photos[i]
                   ? "var(--brand)"
                   : i === step
-                  ? "var(--brand-soft)"
-                  : "var(--line)",
+                    ? "var(--brand-soft)"
+                    : "var(--line)",
             }}
           />
         ))}
@@ -153,7 +199,10 @@ export default function NewTurnover() {
           {capturedHere ? (
             <div style={{ maxWidth: 360, margin: "0 auto", width: "100%" }}>
               <PhotoThumb photo={photos[step] as Photo} />
-              <div className="row" style={{ justifyContent: "center", marginTop: 10 }}>
+              <div
+                className="row"
+                style={{ justifyContent: "center", marginTop: 10 }}
+              >
                 <span className="badge ok">✓ Captured</span>
                 <button className="btn ghost sm" onClick={retake}>
                   Retake
@@ -161,8 +210,15 @@ export default function NewTurnover() {
               </div>
             </div>
           ) : (
-            <div
+            <button
+              type="button"
+              onClick={openPicker}
+              disabled={processing}
+              aria-label={`Capture the ${slot.label.toLowerCase()}`}
               style={{
+                appearance: "none",
+                font: "inherit",
+                border: "none",
                 aspectRatio: "4 / 3",
                 maxWidth: 360,
                 margin: "0 auto",
@@ -171,34 +227,57 @@ export default function NewTurnover() {
                 display: "grid",
                 placeItems: "center",
                 color: "#fff",
+                cursor: processing ? "default" : "pointer",
                 background: `radial-gradient(120% 85% at 28% 18%, rgba(255,255,255,.25), rgba(255,255,255,0) 55%), linear-gradient(150deg, ${slotTint(slot.slot)[0]}, ${slotTint(slot.slot)[1]})`,
               }}
             >
               <div style={{ textAlign: "center", opacity: 0.92 }}>
                 <Icon name="camera" size={36} stroke={1.3} />
                 <div className="small" style={{ marginTop: 4 }}>
-                  Point at the {slot.label.toLowerCase()}
+                  {processing
+                    ? "Processing…"
+                    : `Tap to capture the ${slot.label.toLowerCase()}`}
                 </div>
               </div>
-            </div>
+            </button>
           )}
 
-          {!capturedHere && (slot.slot === "waterline" || slot.slot === "panel") && (
-            <label className="row small" style={{ justifyContent: "center", gap: 7 }}>
-              <input
-                type="checkbox"
-                checked={simIssue}
-                onChange={(e) => setSimIssue(e.target.checked)}
-              />
-              Simulate an issue in this shot{" "}
-              <span className="mock-tag">demo</span>
-            </label>
-          )}
+          {!capturedHere &&
+            (slot.slot === "waterline" || slot.slot === "panel") && (
+              <label
+                className="row small"
+                style={{ justifyContent: "center", gap: 7 }}
+              >
+                <input
+                  type="checkbox"
+                  checked={simIssue}
+                  onChange={(e) => setSimIssue(e.target.checked)}
+                />
+                Simulate an issue in this shot{" "}
+                <span className="mock-tag">demo</span>
+              </label>
+            )}
 
           {!capturedHere && (
-            <button className="btn primary block" onClick={capture}>
-              <Icon name="camera" size={16} /> Capture {slot.label.toLowerCase()}
+            <button
+              className="btn primary block"
+              onClick={openPicker}
+              disabled={processing}
+            >
+              <Icon name="camera" size={16} />{" "}
+              {processing
+                ? "Processing…"
+                : `Capture ${slot.label.toLowerCase()}`}
             </button>
+          )}
+
+          {captureError && (
+            <p
+              className="small"
+              style={{ color: "var(--urgent)", margin: 0, textAlign: "center" }}
+            >
+              {captureError}
+            </p>
           )}
 
           <div className="spread">
@@ -252,9 +331,7 @@ export default function NewTurnover() {
           </div>
 
           <div className="photos">
-            {photos.map(
-              (ph) => ph && <PhotoThumb key={ph.slot} photo={ph} />
-            )}
+            {photos.map((ph) => ph && <PhotoThumb key={ph.slot} photo={ph} />)}
           </div>
 
           <div>
@@ -278,7 +355,8 @@ export default function NewTurnover() {
                       }}
                     >
                       <span>
-                        AI suggests <strong>{tagLabel(tag)}</strong> on the {s} shot
+                        AI suggests <strong>{tagLabel(tag)}</strong> on the {s}{" "}
+                        shot
                       </span>
                       <span className="row" style={{ gap: 7 }}>
                         <span className={on ? "badge ok" : "badge"}>
@@ -323,6 +401,20 @@ export default function NewTurnover() {
             />
             Mark <strong>urgent</strong> — needs attention before next check-in
           </label>
+
+          {saveError && (
+            <div
+              className="note warn row"
+              style={{ gap: 9, alignItems: "flex-start" }}
+            >
+              <Icon
+                name="alert"
+                size={16}
+                style={{ flex: "none", marginTop: 1, color: "var(--ox)" }}
+              />
+              <span>{saveError}</span>
+            </div>
+          )}
 
           <div className="spread">
             <button className="btn ghost" onClick={() => setStep(total - 1)}>

@@ -1,151 +1,103 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-import Link from "next/link";
-import { useDB } from "@/lib/store";
-import {
-  currentUser,
-  visibleProperties,
-  lastTurnover,
-  issueTagsOf,
-  userName,
-  withinHours,
-  canCapture,
-} from "@/lib/selectors";
-import { timeAgo } from "@/lib/format";
-import { DemoGuide } from "@/components/DemoGuide";
-import { Icon } from "@/components/Icon";
+// M1 proof-of-life dashboard. Server component: it reads the signed-in user's
+// org membership and visible properties THROUGH RLS — what renders here is
+// exactly what the database lets this user see. Styling is intentionally minimal
+// (the UI/brand track owns the visual shell).
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-export default function Cockpit() {
-  const db = useDB();
-  if (!db) return <div className="skeleton">Loading cockpit…</div>;
+  const [{ data: memberships }, { data: orgs }, { data: properties }] =
+    await Promise.all([
+      supabase.from("membership").select("role, org_id"),
+      supabase.from("org").select("id, name"),
+      supabase.from("property").select("id, name, address"),
+    ]);
 
-  const me = currentUser(db);
-  const props = visibleProperties(db);
-
-  const turnoversToday = props.filter((p) =>
-    withinHours(lastTurnover(db, p.id)?.submittedAtServer ?? null, 24)
-  ).length;
-  const openIssues = props.reduce((n, p) => {
-    const t = lastTurnover(db, p.id);
-    return n + (t ? issueTagsOf(t).length : 0);
-  }, 0);
-  const needTurnover = props.filter((p) => p.staysSinceTurnover > 0).length;
-
-  const roleLine =
-    me.role === "operator"
-      ? `${db.orgName} · all ${props.length} properties`
-      : me.role === "owner"
-      ? `Owner view · read-only · your ${props.length} ${props.length === 1 ? "property" : "properties"}`
-      : `Cleaner view · your ${props.length} assigned ${props.length === 1 ? "property" : "properties"}`;
+  const orgName = new Map((orgs ?? []).map((o) => [o.id, o.name]));
 
   return (
-    <div className="stack">
-      <DemoGuide />
-      <div className="pagehead spread">
-        <div>
-          <h1>Turnover cockpit</h1>
-          <p className="muted small" style={{ marginTop: 4 }}>
-            {roleLine}
+    <main style={{ maxWidth: 720, margin: "0 auto", padding: "40px 24px" }}>
+      <h1
+        style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.01em" }}
+      >
+        Backend skeleton{" "}
+        <span style={{ color: "#34d399" }}>✓</span>
+      </h1>
+      <p style={{ marginTop: 4, color: "#8a8f98" }}>{user.email}</p>
+
+      <section style={{ marginTop: 24 }}>
+        <h2 style={{ fontSize: 13, color: "#8a8f98", fontWeight: 500 }}>
+          Memberships
+        </h2>
+        {memberships && memberships.length > 0 ? (
+          <ul style={{ marginTop: 8, listStyle: "none", padding: 0 }}>
+            {memberships.map((m, i) => (
+              <li
+                key={i}
+                style={{ fontSize: 14, fontFamily: "var(--font-jbmono, monospace)" }}
+              >
+                {orgName.get(m.org_id) ?? m.org_id} ·{" "}
+                <span style={{ color: "#34d399" }}>{m.role}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p style={{ marginTop: 8, color: "#8a8f98", fontSize: 14 }}>
+            No org membership yet — seed one for this user (see
+            supabase/seed.sql).
           </p>
-        </div>
-      </div>
+        )}
+      </section>
 
-      {me.role === "owner" && (
-        <div className="note">
-          You&apos;re viewing TrackTub as a property owner — a read-only window into
-          the proof for your properties. Owners never edit records.
-        </div>
-      )}
-
-      <div className="tiles">
-        <div className="tile">
-          <div className="k">Properties</div>
-          <div className="v">{props.length}</div>
-          <div className="sub">with hot tubs</div>
-        </div>
-        <div className="tile">
-          <div className="k">Turned over (24h)</div>
-          <div className="v">{turnoversToday}</div>
-          <div className="sub">guest-ready proof on file</div>
-        </div>
-        <div className="tile">
-          <div className="k">Open issues</div>
-          <div className="v" style={{ color: openIssues ? "var(--warn)" : undefined }}>
-            {openIssues}
-          </div>
-          <div className="sub">flagged on last visit</div>
-        </div>
-        <div className="tile">
-          <div className="k">Awaiting turnover</div>
-          <div className="v" style={{ color: needTurnover ? "var(--danger)" : "var(--ok)" }}>
-            {needTurnover}
-          </div>
-          <div className="sub">stays since last proof</div>
-        </div>
-      </div>
-
-      <div className="grid" style={{ gridTemplateColumns: "1fr" }}>
-        {props.map((p) => {
-          const t = lastTurnover(db, p.id);
-          const issues = t ? issueTagsOf(t) : [];
-          const needsTurnover = p.staysSinceTurnover > 0;
-          const batherLoad = p.staysSinceTurnover >= 3;
-          return (
-            <Link key={p.id} href={`/p/${p.id}`} className="card card-link pad">
-              <div className="spread" style={{ alignItems: "flex-start" }}>
-                <div>
-                  <div className="row" style={{ gap: 8 }}>
-                    <h3 style={{ fontSize: 17 }}>{p.name}</h3>
-                  </div>
-                  <div className="small dim" style={{ marginTop: 2 }}>
-                    {p.address}
-                  </div>
-                  <div className="small muted" style={{ marginTop: 8 }}>
-                    {t ? (
-                      <>
-                        Last turnover {timeAgo(t.submittedAtServer)} ·{" "}
-                        {userName(db, t.submitterId)}
-                      </>
-                    ) : (
-                      <>No turnovers yet</>
-                    )}
-                  </div>
-                </div>
-                <div className="row wrap" style={{ justifyContent: "flex-end", maxWidth: 320 }}>
-                  {t?.urgent && <span className="badge danger">Urgent</span>}
-                  {issues.length > 0 && (
-                    <span className="badge warn">{issues.length} issue{issues.length > 1 ? "s" : ""}</span>
-                  )}
-                  {batherLoad && (
-                    <span className="badge brand" title="Heavy guest use since last service">
-                      <Icon name="waves" size={12} /> Bather load
-                    </span>
-                  )}
-                  {needsTurnover ? (
-                    <span className="badge danger">Needs turnover</span>
-                  ) : (
-                    <span className="badge ok">Guest-ready</span>
-                  )}
-                </div>
-              </div>
-
-              {canCapture(db, p.id) && needsTurnover && (
-                <div style={{ marginTop: 12 }}>
-                  <span className="btn primary sm">
-                    <Icon name="camera" size={14} /> Start turnover
-                  </span>
-                  <span className="small dim" style={{ marginLeft: 10 }}>
-                    {p.staysSinceTurnover} stay{p.staysSinceTurnover > 1 ? "s" : ""} since last proof
-                  </span>
+      <section style={{ marginTop: 24 }}>
+        <h2 style={{ fontSize: 13, color: "#8a8f98", fontWeight: 500 }}>
+          Properties visible to you ({properties?.length ?? 0})
+        </h2>
+        <ul style={{ marginTop: 8, listStyle: "none", padding: 0 }}>
+          {(properties ?? []).map((p) => (
+            <li
+              key={p.id}
+              style={{
+                padding: "12px 14px",
+                marginTop: 8,
+                borderRadius: 10,
+                border: "1px solid rgba(255,255,255,0.09)",
+                background: "#131417",
+              }}
+            >
+              <div style={{ fontSize: 15, fontWeight: 500 }}>{p.name}</div>
+              {p.address && (
+                <div style={{ fontSize: 13, color: "#8a8f98", marginTop: 2 }}>
+                  {p.address}
                 </div>
               )}
-            </Link>
-          );
-        })}
-        {props.length === 0 && (
-          <div className="empty">No properties visible for this role.</div>
-        )}
-      </div>
-    </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <form action="/auth/signout" method="post" style={{ marginTop: 28 }}>
+        <button
+          type="submit"
+          style={{
+            fontSize: 13,
+            color: "#8a8f98",
+            background: "none",
+            border: "none",
+            textDecoration: "underline",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          Sign out
+        </button>
+      </form>
+    </main>
   );
 }
