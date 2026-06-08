@@ -39,3 +39,6 @@ coverage/
 
 # Visual brainstorming companion
 .superpowers/
+
+# Obsidian "second brain" — agent working memory; synced to its own private repo, not this one
+vault/
