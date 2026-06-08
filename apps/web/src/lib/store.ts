@@ -8,6 +8,24 @@ import { id, shareToken } from "./format";
 const KEY = "tracktub.v1";
 const EVT = "tracktub:change";
 
+/** Thrown when a write exceeds the localStorage budget (real photos are large).
+ *  The capture wizard catches this to show "reset the demo" instead of failing. */
+export class QuotaError extends Error {
+  constructor() {
+    super("Browser storage is full.");
+    this.name = "QuotaError";
+  }
+}
+
+function isQuotaError(e: unknown): boolean {
+  return (
+    e instanceof DOMException &&
+    (e.name === "QuotaExceededError" ||
+      e.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      e.code === 22)
+  );
+}
+
 function read(): DB {
   if (typeof window === "undefined") return seedDB();
   try {
@@ -26,7 +44,12 @@ function read(): DB {
 }
 
 function write(db: DB) {
-  localStorage.setItem(KEY, JSON.stringify(db));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(db));
+  } catch (e) {
+    if (isQuotaError(e)) throw new QuotaError();
+    throw e;
+  }
   window.dispatchEvent(new Event(EVT));
 }
 
@@ -143,7 +166,11 @@ export function recordOpen(token: string) {
   });
 }
 
-export function toggleConfirmedTag(tid: string, slot: PhotoSlot, tag: IssueTag) {
+export function toggleConfirmedTag(
+  tid: string,
+  slot: PhotoSlot,
+  tag: IssueTag
+) {
   mutate((d) => {
     const t = d.turnovers.find((x) => x.id === tid);
     const ph = t?.photos.find((p) => p.slot === slot);

@@ -88,7 +88,8 @@ export default function TurnoverPage() {
         <div>
           <h1 style={{ fontSize: 21 }}>{p?.name}</h1>
           <div className="small muted" style={{ marginTop: 3 }}>
-            {formatDateTime(t.submittedAtServer)} · {userName(db, t.submitterId)}
+            {formatDateTime(t.submittedAtServer)} ·{" "}
+            {userName(db, t.submitterId)}
           </div>
         </div>
         <div className="row wrap" style={{ justifyContent: "flex-end" }}>
@@ -109,7 +110,7 @@ export default function TurnoverPage() {
       <div className="card pad stack">
         <div className="photos">
           {t.photos.map((ph) => (
-            <PhotoThumb key={ph.slot} photo={ph} />
+            <PhotoThumb key={ph.slot} photo={ph} enlargeable />
           ))}
         </div>
         {t.notes && (
@@ -126,7 +127,8 @@ export default function TurnoverPage() {
       {isOperator && pendingSuggestions.length > 0 && (
         <div className="card pad stack">
           <div className="label" style={{ marginBottom: 0 }}>
-            AI suggestions awaiting confirmation <span className="mock-tag">AI mock</span>
+            AI suggestions awaiting confirmation{" "}
+            <span className="mock-tag">AI mock</span>
           </div>
           {pendingSuggestions.map(({ slot, tag }) => (
             <div key={`${slot}:${tag}`} className="spread small">
@@ -170,13 +172,21 @@ export default function TurnoverPage() {
 
         {isOperator && (
           <div className="row wrap">
-            <button className="btn primary sm" onClick={() => share("Owner email")}>
+            <button
+              className="btn primary sm"
+              onClick={() => share("Owner email")}
+            >
               <Icon name="share" size={15} /> Share with owner
             </button>
             <button className="btn sm" onClick={() => share("Guest / Airbnb")}>
               <Icon name="share" size={15} /> Share with guest / Airbnb
             </button>
-            <a className="btn ghost sm" href={link} target="_blank" rel="noreferrer">
+            <a
+              className="btn ghost sm"
+              href={link}
+              target="_blank"
+              rel="noreferrer"
+            >
               <Icon name="link" size={15} /> Open public view
             </a>
           </div>
@@ -202,7 +212,8 @@ export default function TurnoverPage() {
           </div>
         ) : (
           <p className="tiny dim" style={{ margin: 0 }}>
-            Not shared yet. Sharing + recipient opens are the wedge signal (PRD §12).
+            Not shared yet. Sharing + recipient opens are the wedge signal (PRD
+            §12).
           </p>
         )}
 
