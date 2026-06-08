@@ -41,7 +41,10 @@ export default function ProofPage() {
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
-      <div className="container" style={{ maxWidth: 640, padding: "26px 18px 70px" }}>
+      <div
+        className="container"
+        style={{ maxWidth: 640, padding: "26px 18px 70px" }}
+      >
         {/* public header */}
         <div className="row" style={{ marginBottom: 18, gap: 10 }}>
           <span style={{ display: "inline-flex" }}>
@@ -66,7 +69,9 @@ export default function ProofPage() {
           <div className="spread" style={{ alignItems: "flex-start" }}>
             <div>
               <div className="eyebrow">Turnover proof</div>
-              <h1 style={{ fontSize: 26, marginTop: 4 }}>{p?.name ?? "Property"}</h1>
+              <h1 style={{ fontSize: 26, marginTop: 4 }}>
+                {p?.name ?? "Property"}
+              </h1>
             </div>
             <div
               style={{ textAlign: "center", flex: "none" }}
@@ -84,7 +89,7 @@ export default function ProofPage() {
 
           <div className="photos">
             {t.photos.map((ph) => (
-              <PhotoThumb key={ph.slot} photo={ph} />
+              <PhotoThumb key={ph.slot} photo={ph} enlargeable />
             ))}
           </div>
 
@@ -115,7 +120,8 @@ export default function ProofPage() {
             <dt>Record</dt>
             <dd>
               <span className="row" style={{ gap: 6 }}>
-                <Icon name="lock" size={14} /> Locked — unchanged since submission
+                <Icon name="lock" size={14} /> Locked — unchanged since
+                submission
               </span>
               <span className="mono tiny dim">#{t.shareToken}</span>
             </dd>

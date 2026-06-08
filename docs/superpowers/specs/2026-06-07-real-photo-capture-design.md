@@ -32,7 +32,7 @@ real, which strengthens the core "dispute-grade evidence" story without any back
 | Capture mechanism | Native `<input type="file" accept="image/*" capture="environment">` | Rear camera on mobile, file picker on desktop; zero permission edge cases; desktop-demo-friendly (pick a real tub photo). |
 | Compression | Long edge ≤ **1280px**, **JPEG quality 0.72** | ~100–200 KB/photo; sharp on phone + laptop; ~6–7 captured turnovers fit under the ~5 MB localStorage budget. |
 | Quota overflow | **Warn + offer reset** | On `QuotaExceededError`, keep the user on the review screen with photos intact, show "Storage full — reset the demo." Never silently loses or mutates a locked record (preserves the immutability story). |
-| Evidence viewing | **Click-to-enlarge (lightbox)** on record + proof + gallery | Real photos you can't inspect are a half-measure for an evidence product; zoom is what settles a dispute. |
+| Evidence viewing | **Click-to-enlarge (lightbox)** on record + proof | Real photos you can't inspect are a half-measure for an evidence product; zoom is what settles a dispute. (Gallery tiles are inside a navigational `<Link>`, so they stay navigation — open the turnover, then enlarge.) |
 | Seed data | **Keep placeholders** | Zero asset sourcing; reads as a natural before/after (live capture = real, history = placeholder). |
 | Format | JPEG (not WebP) | Universal, predictable size. |
 | EXIF rotation | `createImageBitmap(file, {imageOrientation:"from-image"})` | Auto-corrects phone orientation before drawing. |
@@ -69,8 +69,9 @@ photos intact and show the storage-full message instead of navigating. The AI-mo
 `QuotaError` (detected via `e.name === "QuotaExceededError"` / name fallbacks) so the
 wizard can distinguish it. `addTurnover` propagates the throw.
 
-**Enlargeable enabled on:** `/t/[id]`, `/proof/[token]`, `/p/[id]`. Wizard preview stays
-non-enlargeable (avoids clashing with Retake).
+**Enlargeable enabled on:** `/t/[id]`, `/proof/[token]`. **Not** `/p/[id]` — its tiles are
+inside a navigational `<Link>` (a button-in-anchor would be invalid HTML). Wizard preview
+stays non-enlargeable too (avoids clashing with Retake).
 
 ## Out of scope (this PR)
 
