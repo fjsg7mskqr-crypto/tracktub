@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { getEnv } from "@/lib/env";
+import { getEnv, getEnvSafe } from "@/lib/env";
 
 describe("getEnv", () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -22,5 +22,30 @@ describe("getEnv", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
     expect(() => getEnv()).toThrow(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+  });
+});
+
+describe("getEnvSafe", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("returns the vars when both are present", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
+    expect(getEnvSafe()).toEqual({
+      SUPABASE_URL: "https://x.supabase.co",
+      SUPABASE_ANON_KEY: "anon",
+    });
+  });
+
+  it("returns null (not a throw) when the URL is missing", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
+    expect(getEnvSafe()).toBeNull();
+  });
+
+  it("returns null (not a throw) when the anon key is missing", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    expect(getEnvSafe()).toBeNull();
   });
 });
