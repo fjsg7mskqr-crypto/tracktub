@@ -44,17 +44,36 @@ off-machine to keep it tidy (`vault/_hermes/`). Tool scratch (`.superpowers/`) s
 feature branch (in a worktree)
    │  PR · CI green · review
    ▼
- main   integration trunk — newest reviewed code (DEFAULT branch)
+ main   integration trunk — newest reviewed code (DEFAULT branch); PREVIEW builds only
    │  promote (PR, fast-forward)
    ▼
- test   staging — deploys to the test URL + test Supabase
+ test   staging — deploys to the test branch/preview URL
    │  promote (PR, fast-forward) after QA
    ▼
- prod   production — live site + live Supabase
+ prod   PRODUCTION — Vercel "Production Branch" = `prod`; reaches the live site (tracktub.vercel.app)
 ```
-- **main** — everything lands here via PR. Never edited directly.
-- **test** — staging mirror; receives `main` via promotion PR; auto-deploys.
-- **prod** — production; receives `test` via promotion PR; auto-deploys.
+- **main** — everything lands here via PR. Never edited directly. Deploys
+  **Preview** builds only — **`main` is NOT production.** Production must never
+  be wired to `main`: an earlier misconfiguration (Vercel Production Branch =
+  `main`) auto-published unreviewed code and caused a **site-wide outage on
+  2026-06-08.**
+- **test** — staging mirror; receives `main` via promotion PR; deploys to its
+  branch/preview URL.
+- **prod** — production; receives `test` via promotion PR. Vercel's "Production
+  Branch" setting must be `prod`; promoting here is what publishes the live site.
+
+**Databases:** all three tiers currently **share ONE Supabase project/database**
+(the existing production project, ref `slkxwpiiludisrnwnxlg`) — there is **no
+separate test/prod database yet.** A dedicated staging database is a planned
+future step (at launch / on the Supabase Pro plan). Local development uses the
+Supabase CLI (`supabase start`) for a fully isolated local stack.
+
+**Env vars (caution):** `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` must be set in Vercel for the **Production** (and
+**Preview**) environments. They are inlined at **build** time, so a **redeploy is
+required after changing them**. A missing **or invalid** value previously 500'd
+the entire site via middleware; this is now mitigated to degrade gracefully
+(middleware passes through instead of crashing).
 
 ## GOLDEN RULES (non-negotiable)
 1. **Never commit or push directly to `main`, `test`, or `prod`.** GitHub
@@ -67,6 +86,8 @@ feature branch (in a worktree)
    0 approvals required, so you self-merge once CI passes.
 4. **Promote, don't rewrite.** main→test→prod move only via fast-forward
    promotion PRs. No force-pushes, no direct edits to environment branches.
+   **`prod` is the production branch** (the live site) — never point Vercel's
+   Production Branch at `main` or `test`.
 
 ## Worktree lifecycle ("how to complete one")
 1. Create — `EnterWorktree` (branches off main) → isolated folder.
@@ -83,8 +104,11 @@ feature branch (in a worktree)
 ```
 gh pr create --base test --head main --title "Promote to test"   # → merge → staging deploys
 # QA the test URL, then:
-gh pr create --base prod --head test --title "Promote to prod"   # → merge → production deploys
+gh pr create --base prod --head test --title "Promote to prod"   # → merge → PRODUCTION RELEASE (live site)
 ```
+The `test → prod` promotion is the production release: merging to `prod`
+publishes the live site. This only works because Vercel's **Production Branch**
+setting is `prod` (not `main`) — verify that before relying on a release.
 
 ## Quality gate
 Before opening a PR, locally: `npm run lint && npm run typecheck && npm run build`
