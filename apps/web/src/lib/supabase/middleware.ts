@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getEnv } from "@/lib/env";
+import { getEnvSafe } from "@/lib/env";
 
 /** Paths reachable without a session: the login form and the auth callback.
  *  Everything else requires a signed-in user. Public proof links (`/proof/*`)
@@ -15,7 +15,20 @@ const PUBLIC_PATHS = ["/login", "/auth/callback"];
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getEnv();
+
+  // Middleware runs on every route, so it must never throw — a throw here is a
+  // site-wide 500 (MIDDLEWARE_INVOCATION_FAILED). If Supabase isn't configured,
+  // skip session refresh/auth gating and let the request through; data pages
+  // still fail loudly on their own via getEnv(), but the site stays up. Warn so
+  // the misconfiguration is visible in logs rather than silent.
+  const env = getEnvSafe();
+  if (!env) {
+    console.warn(
+      "[middleware] Supabase env not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY); skipping session refresh and auth gating.",
+    );
+    return response;
+  }
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = env;
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
