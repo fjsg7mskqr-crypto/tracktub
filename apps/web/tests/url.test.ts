@@ -28,7 +28,9 @@ describe("getURL", () => {
   it("falls back to window.location.origin when no env is set", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_VERCEL_URL", "");
-    vi.stubGlobal("window", { location: { origin: "https://browser.example" } });
+    vi.stubGlobal("window", {
+      location: { origin: "https://browser.example" },
+    });
     expect(getURL()).toBe("https://browser.example");
   });
 
