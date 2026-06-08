@@ -84,7 +84,7 @@ real AI inference. All consistent with the demo's existing mock boundaries.
 - Manual: capture a turnover on desktop (pick a hot-tub image) → the image shows on the
   record, the public proof link, and the property gallery; click-to-enlarge works on each;
   Retake replaces the image; `Reset demo` restores gradient placeholders.
-- Quota path: not expected in a normal session; verified by the try/catch and message.
+- Quota path: not expected in a normal session; code path reviewed (no runtime repro performed).
 
 ## Risks
 
