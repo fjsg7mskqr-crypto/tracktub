@@ -1,6 +1,12 @@
 /* TrackTub design tokens — minimal/sharp, dark-first.
    Light is default; add data-theme="dark" (or .dark) for dark mode.
-   Tailwind v4: map these into an @theme block in apps/web global.css. */
+   Tailwind v4: map these into an @theme block in apps/web global.css.
+
+   Color system (2026-06-07 refresh):
+   - BLUE  #3B82F6  = brand / the hot-tub water. Logo, brand accents, links.
+   - GREEN #34D399  = verified / success ONLY. Never decoration.
+   - ink / white    = the record + text.
+   The mark is a white/ink check (the record) over a blue wave (the tub). */
 
 :root {
   /* surfaces */
@@ -13,12 +19,17 @@
   --tt-text-hi:   #08090A;
   --tt-text-lo:   #5A5F6A;
 
-  /* accent + semantic */
-  --tt-verified:      #34D399; /* success/verified ONLY */
+  /* brand (the water) — blue */
+  --tt-brand:      #3B82F6;
+  --tt-brand-ink:  #2563EB; /* accessible blue for text/links on light */
+  --tt-brand-dim:  rgba(59, 130, 246, 0.12);
+  --tt-brand-line: rgba(59, 130, 246, 0.30);
+
+  /* semantic */
+  --tt-verified:      #34D399; /* success / verified ONLY */
   --tt-verified-ink:  #0A7A55; /* accessible green text on light */
   --tt-pending:       #E8A33D; /* cloudy / awaiting */
   --tt-urgent:        #EF4444; /* urgent / geofence fail */
-  --tt-accent-alt:    #5E6AD2; /* Linear indigo, swap-in */
 
   /* type */
   --tt-font-sans: "Inter", system-ui, -apple-system, sans-serif;
@@ -40,6 +51,9 @@
   --tt-text-hi:   #EDEDEF;
   --tt-text-lo:   #8A8F98;
 
+  /* blue + green read on dark as-is */
+  --tt-brand:      #3B82F6;
+  --tt-brand-ink:  #60A5FA;
   --tt-verified:      #34D399;
-  --tt-verified-ink:  #34D399; /* accent reads on dark as-is */
+  --tt-verified-ink:  #34D399;
 }

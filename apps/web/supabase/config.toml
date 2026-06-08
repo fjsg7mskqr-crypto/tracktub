@@ -1,0 +1,9 @@
+# Supabase CLI config.
+#
+# NOTE: the source of truth for this project is the LIVE remote database
+# (project ref slkxwpiiludisrnwnxlg), managed via the Supabase MCP — NOT the CLI.
+# (The CLI triggers a macOS Keychain prompt on every call.) See ./README.md.
+#
+# This minimal config exists so the supabase/ directory is well-formed and the
+# migrations/ history is linkable should anyone use the CLI later.
+project_id = "slkxwpiiludisrnwnxlg"
