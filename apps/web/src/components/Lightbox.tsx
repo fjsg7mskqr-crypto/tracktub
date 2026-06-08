@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import { Icon } from "@/components/Icon";
 
-/** Full-screen, uncropped view of a captured photo. Closes on Esc or backdrop
- *  click. Lightweight by design — no focus-trap dependency (demo). */
+/** Full-screen, uncropped view of a captured photo. Closes on Esc, on the
+ *  backdrop, or via the Close button — all keyboard-operable. Lightweight by
+ *  design — no focus-trap dependency (demo). */
 export function Lightbox({
   src,
   alt,
@@ -32,7 +33,6 @@ export function Lightbox({
       role="dialog"
       aria-modal="true"
       aria-label={alt}
-      onClick={onClose}
       style={{
         position: "fixed",
         inset: 0,
@@ -45,18 +45,33 @@ export function Lightbox({
         WebkitBackdropFilter: "blur(6px)",
       }}
     >
+      {/* Backdrop is a real button so closing works by mouse AND keyboard. */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: "none",
+          background: "transparent",
+          cursor: "zoom-out",
+          padding: 0,
+        }}
+      />
       {/* eslint-disable-next-line @next/next/no-img-element -- captured data URL, not a static asset */}
       <img
         src={src}
         alt={alt}
-        onClick={(e) => e.stopPropagation()}
         style={{
+          position: "relative",
           maxWidth: "min(1100px, 96vw)",
           maxHeight: "92vh",
           objectFit: "contain",
           borderRadius: 10,
           border: "1px solid rgba(255,255,255,.16)",
           boxShadow: "0 24px 80px rgba(0,0,0,.6)",
+          pointerEvents: "none",
         }}
       />
       <button
