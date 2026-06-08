@@ -2,9 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnv } from "@/lib/env";
 
-/** Paths reachable without a session: the login form, the auth callback, and
- *  public proof links. Everything else requires a signed-in user. */
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/proof"];
+/** Paths reachable without a session: the login form and the auth callback.
+ *  Everything else requires a signed-in user. Public proof links (`/proof/*`)
+ *  will rejoin this list in M2 once they read from Supabase via an anonymous
+ *  `share_token` SELECT policy; until then the route serves only stale demo
+ *  data, so it stays gated rather than publicly advertising a dead page. */
+const PUBLIC_PATHS = ["/login", "/auth/callback"];
 
 /**
  * Refreshes the Supabase session on every request and gates protected routes.

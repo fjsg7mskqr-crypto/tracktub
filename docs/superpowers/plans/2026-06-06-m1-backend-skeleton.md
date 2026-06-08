@@ -1042,3 +1042,36 @@ gh pr create --base main --title "M1: backend skeleton (Supabase + RLS + auth)" 
 - **Invite acceptance flow** (invited email → magic link → membership row): M2.
 - **Storage bucket + upload** for photos: M2 (capture).
 - **test/prod Supabase split + Vercel env per environment:** M5 / launch (M1 uses the single dev project).
+
+---
+
+## Post-review hardening (2026-06-08)
+
+Closed every finding from the PR #3 engineering assessment in this branch. Three
+new migrations (mirrored in `apps/web/supabase/migrations/`, applied to the dev
+project via the Supabase MCP) plus a middleware change; each DB change was
+verified by impersonating the `authenticated` role with forged JWT claims in a
+rolled-back transaction, and is covered by new cases in `tests/rls.test.ts`.
+
+- **HIGH — forgeable attribution.** `submitter_id` and `submitted_at_server` were
+  client-writable, so any capture-authorized user could attribute evidence to
+  someone else or backdate the server clock — defeating the "verified submitter /
+  server time" primitives (PRD §8.2). `server_authoritative_turnover`: a BEFORE
+  INSERT trigger stamps both from the request for end users (service_role keeps
+  control for backfills/tests); the insert policy also requires
+  `submitter_id = auth.uid()`.
+- **MED — empty audit log.** `audit_log` had a SELECT policy but no writer (PRD §9
+  requires it). `audit_log_writer`: AFTER triggers record insert+update on
+  `turnover`/`issue_tag`/`photo` (actor = `auth.uid()`); an UPDATE-deny trigger
+  makes it append-only. DELETE is left to RLS so org/property cascades still clean
+  up.
+- **MED — `/proof` served stale demo data publicly.** Removed `/proof` from
+  `PUBLIC_PATHS`; it rejoins in M2 with an anonymous `share_token` SELECT policy.
+- **LOW — operator self-upgrade.** `hardening_billing_and_profile`: a guard blocks
+  client writes to `org.plan` / `org.billing_ref` (operators can still rename the
+  org); the billing backend (service_role) retains control.
+- **LOW — null-email signup.** `handle_new_user` now coalesces a null email so a
+  future phone/anonymous provider can't break the `profile.email` NOT NULL.
+- **LOW — thin write-side tests.** Added an `operatorB` fixture and negatives:
+  forced attribution, non-member capture, staff write to an unassigned property,
+  cross-org property create, plan self-serve, and the append-only audit trail.

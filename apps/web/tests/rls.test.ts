@@ -57,6 +57,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
 
   let operatorA: AuthedUser;
   let staffA: AuthedUser;
+  let operatorB: AuthedUser;
   let orgA: string;
   let orgB: string;
   let propAssigned: string;
@@ -79,6 +80,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
 
     operatorA = await makeUser("op-a");
     staffA = await makeUser("staff-a");
+    operatorB = await makeUser("op-b");
 
     const { data: oA, error: eA } = await admin
       .from("org")
@@ -98,6 +100,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
     const { error: mErr } = await admin.from("membership").insert([
       { user_id: operatorA.id, org_id: orgA, role: "operator" },
       { user_id: staffA.id, org_id: orgA, role: "staff" },
+      { user_id: operatorB.id, org_id: orgB, role: "operator" },
     ]);
     if (mErr) throw mErr;
 
@@ -220,5 +223,126 @@ describe.skipIf(!ready)("RLS isolation", () => {
       .select("id", { count: "exact", head: true })
       .eq("id", tag!.id);
     expect(count).toBe(1);
+  }, 30_000);
+
+  it("forces submitter_id and submitted_at_server to the acting user", async () => {
+    // Operator A tries to attribute a turnover to staff A AND backdate the server
+    // clock; the trigger must overwrite both with the real actor and real now().
+    const backdated = "2020-01-01T00:00:00.000Z";
+    const { data, error } = await operatorA.client
+      .from("turnover")
+      .insert({
+        property_id: propAssigned,
+        submitter_id: staffA.id,
+        submitted_at_server: backdated,
+        status: "draft",
+      })
+      .select("submitter_id, submitted_at_server")
+      .single();
+    expect(error).toBeNull();
+    expect(data?.submitter_id).toBe(operatorA.id);
+    expect(data?.submitter_id).not.toBe(staffA.id);
+    expect(new Date(data!.submitted_at_server).getTime()).toBeGreaterThan(
+      Date.now() - 60_000,
+    );
+  });
+
+  it("blocks an authenticated non-member from creating a turnover", async () => {
+    // Operator B belongs to org B only — cannot capture an org A property.
+    const { error } = await operatorB.client.from("turnover").insert({
+      property_id: propAssigned,
+      submitter_id: operatorB.id,
+      status: "draft",
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it("lets staff capture their assigned property but not an unassigned one", async () => {
+    // Positive control: the assigned property accepts the capture...
+    const { error: okErr } = await staffA.client.from("turnover").insert({
+      property_id: propAssigned,
+      submitter_id: staffA.id,
+      status: "draft",
+    });
+    expect(okErr).toBeNull();
+    // ...the unassigned org-A property does not.
+    const { error: denyErr } = await staffA.client.from("turnover").insert({
+      property_id: propUnassigned,
+      submitter_id: staffA.id,
+      status: "draft",
+    });
+    expect(denyErr).not.toBeNull();
+  });
+
+  it("blocks an operator from creating a property in another org", async () => {
+    const { error } = await operatorB.client
+      .from("property")
+      .insert({ org_id: orgA, name: "Org B land-grab" });
+    expect(error).not.toBeNull();
+  });
+
+  it("forbids an operator from self-serving a plan / billing change", async () => {
+    const { error } = await operatorA.client
+      .from("org")
+      .update({ plan: "enterprise" })
+      .eq("id", orgA);
+    expect(error).not.toBeNull();
+    // The plan is unchanged when an admin reads it back.
+    const { data } = await admin
+      .from("org")
+      .select("plan")
+      .eq("id", orgA)
+      .single();
+    expect(data?.plan).not.toBe("enterprise");
+    // ...but a non-billing field (name) remains editable by the operator.
+    const { error: nameErr } = await operatorA.client
+      .from("org")
+      .update({ name: "Org A (renamed)" })
+      .eq("id", orgA);
+    expect(nameErr).toBeNull();
+  });
+
+  it("records evidence writes in an append-only audit log", async () => {
+    // A capture writes exactly one audit row, attributed to the actor.
+    const { data: to, error: toErr } = await operatorA.client
+      .from("turnover")
+      .insert({ property_id: propAssigned, submitter_id: operatorA.id, status: "draft" })
+      .select("id")
+      .single();
+    expect(toErr).toBeNull();
+
+    const { data: rows, error: auditErr } = await admin
+      .from("audit_log")
+      .select("id, entity, action, actor_id, org_id")
+      .eq("entity", "turnover")
+      .eq("entity_id", to!.id);
+    expect(auditErr).toBeNull();
+    expect(rows).toHaveLength(1);
+    const auditRow = rows![0];
+    expect(auditRow).toMatchObject({
+      entity: "turnover",
+      action: "INSERT",
+      actor_id: operatorA.id,
+      org_id: orgA,
+    });
+
+    // The operator has SELECT but no UPDATE policy: the tamper is a silent no-op.
+    await operatorA.client
+      .from("audit_log")
+      .update({ action: "TAMPERED" })
+      .eq("id", auditRow.id);
+    // Even a service-role UPDATE is rejected by the append-only guard trigger.
+    const { error: tamperErr } = await admin
+      .from("audit_log")
+      .update({ action: "TAMPERED" })
+      .eq("id", auditRow.id);
+    expect(tamperErr).not.toBeNull();
+
+    const { data: after } = await admin
+      .from("audit_log")
+      .select("action")
+      .eq("id", auditRow.id)
+      .single();
+    expect(after?.action).toBe("INSERT");
   }, 30_000);
 });

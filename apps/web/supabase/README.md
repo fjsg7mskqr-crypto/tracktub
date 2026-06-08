@@ -7,7 +7,7 @@ call). The files here mirror what is already applied to that project.
 
 ## Migrations
 
-The four files in `migrations/` are named with the **exact remote migration versions**,
+The files in `migrations/` are named with the **exact remote migration versions**,
 so this directory matches the cloud's applied history one-to-one:
 
 | File | Remote version · name | Contents |
@@ -17,6 +17,10 @@ so this directory matches the cloud's applied history one-to-one:
 | `20260607022901_triggers.sql` | `triggers` | profile-on-signup + turnover immutability lock |
 | `20260607023127_harden_functions.sql` | `harden_functions` | pin `search_path`, revoke PUBLIC execute on helpers |
 | `20260607031214_immutability_child_guards.sql` | `immutability_child_guards` | extend the locked-turnover immutability to `photo` + `issue_tag` writes |
+| `20260608022343_server_authoritative_turnover.sql` | `server_authoritative_turnover` | force `submitter_id`/`submitted_at_server` from the request for end users; `submitter_id = auth.uid()` in the insert policy |
+| `20260608022512_audit_log_writer.sql` | `audit_log_writer` | AFTER trigger writes `audit_log` for `turnover`/`issue_tag`/`photo` insert+update; UPDATE-deny makes it append-only |
+| `20260608022607_hardening_billing_and_profile.sql` | `hardening_billing_and_profile` | block client writes to `org.plan`/`billing_ref`; coalesce null email on signup |
+| `20260608023717_lock_trigger_function_execute.sql` | `lock_trigger_function_execute` | revoke `anon`/`authenticated` EXECUTE on trigger-only functions (clears advisors 0028/0029 for them) |
 
 To re-apply to a *fresh* project, run them in version order.
 
