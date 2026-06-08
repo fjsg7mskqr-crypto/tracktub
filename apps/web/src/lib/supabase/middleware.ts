@@ -30,39 +30,54 @@ export async function updateSession(request: NextRequest) {
   }
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = env;
 
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (toSet) => {
-        toSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        toSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
+  // Anything from here on (client construction, the auth round-trip) can throw —
+  // e.g. an INVALID env value (a malformed URL makes createServerClient throw
+  // `Invalid supabaseUrl`, the second half of the 2026-06-08 outage) or Supabase
+  // being unreachable. Because middleware runs on every route, an uncaught throw
+  // is a site-wide 500, so we fail open: log loudly and pass the request through.
+  // RLS and the data-access clients' own getEnv() remain the real protection, so
+  // skipping the auth-gate redirect here exposes nothing a missing config wouldn't.
+  try {
+    const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (toSet) => {
+          toSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          toSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options),
+          );
+        },
       },
-    },
-  });
+    });
 
-  // IMPORTANT: do nothing between creating the client and getUser() — it keeps
-  // the session in sync. getUser() revalidates the token with the auth server.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    // IMPORTANT: do nothing between creating the client and getUser() — it keeps
+    // the session in sync. getUser() revalidates the token with the auth server.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some(
-    (p) => path === p || path.startsWith(p + "/"),
-  );
+    const path = request.nextUrl.pathname;
+    const isPublic = PUBLIC_PATHS.some(
+      (p) => path === p || path.startsWith(p + "/"),
+    );
 
-  if (!user && !isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    // Carry any cookies refreshed above onto the redirect, matching the
-    // canonical Supabase middleware (harmless today, correct if logic changes).
-    const redirect = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
-    return redirect;
+    if (!user && !isPublic) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      // Carry any cookies refreshed above onto the redirect, matching the
+      // canonical Supabase middleware (harmless today, correct if logic changes).
+      const redirect = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+      return redirect;
+    }
+
+    return response;
+  } catch (err) {
+    console.error(
+      "[middleware] Supabase session check failed; passing the request through to avoid a site-wide 500. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY:",
+      err,
+    );
+    return response;
   }
-
-  return response;
 }
