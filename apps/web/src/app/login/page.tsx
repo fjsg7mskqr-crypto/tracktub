@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getURL } from "@/lib/url";
 
 // Functional sign-in — Google OAuth via Supabase. Plain elements + minimal
 // inline styles; the UI/brand track restyles this once that foundation lands.
@@ -16,7 +15,13 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${getURL()}/auth/callback` },
+      // Client-initiated PKCE stores a one-time code verifier in a cookie on the
+      // CURRENT origin, so the OAuth round-trip MUST return to that same origin.
+      // Do NOT use getURL() here: it prefers a fixed canonical URL
+      // (NEXT_PUBLIC_SITE_URL), which sends preview/non-canonical deployments to
+      // prod, where the verifier cookie is absent → session never minted →
+      // redirect loop back to /login. Always use the live browser origin.
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     // On success the browser is redirected to Google, so this line is only
     // reached on error.
