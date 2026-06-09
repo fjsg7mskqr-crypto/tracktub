@@ -1,0 +1,5 @@
+# Remotion brand-motion project — local deps and render scratch (regenerable).
+# The current rendered deliverable is committed at the project root:
+#   tracktub-brand-reveal.mp4
+node_modules/
+out/
