@@ -21,6 +21,7 @@ so this directory matches the cloud's applied history one-to-one:
 | `20260608022512_audit_log_writer.sql` | `audit_log_writer` | AFTER trigger writes `audit_log` for `turnover`/`issue_tag`/`photo` insert+update; UPDATE-deny makes it append-only |
 | `20260608022607_hardening_billing_and_profile.sql` | `hardening_billing_and_profile` | block client writes to `org.plan`/`billing_ref`; coalesce null email on signup |
 | `20260608023717_lock_trigger_function_execute.sql` | `lock_trigger_function_execute` | revoke `anon`/`authenticated` EXECUTE on trigger-only functions (clears advisors 0028/0029 for them) |
+| `20260608193153_workspace_on_signup.sql` | `workspace_on_signup` | extend `handle_new_user` to also create an `org` + `operator` membership (self-serve signup); backfill existing users; re-lock EXECUTE |
 
 To re-apply to a *fresh* project, run them in version order.
 

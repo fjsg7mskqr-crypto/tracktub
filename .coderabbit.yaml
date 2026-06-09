@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit configuration — tuned to reduce review-quota consumption.
+#
+# Why (issue #17): with no config file, CodeRabbit ran on full defaults — a
+# fresh review on EVERY push to EVERY PR, each with poem + sequence diagrams +
+# summaries. On the free plan that burned through the PR review rate limit:
+# more than half of recent PRs (#3, #5, #7, #13, #16) came back with
+# "Review limit reached" and went un-reviewed.
+#
+# This keeps automatic review ON for real code PRs into main, but spends far
+# less per PR. Note: the rate limit is a *plan* cap — this slows how fast we
+# hit it, it can't raise the ceiling. If we still hit it, the only remaining
+# lever is the CodeRabbit plan itself.
+
+language: en-US
+
+reviews:
+  profile: chill                 # fewer low-value nitpicks (this is the default; explicit for clarity)
+  request_changes_workflow: false
+
+  # Keep the substance (the high-level walkthrough); drop the cosmetic extras
+  # that cost tokens but aren't load-bearing for a code review.
+  high_level_summary: true
+  poem: false
+  sequence_diagrams: false
+  changed_files_summary: false
+  related_issues: false
+  related_prs: false
+
+  auto_review:
+    enabled: true                # still auto-review code PRs into main...
+    drafts: false                # ...but not draft PRs (default; explicit)
+    auto_incremental_review: false   # KEY LEVER: review a PR ONCE, not again on every push.
+                                     # After pushing a fix, comment "@coderabbitai review" to re-review on demand.
+    ignore_title_keywords:       # case-insensitive substring match — skip PRs that don't need a code review
+      - "promote to"             #   main->test->prod promotions (already-reviewed, fast-forward code)
+      - "docs:"                  #   docs-only conventional-commit PRs
+      - "docs("
+      - "chore:"                 #   chore / tooling PRs
+      - "chore("
+      - "wip"                    #   work-in-progress
+
+  # Don't spend the review budget on generated, vendored, or non-code paths.
+  # Only exclusions are listed, so everything else is still reviewed.
+  path_filters:
+    - "!**/package-lock.json"
+    - "!**/pnpm-lock.yaml"
+    - "!**/yarn.lock"
+    - "!**/*.svg"                # brand / icon assets
+    - "!brand/**"                # identity spec, logo package
+    - "!docs/**"                 # specs & collateral (prose, not code)
+    - "!vault/**"                # git-ignored anyway, but belt-and-suspenders
+    - "!**/*.snap"               # test snapshots
