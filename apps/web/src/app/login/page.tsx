@@ -65,7 +65,11 @@ export default function LoginPage() {
       >
         {pending ? "Redirecting…" : "Continue with Google"}
       </button>
-      {error && <p style={{ color: "#ef4444", fontSize: 13 }}>{error}</p>}
+      {error && (
+        <p role="alert" style={{ color: "#ef4444", fontSize: 13 }}>
+          {error}
+        </p>
+      )}
     </main>
   );
 }
