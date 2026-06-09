@@ -103,18 +103,19 @@ function label(text, x, y, h, color, trackingEm = -0.005) {
 
 /* ------------------------------- geometry --------------------------------- */
 // full mark on the 64 grid (content ~x10..54, y16..48, centered)
+// check rests ON the water surface (lifted above the wave — no piercing)
 const markInner = (check, water) =>
-  `<path d="M10 40 q5.5 -3.5 11 0 t11 0 t11 0 t11 0" stroke="${water}" stroke-width="2" fill="none"/>` +
-  `<path d="M14 46 q5 -2.2 10 0 t10 0 t10 0 t10 0" stroke="${water}" stroke-width="1.2" fill="none" opacity="0.55"/>` +
-  `<path d="M16 30 L26 40" stroke="${check}" stroke-width="5.5" stroke-linecap="square"/>` +
-  `<path d="M26 40 L48 16" stroke="${check}" stroke-width="5.5" stroke-linecap="square"/>`;
-const MARK = { l: 10, r: 54, t: 16, b: 48 };
-// bold recut (one wave) for small sizes / tiles; centered via translate(-1 1.25)
+  `<path d="M10 42 q5.5 -3.5 11 0 t11 0 t11 0 t11 0" stroke="${water}" stroke-width="2" fill="none"/>` +
+  `<path d="M14 48 q5 -2.2 10 0 t10 0 t10 0 t10 0" stroke="${water}" stroke-width="1.2" fill="none" opacity="0.55"/>` +
+  `<path d="M16 24 L26 34" stroke="${check}" stroke-width="5.5" stroke-linecap="square"/>` +
+  `<path d="M26 34 L48 10" stroke="${check}" stroke-width="5.5" stroke-linecap="square"/>`;
+const MARK = { l: 10, r: 54, t: 8, b: 52 };
+// bold recut (one wave) for small sizes / tiles; check rests above the wave
 const recutInner = (check, water) =>
-  `<g transform="translate(-1 1.25)">` +
-  `<path d="M9 42 q8 -5.5 16 0 t16 0 t16 0" stroke="${water}" stroke-width="4" fill="none"/>` +
-  `<path d="M15 29 L27 41" stroke="${check}" stroke-width="8" stroke-linecap="square"/>` +
-  `<path d="M27 41 L50 14" stroke="${check}" stroke-width="8" stroke-linecap="square"/></g>`;
+  `<g transform="translate(-2 3.5)">` +
+  `<path d="M10 44 q8 -5 16 0 t16 0 t16 0" stroke="${water}" stroke-width="4" fill="none"/>` +
+  `<path d="M16 23 L27 34" stroke="${check}" stroke-width="8" stroke-linecap="square"/>` +
+  `<path d="M27 34 L50 8" stroke="${check}" stroke-width="8" stroke-linecap="square"/></g>`;
 const waterlinePath = (color) =>
   `<path d="M0 8 q8 -4 16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0" stroke="${color}" stroke-width="1.6" fill="none"/>`;
 

@@ -21,21 +21,21 @@ export function Seal({
       style={style}
       aria-hidden="true"
     >
-      <g transform="translate(-1 1.25)">
+      <g transform="translate(-2 3.5)">
         <path
-          d="M9 42 q8 -5.5 16 0 t16 0 t16 0"
+          d="M10 44 q8 -5 16 0 t16 0 t16 0"
           stroke="var(--brand, #3B82F6)"
           strokeWidth={4}
           fill="none"
         />
         <path
-          d="M15 29 L27 41"
+          d="M16 23 L27 34"
           stroke="var(--text-hi, #EDEDEF)"
           strokeWidth={8}
           strokeLinecap="square"
         />
         <path
-          d="M27 41 L50 14"
+          d="M27 34 L50 8"
           stroke="var(--text-hi, #EDEDEF)"
           strokeWidth={8}
           strokeLinecap="square"
