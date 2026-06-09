@@ -16,7 +16,7 @@ timestamps + audit log), built on feature branches.
 | Path | What |
 |------|------|
 | `apps/web` | Next.js 15 app (the demo today; v1 backend lands here) |
-| `brand/` | Identity spec, tokens, logo/icon SVGs |
+| `branding/` | Single brand package — logo/icon/social assets (SVG + PNG), spec, tokens, generator |
 | `docs/` | PRD (product source of truth), design specs, validation collateral |
 | `.github/workflows/ci.yml` | CI: install → lint → typecheck → build |
 
@@ -49,4 +49,4 @@ feature branch → main (trunk) → test (staging) → prod (production)
 Read [`CLAUDE.md`](CLAUDE.md) first — it holds the contributor/agent guide, the golden
 rules (one worktree = one branch = one task), and the full worktree → PR → promotion
 workflow. Product decisions live in [`docs/PRD.md`](docs/PRD.md); the visual spec lives
-in [`brand/`](brand).
+in [`branding/`](branding).

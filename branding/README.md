@@ -9,16 +9,16 @@ Start with **`brand-board.svg`** for the one-sheet overview.
 
 ## Regenerating
 
-Everything here is generated from a single script — nothing is hand-edited in
-this folder. To change the system, edit `../brand/scripts/export.mjs` and run:
+Every **asset** here is generated from a single script — nothing visual is
+hand-edited. To change the system, edit `scripts/export.mjs` and run:
 
 ```sh
-cd ../brand/scripts && npm install && npm run export
+cd scripts && npm install && npm run export
 ```
 
 That rewrites this `branding/` package **and** the app's build icons in
-`apps/web`. Brand tokens (CSS variables) live in `../brand/tokens.css`; the full
-written spec is `../brand/brand-notes.md`.
+`apps/web`. Brand tokens (CSS variables) live in `tokens.css`; the full
+written spec is `brand-notes.md` — both sit alongside this README.
 
 ## File map
 
@@ -38,6 +38,9 @@ branding/
   print/         tracktub-horizontal-{color,black}.svg + -300dpi .png
   device/        waterline.svg/.png                     (reusable wave)
   color/         swatches.svg/.png
+  brand-notes.md   the written brand spec
+  tokens.css       brand color/type tokens (CSS variables)
+  scripts/         the generator (export.mjs · gallery.mjs) — regenerates everything above
 ```
 
 ## Working in Figma

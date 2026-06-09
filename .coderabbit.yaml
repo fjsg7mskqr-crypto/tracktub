@@ -48,7 +48,7 @@ reviews:
     - "!**/pnpm-lock.yaml"
     - "!**/yarn.lock"
     - "!**/*.svg"                # brand / icon assets
-    - "!brand/**"                # identity spec, logo package
+    - "!branding/**"             # identity spec, tokens, logo package + generator
     - "!docs/**"                 # specs & collateral (prose, not code)
     - "!vault/**"                # git-ignored anyway, but belt-and-suspenders
     - "!**/*.snap"               # test snapshots

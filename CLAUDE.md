@@ -6,7 +6,7 @@
 ## What this is
 TrackTub — the dispute-grade **evidence layer for short-term-rental hot-tub
 turnovers** (B2B SaaS). Source of truth for product decisions: `docs/PRD.md`.
-Brand/visual spec: `brand/` (minimal/sharp, dark-first, Inter + JetBrains Mono).
+Brand/visual spec: `branding/` (minimal/sharp, dark-first, Inter + JetBrains Mono).
 
 **Current phase (build-first):** the app in `apps/web` is a clickable thin-MVP
 **demo** (Next.js 15, localStorage, no backend) — it is the **UX/design
@@ -16,7 +16,7 @@ feature branch. Do not treat the demo as the real codebase.
 
 ## Repo layout
 - `apps/web` — Next.js app (the only app today).
-- `brand/` — identity spec, tokens, logo/icon SVGs.
+- `branding/` — single brand package: logo/icon/social assets (SVG + PNG) + spec, tokens, generator.
 - `docs/` — PRD, design specs, validation collateral.
 - `vault/` — local Obsidian "second brain" (git-ignored; agent working memory — see below).
 - `.github/workflows/ci.yml` — CI: install → lint → typecheck → build.
@@ -119,4 +119,4 @@ build)` check is required to merge to any protected branch.
 - Strict TypeScript; keep `tsc --noEmit` clean.
 - Prettier-formatted (`npm run format`); ESLint `next/core-web-vitals`.
 - Match existing code style; green only goes to verified/success states
-  (brand rule — see `brand/brand-notes.md`).
+  (brand rule — see `branding/brand-notes.md`).
