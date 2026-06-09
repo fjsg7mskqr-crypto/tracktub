@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 /** The TrackTub mark — a verified check over a hot-tub waterline.
  *  White/ink check = the record; blue wave = the tub. Square caps, sharp
  *  geometry. This is the small-size recut (one bold wave) tuned for UI; the
- *  full mark + lockups live in brand/logo/. Colors are theme-driven:
+ *  full mark + lockups live in /branding/. Colors are theme-driven:
  *  check = --text-hi, water = --brand. */
 export function Seal({
   size = 64,

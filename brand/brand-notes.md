@@ -2,7 +2,7 @@
 
 Single source of truth for TrackTub's visual identity. Dev consumes tokens + SVGs from this `brand/` dir. Mirrors the structure of a working brand spec — palette, type, logo, voice.
 
-> **Status:** updated 2026-06-07. Direction: **minimal & sharp** (Linear/Vercel register), dark-first — now with a **hot-tub identity** carried by the mark and a **blue "water" brand color**. The mark is a verified check on a waterline; the wordmark sets "Tub" in blue. See `brand/logo/README.md` for the full package + usage rules.
+> **Status:** updated 2026-06-07. Direction: **minimal & sharp** (Linear/Vercel register), dark-first — now with a **hot-tub identity** carried by the mark and a **blue "water" brand color**. The mark is a verified check on a waterline; the wordmark sets "Tub" in blue. See `branding/README.md` for the full package + usage rules.
 >
 > **Change note:** earlier notes said "never aqua/water." That is superseded. We now embrace the hot tub as **subject matter** — a measured vessel of water, drawn sharp and technical — while still avoiding the **spa/wellness/relaxation mood**. Subject: yes. Candlelit-spa vibe: no.
 
@@ -58,17 +58,17 @@ Dark-first (the product presents dark, like Linear). Light mode is fully support
 
 - **Display + UI:** **Inter** (400/500/600/700), tight tracking on headings (−0.02 to −0.035em).
 - **Proof metadata:** **JetBrains Mono** (400/500) — timestamps, IDs, geofence, and the signature `✓ VERIFIED` tag. The mono is the "machine record" tell.
-- Production wordmark = Inter 600 **outlined to paths** (shipped in `brand/logo/wordmark/`; the app header uses live `next/font`).
+- Production wordmark = Inter 600 **outlined to paths** (shipped in `branding/logo/wordmark/`; the app header uses live `next/font`).
 
 ## Logo & mark
 
-Files in `brand/logo/` (see `brand/logo/README.md`).
+Files in `branding/` (see `branding/README.md`).
 
 - **Primary mark:** a **verified check on a waterline** — white/ink check (the record) over a trust-blue `#3B82F6` wavy water (the tub). Square caps, two-tone by role (check vs water), no green.
 - **Favicon / app-icon recut:** one bold wave + a thicker check, because the fine ripples wash out below ~24px. Self-contained dark tile so it reads on any background.
 - **Wordmark:** `TrackTub`, Inter 600 — "Track" in ink/white, **"Tub" in blue**.
 - **Lockups:** horizontal (mark + wordmark) and stacked (mark over wordmark), four treatments each.
-- **Reusable device:** the waterline wave (`brand/device/waterline.svg`) for dividers, footers, section breaks.
+- **Reusable device:** the waterline wave (`branding/device/waterline.svg`) for dividers, footers, section breaks.
 - **Clear space:** ≥ the height of the check's short arm on all sides. **Min size:** mark 16px; horizontal wordmark 96px wide.
 - **Don't:** recolor outside the palette, make the check green, add gradients/shadows/gloss, round the caps, or place the full-color mark on a busy photo.
 
@@ -95,7 +95,7 @@ A monospace tag — `✓ VERIFIED` in **green** on a dim green fill — plus a m
 | Wordmark/lockup outlining + all rasters (PNG/ICO) | `brand/scripts/export.mjs` (sharp + opentype.js) | Claude |
 | Color + type tokens | **Code** (`brand/tokens.css`, app `globals.css`) | Claude |
 | App / PWA UI | **Code** | Claude + app agents |
-| OG / social / X cards | Generated SVG → PNG (`brand/social/`) | Claude |
+| OG / social / X cards | Generated SVG → PNG (`branding/social/`) | Claude |
 | Hero / marketing imagery | **Nano Banana Pro** | Claude (needs key) |
 | Social posts, one-pagers, slides | **Canva** (import the SVG/PNG, never Canva stock) | Founder |
 
