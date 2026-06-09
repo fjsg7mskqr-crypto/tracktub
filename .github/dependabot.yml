@@ -1,0 +1,23 @@
+# Dependabot: weekly dependency PRs + security updates (alerts and automated
+# security fixes are enabled in repo settings). One batch per Monday keeps the
+# solo-dev review load predictable.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      # Non-major bumps arrive as a single PR; majors stay separate so a
+      # breaking Next/React upgrade is never buried in a batch.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
