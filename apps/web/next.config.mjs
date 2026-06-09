@@ -1,4 +1,5 @@
 import path from "node:path";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -41,6 +42,8 @@ function contentSecurityPolicy() {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
+    // Sentry session replay records via a worker created from a blob: URL.
+    "worker-src 'self' blob:",
     `connect-src ${connectSrc()}`,
     "object-src 'none'",
     "base-uri 'self'",
@@ -77,4 +80,18 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "supernova-r7",
+  project: "tracktub-web",
+
+  // Source-map upload happens only when the token is present (Vercel/CI env);
+  // local builds just skip it with a warning.
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  widenClientFileUpload: true,
+
+  // First-party ingest path so ad-blockers can't eat error reports. Must stay
+  // excluded from the auth-gating middleware matcher (src/middleware.ts).
+  tunnelRoute: "/monitoring",
+
+  silent: !process.env.CI,
+});
