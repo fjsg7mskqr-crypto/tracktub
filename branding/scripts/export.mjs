@@ -2,7 +2,7 @@
    package (SVG + PNG for every asset) plus the app build icons.
 
    Self-contained: all geometry is defined here, so this script is the single
-   source of truth. Run: `cd brand/scripts && npm install && npm run export`.
+   source of truth. Run: `cd branding/scripts && npm install && npm run export`.
 
    Outputs:
      branding/logo/{mark,wordmark,lockup}/*.svg + *.png   (4 treatments each)
