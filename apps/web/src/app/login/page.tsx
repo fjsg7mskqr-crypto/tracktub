@@ -3,26 +3,32 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-// Functional M1 login — plain elements + minimal inline styles. The UI/brand
-// track restyles this with shadcn/Tailwind once that foundation lands.
+// Functional sign-in — Google OAuth via Supabase. Plain elements + minimal
+// inline styles; the UI/brand track restyles this once that foundation lands.
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function signInWithGoogle() {
     setError(null);
     setPending(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      // Client-initiated PKCE stores a one-time code verifier in a cookie on the
+      // CURRENT origin, so the OAuth round-trip MUST return to that same origin.
+      // Do NOT use getURL() here: it prefers a fixed canonical URL
+      // (NEXT_PUBLIC_SITE_URL), which sends preview/non-canonical deployments to
+      // prod, where the verifier cookie is absent → session never minted →
+      // redirect loop back to /login. Always use the live browser origin.
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-    setPending(false);
-    if (error) setError(error.message);
-    else setSent(true);
+    // On success the browser is redirected to Google, so this line is only
+    // reached on error.
+    if (error) {
+      setError(error.message);
+      setPending(false);
+    }
   }
 
   return (
@@ -41,51 +47,28 @@ export default function LoginPage() {
       <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em" }}>
         Sign in to TrackTub
       </h1>
-      {sent ? (
-        <p style={{ color: "#8a8f98" }}>
-          Check your email for a sign-in link.
+      <button
+        type="button"
+        onClick={signInWithGoogle}
+        disabled={pending}
+        style={{
+          padding: "10px 12px",
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.14)",
+          background: "#ededef",
+          color: "#08090a",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: pending ? "default" : "pointer",
+          opacity: pending ? 0.6 : 1,
+        }}
+      >
+        {pending ? "Redirecting…" : "Continue with Google"}
+      </button>
+      {error && (
+        <p role="alert" style={{ color: "#ef4444", fontSize: 13 }}>
+          {error}
         </p>
-      ) : (
-        <form
-          onSubmit={submit}
-          style={{ display: "flex", flexDirection: "column", gap: 12 }}
-        >
-          <input
-            type="email"
-            required
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "#131417",
-              color: "#ededef",
-              fontSize: 14,
-            }}
-          />
-          <button
-            type="submit"
-            disabled={pending}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "#ededef",
-              color: "#08090a",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: pending ? "default" : "pointer",
-              opacity: pending ? 0.6 : 1,
-            }}
-          >
-            {pending ? "Sending…" : "Email me a sign-in link"}
-          </button>
-          {error && (
-            <p style={{ color: "#ef4444", fontSize: 13 }}>{error}</p>
-          )}
-        </form>
       )}
     </main>
   );

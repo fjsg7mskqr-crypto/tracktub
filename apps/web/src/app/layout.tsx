@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Shell } from "@/components/Shell";
+import { getURL } from "@/lib/url";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,7 +18,7 @@ const jbMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(getURL()),
   title: "TrackTub — guest-ready hot tub proof",
   description:
     "Dispute-grade turnover proof for short-term-rental operators. Capture, prove, share.",
