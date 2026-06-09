@@ -61,8 +61,8 @@ body += `<div class="section"><span class="label">Social &amp; marketing</span><
 
 body += `<div class="section"><span class="label">Print (SVG vector + 300-DPI PNG)</span>` +
   grid([
-    cell(lightTile(png("branding/print/tracktub-horizontal-color-300dpi.png", "width:100%;max-width:320px"), 130), "color · 300dpi"),
-    cell(lightTile(png("branding/print/tracktub-horizontal-black-300dpi.png", "width:100%;max-width:320px"), 130), "black · 300dpi"),
+    cell(lightTile(png("branding/print/tracktub-horizontal-color.png", "width:100%;max-width:320px"), 130), "color · 300dpi"),
+    cell(lightTile(png("branding/print/tracktub-horizontal-black.png", "width:100%;max-width:320px"), 130), "black · 300dpi"),
   ], 280) + `</div>`;
 
 body += `<div class="section"><span class="label">Color + device</span>` +
