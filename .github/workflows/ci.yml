@@ -13,9 +13,9 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -23,6 +23,13 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      # Advisory for now: high/critical advisories annotate the run instead of
+      # failing it. Revisit making this required once there's a week of signal
+      # (tracked in #39).
+      - name: Audit dependencies (advisory)
+        run: |
+          npm audit --audit-level=high || echo "::warning title=npm audit::High/critical advisories found — see the step output."
 
       - name: Lint
         run: npm run lint

@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnvSafe } from "@/lib/env";
 
@@ -74,6 +75,11 @@ export async function updateSession(request: NextRequest) {
 
     return response;
   } catch (err) {
+    // Surface the failure in Sentry — this fail-open path is exactly the
+    // 2026-06-08 outage class, previously visible only in Vercel logs.
+    // captureException never throws (and is a no-op without a DSN), so the
+    // fail-open guarantee holds.
+    Sentry.captureException(err);
     console.error(
       "[middleware] Supabase session check failed; passing the request through to avoid a site-wide 500. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY:",
       err,
