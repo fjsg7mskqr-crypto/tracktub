@@ -40,23 +40,64 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Make a skipped RLS gate VISIBLE: without secrets the RLS isolation suite
-      # silently skips, so annotate the run instead of letting green hide it.
-      - name: RLS gate status
-        env:
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "::warning title=RLS gate skipped::Supabase secrets not configured — the RLS isolation suite did NOT run. Add NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY as repository secrets to enforce it."
-          else
-            echo "RLS secrets present — the isolation suite will run."
-          fi
-
-      # Env unit tests run always; the RLS isolation suite runs only when the
-      # Supabase secrets are configured (otherwise it skips, see the step above).
-      - name: Test
+      # Fast unit suite (security headers, env, url, email, middleware-session).
+      # The RLS isolation suite (tests/rls.test.ts) self-skips here — without a
+      # service-role key it can't provision users — and runs for real in the
+      # dedicated `rls` job below against an ephemeral local Supabase. We do NOT
+      # wire the prod service-role key as a repo secret on purpose: that would
+      # point the suite's create/teardown at the shared production database.
+      - name: Test (unit)
         run: npm run test
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  # The M1 security gate, for real: boot a throwaway Supabase, apply migrations,
+  # and run the RLS isolation suite against it. Isolated from prod and parallel-
+  # safe (every run gets its own stack), so there's no shared-database foot-gun.
+  rls:
+    name: rls (isolation suite · ephemeral supabase)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: "2.95.4"
+
+      # Boots the local stack in Docker and applies every migration in
+      # supabase/migrations. Seeding is disabled in config.toml (the dev seed
+      # has unsubstituted :placeholders); the suite provisions its own data.
+      - name: Start local Supabase
+        run: supabase start
+
+      # The local stack's anon/service keys are static, non-secret demo JWTs.
+      # Feed them to the suite via the same env vars the app reads.
+      - name: Export local stack credentials
+        run: |
+          set -a; eval "$(supabase status -o env)"; set +a
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      - name: RLS isolation suite
+        run: npm run test:rls
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
