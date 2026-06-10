@@ -17,6 +17,7 @@ yarn-error.log*
 # Env / secrets
 .env
 .env.local
+.env.sentry-build-plugin
 .env.development.local
 .env.test.local
 .env.production.local

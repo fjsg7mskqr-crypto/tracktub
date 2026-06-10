@@ -1,13 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnvSafe } from "@/lib/env";
 
-/** Paths reachable without a session: the login form and the auth callback.
- *  Everything else requires a signed-in user. Public proof links (`/proof/*`)
- *  will rejoin this list in M2 once they read from Supabase via an anonymous
- *  `share_token` SELECT policy; until then the route serves only stale demo
- *  data, so it stays gated rather than publicly advertising a dead page. */
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+/** Paths reachable without a session: the login form, the auth callback, and
+ *  the marketing landing page. Everything else requires a signed-in user.
+ *  Public proof links (`/proof/*`) will rejoin this list in M2 once they read
+ *  from Supabase via an anonymous `share_token` SELECT policy; until then the
+ *  route serves only stale demo data, so it stays gated rather than publicly
+ *  advertising a dead page. */
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/landing"];
 
 /**
  * Refreshes the Supabase session on every request and gates protected routes.
@@ -64,7 +66,10 @@ export async function updateSession(request: NextRequest) {
 
     if (!user && !isPublic) {
       const url = request.nextUrl.clone();
-      url.pathname = "/login";
+      // Root is the authed cockpit; a logged-out visitor there is marketing
+      // traffic, so send them to the public landing page instead of a login
+      // wall. Deeper app paths keep redirecting to /login.
+      url.pathname = path === "/" ? "/landing" : "/login";
       // Carry any cookies refreshed above onto the redirect, matching the
       // canonical Supabase middleware (harmless today, correct if logic changes).
       const redirect = NextResponse.redirect(url);
@@ -74,6 +79,11 @@ export async function updateSession(request: NextRequest) {
 
     return response;
   } catch (err) {
+    // Surface the failure in Sentry — this fail-open path is exactly the
+    // 2026-06-08 outage class, previously visible only in Vercel logs.
+    // captureException never throws (and is a no-op without a DSN), so the
+    // fail-open guarantee holds.
+    Sentry.captureException(err);
     console.error(
       "[middleware] Supabase session check failed; passing the request through to avoid a site-wide 500. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY:",
       err,

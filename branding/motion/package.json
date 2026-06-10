@@ -1,0 +1,23 @@
+{
+  "name": "tracktub-brand-motion",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Short brand-reveal motion video for TrackTub (Remotion).",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render",
+    "still": "remotion still"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.474",
+    "@remotion/google-fonts": "^4.0.474",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.474"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "typescript": "^5.9.3"
+  }
+}
