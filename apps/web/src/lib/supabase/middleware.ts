@@ -7,7 +7,7 @@ import { getEnvSafe } from "@/lib/env";
  *  will rejoin this list in M2 once they read from Supabase via an anonymous
  *  `share_token` SELECT policy; until then the route serves only stale demo
  *  data, so it stays gated rather than publicly advertising a dead page. */
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/landing"];
 
 /**
  * Refreshes the Supabase session on every request and gates protected routes.
