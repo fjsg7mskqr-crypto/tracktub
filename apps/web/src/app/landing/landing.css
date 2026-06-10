@@ -163,13 +163,17 @@
 }
 .tt-landing .navlinks {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   margin-left: 24px;
-  font-size: 14px;
-  font-weight: 500;
 }
+/* Mono + uppercase + tracked, matching the rest of the app's nav (globals.css .navlinks). */
 .tt-landing .navlinks a {
   color: var(--slate4);
+  font-family: var(--lmono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .tt-landing .navlinks a:hover {
   color: var(--white);
