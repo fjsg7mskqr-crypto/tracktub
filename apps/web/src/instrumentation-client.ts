@@ -1,9 +1,12 @@
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  // No DSN (local dev, or before the Sentry project exists) disables the SDK
-  // cleanly — the app runs exactly as before. Issue #37 tracks provisioning.
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  // The DSN is public by design (it only addresses where events are sent), so
+  // it ships in code — no per-environment Vercel config or redeploy needed.
+  // Env still overrides it, e.g. to split projects per tier later.
+  dsn:
+    process.env.NEXT_PUBLIC_SENTRY_DSN ??
+    "https://95ef95ac9eefd2ee1f0c31b83284943b@o4510660925718528.ingest.us.sentry.io/4511538300846080",
 
   // Vercel: "production" | "preview" | "development". prod is the only tier
   // wired to the Production environment, so alerts can filter on it.
