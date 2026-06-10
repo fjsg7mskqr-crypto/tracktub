@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-label="TrackTub">
-  <!-- favicon = self-contained dark tile (reads on any tab color) + bold recut mark -->
-  <rect width="64" height="64" rx="14" fill="#08090A"/>
-  <g transform="translate(32 32) scale(0.8) translate(-33 -30.75)">
-    <path d="M9 42 q8 -5.5 16 0 t16 0 t16 0" stroke="#3B82F6" stroke-width="4" fill="none"/>
-    <path d="M15 29 L27 41" stroke="#EDEDEF" stroke-width="8" stroke-linecap="square"/>
-    <path d="M27 41 L50 14" stroke="#EDEDEF" stroke-width="8" stroke-linecap="square"/>
-  </g>
-</svg>

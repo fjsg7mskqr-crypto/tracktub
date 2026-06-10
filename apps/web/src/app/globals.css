@@ -1,5 +1,33 @@
+/* Tailwind v4 — theme + utilities only (Preflight intentionally EXCLUDED so the
+   hand-rolled demo/auth pages can't regress). The legacy stylesheet below is
+   wrapped in a low-priority `legacy` cascade layer so the landing's Tailwind
+   utilities win where they overlap, while the demo (which uses none of them) is
+   untouched. Layer order: utilities is last = highest. */
+@layer theme, base, components, legacy, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-base: #08090a;
+  --color-surface: #131417;
+  --color-surface-2: #191b20;
+  --color-hi: #ededef;
+  --color-lo: #8a8f98;
+  --color-dim: #5f646e;
+  --color-water: #3b82f6;
+  --color-water-2: #60a5fa;
+  --color-water-3: #93c5fd;
+  --color-water-ink: #2563eb;
+  --color-verified: #34d399;
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-line-2: rgba(255, 255, 255, 0.17);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, monospace;
+}
+
+@layer legacy {
 /* TrackTub — minimal & sharp, dark-first (Linear/Vercel register).
-   Source of truth: brand/brand-notes.md + brand/tokens.css.
+   Source of truth: branding/brand-notes.md + branding/tokens.css.
    Near-monochrome surfaces + one accent. Green is reserved for
    verified/success ONLY — never decoration. */
 
@@ -661,3 +689,5 @@ select.input {
     padding-top: 2px;
   }
 }
+}
+/* end @layer legacy */
