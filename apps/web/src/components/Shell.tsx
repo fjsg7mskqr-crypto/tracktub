@@ -17,8 +17,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const db = useDB();
   const pathname = usePathname() ?? "/";
 
-  // Public proof links render with no operator chrome (no login, no nav).
-  if (pathname.startsWith("/proof")) return <>{children}</>;
+  // Public pages render with no operator chrome (no login, no demo nav): the
+  // marketing landing and shareable proof links each bring their own layout.
+  if (pathname.startsWith("/proof") || pathname.startsWith("/landing"))
+    return <>{children}</>;
 
   return (
     <>
