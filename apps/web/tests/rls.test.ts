@@ -345,4 +345,134 @@ describe.skipIf(!ready)("RLS isolation", () => {
       .single();
     expect(after?.action).toBe("INSERT");
   }, 30_000);
+
+  // ── Anon proof link access ─────────────────────────────────────────────────
+  describe("Proof link — anon access", () => {
+    const anonClient = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as ReturnType<typeof createClient<Database>>);
+
+    let proofOrgId: string;
+    let proofTurnoverLockedId: string;
+    let proofShareToken: string;
+    let proofTurnoverDraftId: string;
+    let proofPhotoId: string;
+
+    beforeAll(async () => {
+      const { data: org } = await admin
+        .from("org")
+        .insert({ name: "RLS Proof Org" })
+        .select("id")
+        .single();
+      proofOrgId = org!.id;
+      createdOrgIds.push(proofOrgId);
+
+      const proofOperator = await makeUser("proofop");
+      await admin
+        .from("membership")
+        .insert({ user_id: proofOperator.id, org_id: proofOrgId, role: "operator" });
+
+      const { data: prop } = await admin
+        .from("property")
+        .insert({ org_id: proofOrgId, name: "Proof Test Property" })
+        .select("id")
+        .single();
+
+      proofShareToken = randomUUID();
+      const { data: locked } = await admin
+        .from("turnover")
+        .insert({
+          property_id: prop!.id,
+          submitter_id: proofOperator.id,
+          status: "submitted_locked",
+          share_token: proofShareToken,
+          urgent: false,
+          notes: "",
+        })
+        .select("id")
+        .single();
+      proofTurnoverLockedId = locked!.id;
+
+      const { data: ph } = await admin
+        .from("photo")
+        .insert({ turnover_id: proofTurnoverLockedId, slot: "wide" })
+        .select("id")
+        .single();
+      proofPhotoId = ph!.id;
+
+      await admin
+        .from("issue_tag")
+        .insert({ turnover_id: proofTurnoverLockedId, tag: "foam", source: "human" });
+
+      const { data: draft } = await admin
+        .from("turnover")
+        .insert({
+          property_id: prop!.id,
+          submitter_id: proofOperator.id,
+          status: "draft",
+          share_token: null,
+          urgent: false,
+          notes: "",
+        })
+        .select("id")
+        .single();
+      proofTurnoverDraftId = draft!.id;
+    });
+
+    it("anon can read a locked turnover via its share_token", async () => {
+      const { data, error } = await anonClient
+        .from("turnover")
+        .select("id, share_token, status")
+        .eq("share_token", proofShareToken)
+        .single();
+      expect(error).toBeNull();
+      expect(data?.id).toBe(proofTurnoverLockedId);
+      expect(data?.status).toBe("submitted_locked");
+    });
+
+    it("anon cannot read a draft turnover (no share_token)", async () => {
+      const { data } = await anonClient
+        .from("turnover")
+        .select("id")
+        .eq("id", proofTurnoverDraftId);
+      expect(data).toHaveLength(0);
+    });
+
+    it("anon can read photos of a locked shared turnover", async () => {
+      const { data, error } = await anonClient
+        .from("photo")
+        .select("id")
+        .eq("turnover_id", proofTurnoverLockedId);
+      expect(error).toBeNull();
+      expect(data?.length).toBeGreaterThan(0);
+      expect(data?.[0].id).toBe(proofPhotoId);
+    });
+
+    it("anon cannot read photos of a draft/non-shared turnover", async () => {
+      const { data } = await anonClient
+        .from("photo")
+        .select("id")
+        .eq("turnover_id", proofTurnoverDraftId);
+      expect(data).toHaveLength(0);
+    });
+
+    it("anon can read issue tags of a locked shared turnover", async () => {
+      const { data, error } = await anonClient
+        .from("issue_tag")
+        .select("tag")
+        .eq("turnover_id", proofTurnoverLockedId);
+      expect(error).toBeNull();
+      expect(data?.map((i) => i.tag)).toContain("foam");
+    });
+
+    it("anon cannot read issue tags of a draft/non-shared turnover", async () => {
+      const { data } = await anonClient
+        .from("issue_tag")
+        .select("tag")
+        .eq("turnover_id", proofTurnoverDraftId);
+      expect(data).toHaveLength(0);
+    });
+  });
 });
