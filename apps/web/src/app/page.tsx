@@ -1,10 +1,10 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Icon } from "@/components/Icon";
+import { photoPublicUrl } from "@/lib/supabase/storage";
+import { timeAgo } from "@/lib/format";
 
-// M1 proof-of-life dashboard. Server component: it reads the signed-in user's
-// org membership and visible properties THROUGH RLS — what renders here is
-// exactly what the database lets this user see. Styling is intentionally minimal
-// (the UI/brand track owns the visual shell).
 export default async function Home() {
   const supabase = await createClient();
   const {
@@ -12,92 +12,116 @@ export default async function Home() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: memberships }, { data: orgs }, { data: properties }] =
-    await Promise.all([
-      supabase.from("membership").select("role, org_id"),
-      supabase.from("org").select("id, name"),
-      supabase.from("property").select("id, name, address"),
-    ]);
+  const { data: properties } = await supabase
+    .from("property")
+    .select(
+      `id, name, address,
+       turnover(
+         id, submitted_at_server, status, urgent,
+         photo(slot, storage_path),
+         issue_tag(tag, confirmed_at)
+       )`
+    )
+    .order("created_at");
 
-  const orgName = new Map((orgs ?? []).map((o) => [o.id, o.name]));
+  const cockpit = (properties ?? []).map((p) => {
+    const locked = (p.turnover ?? [])
+      .filter((t) => t.status === "submitted_locked")
+      .sort((a, b) =>
+        b.submitted_at_server.localeCompare(a.submitted_at_server)
+      );
+    const last = locked[0] ?? null;
+    const openIssues = last
+      ? (last.issue_tag ?? []).filter((i) => !i.confirmed_at).length
+      : 0;
+    return { ...p, last, openIssues };
+  });
 
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "40px 24px" }}>
-      <h1
-        style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.01em" }}
-      >
-        Backend skeleton{" "}
-        <span style={{ color: "#34d399" }}>✓</span>
-      </h1>
-      <p style={{ marginTop: 4, color: "#8a8f98" }}>{user.email}</p>
+    <div className="stack">
+      <div className="spread pagehead">
+        <h1>Cockpit</h1>
+        <Link href="/add-property" className="btn primary">
+          <Icon name="plus" size={15} /> Add property
+        </Link>
+      </div>
 
-      <section style={{ marginTop: 24 }}>
-        <h2 style={{ fontSize: 13, color: "#8a8f98", fontWeight: 500 }}>
-          Memberships
-        </h2>
-        {memberships && memberships.length > 0 ? (
-          <ul style={{ marginTop: 8, listStyle: "none", padding: 0 }}>
-            {memberships.map((m, i) => (
-              <li
-                key={i}
-                style={{ fontSize: 14, fontFamily: "var(--font-jbmono, monospace)" }}
-              >
-                {orgName.get(m.org_id) ?? m.org_id} ·{" "}
-                <span style={{ color: "#34d399" }}>{m.role}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p style={{ marginTop: 8, color: "#8a8f98", fontSize: 14 }}>
-            No org membership yet — seed one for this user (see
-            supabase/seed.sql).
+      {cockpit.length === 0 ? (
+        <div
+          className="card pad stack"
+          style={{ textAlign: "center", padding: "40px 24px" }}
+        >
+          <p className="muted">
+            No properties yet. Add your first to start logging turnovers.
           </p>
-        )}
-      </section>
-
-      <section style={{ marginTop: 24 }}>
-        <h2 style={{ fontSize: 13, color: "#8a8f98", fontWeight: 500 }}>
-          Properties visible to you ({properties?.length ?? 0})
-        </h2>
-        <ul style={{ marginTop: 8, listStyle: "none", padding: 0 }}>
-          {(properties ?? []).map((p) => (
-            <li
-              key={p.id}
-              style={{
-                padding: "12px 14px",
-                marginTop: 8,
-                borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.09)",
-                background: "#131417",
-              }}
-            >
-              <div style={{ fontSize: 15, fontWeight: 500 }}>{p.name}</div>
-              {p.address && (
-                <div style={{ fontSize: 13, color: "#8a8f98", marginTop: 2 }}>
-                  {p.address}
+          <Link
+            href="/add-property"
+            className="btn primary"
+            style={{ alignSelf: "center" }}
+          >
+            Add your first property →
+          </Link>
+        </div>
+      ) : (
+        <div className="stack">
+          {cockpit.map((p) => (
+            <Link key={p.id} href={`/p/${p.id}`} className="card card-link pad">
+              <div className="spread" style={{ marginBottom: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 16 }}>{p.name}</div>
+                  {p.address && (
+                    <div className="small dim" style={{ marginTop: 2 }}>
+                      {p.address}
+                    </div>
+                  )}
+                </div>
+                <div
+                  className="row wrap"
+                  style={{ justifyContent: "flex-end" }}
+                >
+                  {p.last?.urgent && (
+                    <span className="badge danger">Urgent</span>
+                  )}
+                  {p.openIssues > 0 ? (
+                    <span className="badge warn">
+                      {p.openIssues} issue{p.openIssues > 1 ? "s" : ""}
+                    </span>
+                  ) : p.last ? (
+                    <span className="badge ok">● Guest-ready</span>
+                  ) : (
+                    <span className="badge">No turnovers yet</span>
+                  )}
+                </div>
+              </div>
+              {p.last && (
+                <div className="small dim">
+                  Last turnover {timeAgo(p.last.submitted_at_server)}
                 </div>
               )}
-            </li>
+              {p.last?.photo && p.last.photo.length > 0 && (
+                <div className="photos" style={{ marginTop: 10 }}>
+                  {p.last.photo
+                    .filter((ph) => ph.storage_path)
+                    .slice(0, 4)
+                    .map((ph) => (
+                      <img
+                        key={ph.slot}
+                        src={photoPublicUrl(ph.storage_path!)}
+                        alt={ph.slot}
+                        style={{
+                          width: 64,
+                          height: 64,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                        }}
+                      />
+                    ))}
+                </div>
+              )}
+            </Link>
           ))}
-        </ul>
-      </section>
-
-      <form action="/auth/signout" method="post" style={{ marginTop: 28 }}>
-        <button
-          type="submit"
-          style={{
-            fontSize: 13,
-            color: "#8a8f98",
-            background: "none",
-            border: "none",
-            textDecoration: "underline",
-            cursor: "pointer",
-            padding: 0,
-          }}
-        >
-          Sign out
-        </button>
-      </form>
-    </main>
+        </div>
+      )}
+    </div>
   );
 }
