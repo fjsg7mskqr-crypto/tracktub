@@ -402,6 +402,10 @@ describe.skipIf(!ready)("RLS isolation", () => {
         .single();
       proofPhotoId = ph!.id;
 
+      await admin
+        .from("issue_tag")
+        .insert({ turnover_id: proofTurnoverLockedId, tag: "foam", source: "human" });
+
       const { data: draft } = await admin
         .from("turnover")
         .insert({
@@ -450,6 +454,23 @@ describe.skipIf(!ready)("RLS isolation", () => {
       const { data } = await anonClient
         .from("photo")
         .select("id")
+        .eq("turnover_id", proofTurnoverDraftId);
+      expect(data).toHaveLength(0);
+    });
+
+    it("anon can read issue tags of a locked shared turnover", async () => {
+      const { data, error } = await anonClient
+        .from("issue_tag")
+        .select("tag")
+        .eq("turnover_id", proofTurnoverLockedId);
+      expect(error).toBeNull();
+      expect(data?.map((i) => i.tag)).toContain("foam");
+    });
+
+    it("anon cannot read issue tags of a draft/non-shared turnover", async () => {
+      const { data } = await anonClient
+        .from("issue_tag")
+        .select("tag")
         .eq("turnover_id", proofTurnoverDraftId);
       expect(data).toHaveLength(0);
     });
