@@ -30,7 +30,7 @@ This work realigns the public story to that ICP, expands the landing with the co
 - Actor language: **"you or your cleaner"** (not "your cleaners").
 - Proof/evidence/dispute language stays — but as the *reassuring closer*, never the opener.
 - Keep claims honest: chemistry/prevention is gated (PRD §8.8) — present it as light and forward-looking, not a shipped guarantee.
-- Founder authenticity is a primary asset: **the builder is the buyer.**
+- Founder authenticity is real (the builder is the buyer), but kept subtle — no dedicated bio section (see §11 Parked); let the product lead.
 
 ## 4. Landing information architecture
 
@@ -64,20 +64,16 @@ Links: **How it works · Why it matters · Pricing · FAQ** · Sign in · **Get 
 - **sub:** Four photos become a record you can actually stand behind.
 - Cards unchanged: 4 guided photos · server timestamp · tamper-proof record · one-tap share link · captured on-site · **dispute-ready export** (the closer).
 
-### 6. Built by an operator ✅ (real photo ⏳ #69)
-- **eyebrow:** Built by an operator · **header:** Made by a hot-tub tech who runs these turnovers.
-- **body:** "I'm Ethan — I service hot tubs for short-term rentals in a seasonal market, where the Airbnbs never stop and the spa companies are booked solid. I built TrackTub because paper logs and a camera roll full of photos weren't proof of anything when a guest or owner had a question. I use it on my own turnovers first. If it doesn't make my job easier, it doesn't ship."
-
-### 7. Stays guest-ready — prevention, light ✅
+### 6. Stays guest-ready — prevention, light ✅
 - **eyebrow:** More than a clean · **header:** A tub that stays guest-ready between guests.
 - **body:** Back-to-back bookings are when water chemistry crashes. TrackTub uses the photos you already take to flag cloudy water and nudge you when a heavy weekend means the tub needs attention — so the next guest steps into a tub that's actually ready. *(Rolling out as we learn what hosts need most.)*
 
-### 8. Pricing ✅ (reframe Free)
+### 7. Pricing ✅ (reframe Free)
 - **header:** Start free. Add properties when you grow.
 - **Free** — Your first property, free. All features, 1 property.
 - **Pro** — $12 / property / mo, 2+ properties. Multi-property cockpit + dispute-ready exports.
 
-### 9. FAQ ✅
+### 8. FAQ ✅
 - **Do I need a cleaner to use this?** No. Use it yourself, or hand the guided capture to whoever does your turnover — it's built for one-person operations.
 - **What does my guest or owner see?** A clean, read-only link with the photos, timestamp, and verification — no login, nothing to install.
 - **I already take photos. Why this?** Camera-roll photos aren't stamped on a trusted clock, locked against edits, or shareable as proof. TrackTub makes them count.
@@ -85,12 +81,12 @@ Links: **How it works · Why it matters · Pricing · FAQ** · Sign in · **Get 
 - **What about privacy?** The photos are yours. Share links show only what you choose to send; nothing is public.
 - **Do I need to know hot tub chemistry?** No — the guided set is just photos. Simple water reminders are coming to help, not to require expertise.
 
-### 10. Early access + demo ✅ (video ⏳ Remotion)
+### 9. Early access + demo ✅ (video ⏳ Remotion)
 - **eyebrow:** Launching soon · building in public · **header:** Be one of the first hosts on TrackTub.
 - **body:** We're onboarding hosts in small batches and shipping in the open. Join the early-access list, then follow the build on X.
 - Waitlist + Follow @tracktub on X. Reserve a slot for the demo video.
 
-### 11. Footer ✅ — keep.
+### 10. Footer ✅ — keep.
 
 ## 5. PRD changes
 
@@ -122,13 +118,17 @@ Links: **How it works · Why it matters · Pricing · FAQ** · Sign in · **Get 
 ## 9. Success criteria
 
 - Landing leads with peace of mind for the self-managed host; "you or your cleaner" throughout; proof is the closer.
-- New sections present (why-it-matters, how-it-works, built-by-operator, FAQ); founder credibility prominent.
+- New sections present (why-it-matters, how-it-works, FAQ).
 - PRD §1/§3/§14 + the marketing spec reflect the locked ICP — the repo finally matches the decision.
 - Live on prod; waitlist works; no new CSP violations.
 
 ## 10. Assumptions (correct any)
 
 - Glassmorphism aesthetic unchanged; this is copy + content + docs.
-- Founder blurb is first-person "Ethan" — confirm name/voice.
+- Founder/credibility section is **parked** (not shipping) — see §11.
 - Pilot photo + demo video are placeholders; swap when assets land (#69 / Remotion).
 - Pricing numbers unchanged ($0 / $12).
+
+## 11. Parked (not shipping now)
+
+- **Founder / "built by an operator" section** — cut from the landing at the founder's request (2026-06-11). Drafted blurb kept here for a possible future About page or social bio: *"I'm Ethan — I service hot tubs for short-term rentals in a seasonal market… I built TrackTub because paper logs and a camera roll full of photos weren't proof of anything. I use it on my own turnovers first. If it doesn't make my job easier, it doesn't ship."* Founder credibility instead rides quietly in the "building in public / early access" framing.
