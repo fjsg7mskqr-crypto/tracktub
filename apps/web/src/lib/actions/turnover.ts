@@ -58,9 +58,14 @@ export async function submitTurnoverAction(
       (formData.get(`capturedAt_${slot}`) as string | null) ??
       new Date().toISOString();
     const tagsRaw = formData.get(`tags_${slot}`) as string | null;
-    const confirmedTags: string[] = tagsRaw
-      ? (JSON.parse(tagsRaw) as string[])
-      : [];
+    let confirmedTags: string[] = [];
+    if (tagsRaw) {
+      try {
+        confirmedTags = JSON.parse(tagsRaw) as string[];
+      } catch {
+        // Malformed tags payload; proceed without tags
+      }
+    }
 
     const storagePath = `${property.org_id}/${turnover.id}/${slot}`;
     const { error: upErr } = await supabase.storage

@@ -28,7 +28,7 @@ export default async function Home() {
     const locked = (p.turnover ?? [])
       .filter((t) => t.status === "submitted_locked")
       .sort((a, b) =>
-        b.submitted_at_server.localeCompare(a.submitted_at_server)
+        (b.submitted_at_server ?? "").localeCompare(a.submitted_at_server ?? "")
       );
     const last = locked[0] ?? null;
     const openIssues = last
