@@ -816,19 +816,109 @@
   background: linear-gradient(135deg, var(--blue), var(--blue2));
 }
 
-/* single-column prose panel (prevention section) */
-.tt-landing .panel {
-  padding: 26px 30px;
-  max-width: 760px;
+/* prevention panel — text + image, two columns */
+.tt-landing .readypanel {
+  padding: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
 }
-.tt-landing .panel p {
+.tt-landing .readypanel .ptext {
+  padding: 28px 30px;
+  align-self: center;
+}
+.tt-landing .readypanel .ptext p {
   color: var(--slate3);
   font-size: 16px;
   margin: 0;
 }
-.tt-landing .panel em {
+.tt-landing .readypanel .ptext em {
   color: var(--slate4);
   font-style: normal;
+}
+.tt-landing .readypanel .pimg {
+  background-size: cover;
+  background-position: center;
+  min-height: 230px;
+  border-left: 1px solid var(--gline);
+}
+
+/* lifestyle band — wide image, dark overlay, caption */
+.tt-landing .band {
+  position: relative;
+  overflow: hidden;
+  min-height: 340px;
+  display: flex;
+  align-items: flex-end;
+  background-size: cover;
+  background-position: center 38%;
+}
+.tt-landing .band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, rgba(8, 9, 10, 0.93) 6%, rgba(8, 9, 10, 0.55) 46%, rgba(8, 9, 10, 0.18));
+}
+.tt-landing .bandcopy {
+  position: relative;
+  z-index: 1;
+  padding: 32px 34px 34px;
+  max-width: 520px;
+}
+.tt-landing .bandcopy h2 {
+  font-size: 30px;
+  font-weight: 700;
+}
+.tt-landing .bandcopy p {
+  color: var(--slate3);
+  font-size: 15.5px;
+  margin-top: 9px;
+}
+
+/* gallery strip */
+.tt-landing .gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.tt-landing .gimg {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--gline2);
+  background-size: cover;
+  background-position: center;
+}
+.tt-landing .gimg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent 55%);
+}
+.tt-landing .gcap {
+  position: absolute;
+  left: 13px;
+  bottom: 11px;
+  z-index: 1;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: #fff;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.8);
+}
+@media (max-width: 880px) {
+  .tt-landing .readypanel {
+    grid-template-columns: 1fr;
+  }
+  .tt-landing .readypanel .pimg {
+    min-height: 180px;
+    border-left: none;
+    border-top: 1px solid var(--gline);
+  }
+  .tt-landing .gallery {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 /* FAQ accordion — native <details>, no JS */

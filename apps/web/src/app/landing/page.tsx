@@ -216,6 +216,16 @@ export default function Landing() {
           </div>
         </div>
 
+        {/* LIFESTYLE BAND */}
+        <div className="section">
+          <div className="glass band" style={{ backgroundImage: "url(/landing/cabin.jpg)" }}>
+            <div className="bandcopy">
+              <h2>Built for the way you actually host.</h2>
+              <p>One person, a few places, a tub that has to be right before every guest checks in.</p>
+            </div>
+          </div>
+        </div>
+
         {/* FEATURE SHOWCASE */}
         <div className="section" id="record">
           <span className="eyebrow">What&rsquo;s in the record</span>
@@ -409,12 +419,34 @@ export default function Landing() {
           <div className="sechead">
             <h2>A tub that stays guest-ready between guests.</h2>
           </div>
-          <div className="glass panel">
-            <p>
-              Back-to-back bookings are when water chemistry crashes. TrackTub uses the photos you already take to
-              flag cloudy water and nudge you when a heavy weekend means the tub needs attention — so the next guest
-              steps into a tub that&rsquo;s actually ready. <em>(Rolling out as we learn what hosts need most.)</em>
-            </p>
+          <div className="glass readypanel">
+            <div className="ptext">
+              <p>
+                Back-to-back bookings are when water chemistry crashes. TrackTub uses the photos you already take to
+                flag cloudy water and nudge you when a heavy weekend means the tub needs attention — so the next guest
+                steps into a tub that&rsquo;s actually ready. <em>(Rolling out as we learn what hosts need most.)</em>
+              </p>
+            </div>
+            <div className="pimg" style={{ backgroundImage: "url(/landing/water.jpg)" }} aria-hidden="true" />
+          </div>
+        </div>
+
+        {/* GALLERY */}
+        <div className="section">
+          <span className="eyebrow">Every kind of tub</span>
+          <div className="sechead">
+            <h2>From a mountain deck to a snowy cabin.</h2>
+          </div>
+          <div className="gallery">
+            <div className="gimg" style={{ backgroundImage: "url(/landing/full.jpg)" }}>
+              <span className="gcap">Mountain rental</span>
+            </div>
+            <div className="gimg" style={{ backgroundImage: "url(/landing/cover.jpg)" }}>
+              <span className="gcap">Cold-weather cabin</span>
+            </div>
+            <div className="gimg" style={{ backgroundImage: "url(/landing/tub-garden.jpg)" }}>
+              <span className="gcap">Backyard retreat</span>
+            </div>
           </div>
         </div>
 
@@ -457,7 +489,7 @@ export default function Landing() {
                 ))}
               </ul>
               <a href="#join" className="btn" style={{ width: "100%", justifyContent: "center" }}>
-                Join the waitlist
+                Get early access
               </a>
             </div>
           </div>
