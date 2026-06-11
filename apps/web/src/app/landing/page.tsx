@@ -431,25 +431,6 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* GALLERY */}
-        <div className="section">
-          <span className="eyebrow">Every kind of tub</span>
-          <div className="sechead">
-            <h2>From a mountain deck to a snowy cabin.</h2>
-          </div>
-          <div className="gallery">
-            <div className="gimg" style={{ backgroundImage: "url(/landing/full.jpg)" }}>
-              <span className="gcap">Mountain rental</span>
-            </div>
-            <div className="gimg" style={{ backgroundImage: "url(/landing/cover.jpg)" }}>
-              <span className="gcap">Cold-weather cabin</span>
-            </div>
-            <div className="gimg" style={{ backgroundImage: "url(/landing/tub-garden.jpg)" }}>
-              <span className="gcap">Backyard retreat</span>
-            </div>
-          </div>
-        </div>
-
         {/* PRICING */}
         <div className="section" id="pricing">
           <span className="eyebrow">Simple pricing</span>
