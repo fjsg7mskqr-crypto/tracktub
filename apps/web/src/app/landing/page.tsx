@@ -3,11 +3,12 @@ import Link from "next/link";
 import "./landing.css";
 import { Lockup, Mark, Waterline } from "./_marks";
 import { LandingWaitlist } from "./LandingWaitlist";
+import { Faq } from "./Faq";
 
 export const metadata: Metadata = {
-  title: "TrackTub — guest-ready hot tub proof for every turnover",
+  title: "TrackTub — know your hot tub was guest-ready",
   description:
-    "The dispute-grade evidence layer for short-term-rental hot-tub turnovers. Your cleaners capture it; you prove it; owners and guests trust it.",
+    "For self-managed STR hosts: capture each hot-tub turnover, lock it as tamper-proof proof, and share it in one tap. Free for your first property.",
 };
 
 const PLATES = [
@@ -29,21 +30,36 @@ function Check({ size = 11, color = "#04240f", w = 3.2 }: { size?: number; color
 export default function Landing() {
   return (
     <div className="tt-landing">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "TrackTub",
+            applicationCategory: "BusinessApplication",
+            description:
+              "Guest-ready hot tub proof for self-managed short-term-rental hosts.",
+            offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+          }),
+        }}
+      />
       <div className="wrap">
         {/* NAV */}
         <div className="nav glass">
           <Lockup className="brandlockup" />
           <div className="navlinks">
+            <a href="#why">Why it matters</a>
             <a href="#how">How it works</a>
             <a href="#pricing">Pricing</a>
-            <a href="#proof">The proof</a>
+            <a href="#faq">FAQ</a>
           </div>
           <div className="sp">
             <Link href="/login" className="btn ghost sm">
               Sign in
             </Link>
             <a href="#join" className="btn sm">
-              Join the waitlist
+              Get early access
             </a>
           </div>
         </div>
@@ -67,22 +83,23 @@ export default function Landing() {
           <div>
             <span className="chip">
               <span className="dot" />
-              The evidence layer for STR turnovers
+              For self-managed hosts with a hot tub
             </span>
             <h1 style={{ marginTop: 18 }}>
-              Guest-ready hot <span className="tub">tub</span> proof for every turnover.
+              Know your hot <span className="tub">tub</span> was guest-ready — without being there.
             </h1>
             <p className="sub">
-              Your cleaners shoot a guided four-photo set. TrackTub stamps it server-side, locks it, and turns it
-              into a tamper-proof link owners and guests actually trust.
+              Every turnover, you or your cleaner snap a quick guided photo set. TrackTub stamps the time, locks it,
+              and confirms it was taken on-site — so you always have proof the tub was clean, safe, and ready, and a
+              link to share the moment anyone asks.
             </p>
             <LandingWaitlist />
             <div className="trust">
               <span className="vchip">
                 <Check color="#34D399" w={3} />
-                Verified, human-confirmed
+                Free for your first property
               </span>
-              <span>Free for 1 property · ~$12/property at 2+</span>
+              <span>No app to install · ~$12/property at 2+</span>
             </div>
           </div>
 
@@ -132,12 +149,79 @@ export default function Landing() {
           <Waterline strokeWidth={1.6} />
         </div>
 
-        {/* FEATURE SHOWCASE */}
+        {/* WHY IT MATTERS */}
+        <div className="section" id="why">
+          <span className="eyebrow">Peace of mind</span>
+          <div className="sechead">
+            <h2>You can&rsquo;t be at every check-in. Now you don&rsquo;t have to be.</h2>
+          </div>
+          <div className="feat">
+            <div className="glass fcard">
+              <div className="ichip" style={{ background: "linear-gradient(135deg,#60A5FA,#2563EB)" }}>
+                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
+                  <path d="M5 12.5l4 4 9-10" />
+                </svg>
+              </div>
+              <h3>Know it got done</h3>
+              <p>A clear, guided routine every turnover, so nothing gets skipped — even when someone else does the clean.</p>
+            </div>
+            <div className="glass fcard">
+              <div className="ichip" style={{ background: "linear-gradient(135deg,#3B82F6,#1D4ED8)" }}>
+                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
+                  <path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z" />
+                  <circle cx="12" cy="10" r="2.6" />
+                </svg>
+              </div>
+              <h3>Know it was safe &amp; ready</h3>
+              <p>
+                Water level, clarity, and the control panel, captured every time.{" "}
+                <em>Coming: reminders so the water doesn&rsquo;t crash between back-to-back guests.</em>
+              </p>
+            </div>
+            <div className="glass fcard">
+              <div className="ichip" style={{ background: "linear-gradient(135deg,#93C5FD,#3B82F6)" }}>
+                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
+                  <path d="M7 3.5h7l4 4v13H7z" />
+                  <path d="M9.5 13l2 2 3.5-4" />
+                </svg>
+              </div>
+              <h3>Prove it if anyone asks</h3>
+              <p>A timestamped, locked record and a share link — for the owner, the guest, or an Airbnb claim.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* HOW IT WORKS */}
         <div className="section" id="how">
+          <span className="eyebrow">How it works</span>
+          <div className="sechead">
+            <h2>Three steps. Under ten minutes.</h2>
+          </div>
+          <div className="feat">
+            <div className="glass fcard">
+              <div className="ichip num">1</div>
+              <h3>Snap the guided set</h3>
+              <p>Full frame, water, control panel, cover — the same four shots every turnover, right from your phone. No app to install.</p>
+            </div>
+            <div className="glass fcard">
+              <div className="ichip num">2</div>
+              <h3>It locks itself</h3>
+              <p>TrackTub stamps the time on our clock, confirms it was on-site, and locks the record so it can&rsquo;t be edited or back-dated.</p>
+            </div>
+            <div className="glass fcard">
+              <div className="ichip num">3</div>
+              <h3>Share it or just relax</h3>
+              <p>Keep it as peace of mind, or send a one-tap link to an owner, guest, or Airbnb. They open it — no login.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* FEATURE SHOWCASE */}
+        <div className="section" id="record">
           <span className="eyebrow">What&rsquo;s in the record</span>
           <div className="sechead">
             <h2>Everything that rides along with every turnover</h2>
-            <p>Six things that turn four photos into a record that holds up in a dispute.</p>
+            <p>Four photos become a record you can actually stand behind.</p>
           </div>
           <div className="feat">
             {/* 1 — 4 guided photos */}
@@ -319,17 +403,32 @@ export default function Landing() {
           </div>
         </div>
 
+        {/* STAYS GUEST-READY */}
+        <div className="section" id="ready">
+          <span className="eyebrow">More than a clean</span>
+          <div className="sechead">
+            <h2>A tub that stays guest-ready between guests.</h2>
+          </div>
+          <div className="glass panel">
+            <p>
+              Back-to-back bookings are when water chemistry crashes. TrackTub uses the photos you already take to
+              flag cloudy water and nudge you when a heavy weekend means the tub needs attention — so the next guest
+              steps into a tub that&rsquo;s actually ready. <em>(Rolling out as we learn what hosts need most.)</em>
+            </p>
+          </div>
+        </div>
+
         {/* PRICING */}
         <div className="section" id="pricing">
           <span className="eyebrow">Simple pricing</span>
           <div className="sechead">
-            <h2>Start free. Scale by the property.</h2>
+            <h2>Start free. Add properties when you grow.</h2>
           </div>
           <div className="price">
             <div className="glass pcard">
               <div className="k">Free</div>
               <div className="v">$0</div>
-              <div className="d">For your first property — all features.</div>
+              <div className="d">Your first property, free. All features.</div>
               <ul>
                 {["1 property", "Unlimited proofs & share links", "Server timestamp + tamper-proof record"].map((f) => (
                   <li key={f}>
@@ -364,16 +463,25 @@ export default function Landing() {
           </div>
         </div>
 
+        {/* FAQ */}
+        <div className="section" id="faq">
+          <span className="eyebrow">Questions</span>
+          <div className="sechead">
+            <h2>The stuff hosts ask first.</h2>
+          </div>
+          <Faq />
+        </div>
+
         {/* LAUNCH / CTA */}
         <div className="glass cta" id="join">
           <Mark className="markbig" />
           <span className="eyebrow" style={{ display: "block", marginBottom: 9 }}>
             Launching soon · building in public
           </span>
-          <h2>Get proof on every turnover — from day one.</h2>
+          <h2>Be one of the first hosts on TrackTub.</h2>
           <p>
-            We&rsquo;re onboarding operators in small batches and shipping in the open. Join the waitlist, then follow
-            the build on X.
+            We&rsquo;re onboarding hosts in small batches and shipping in the open. Join the early-access list, then
+            follow the build on X.
           </p>
           <LandingWaitlist />
           <a className="xfollow" href="https://x.com/tracktub" target="_blank" rel="noopener noreferrer">

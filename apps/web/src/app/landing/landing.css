@@ -807,6 +807,76 @@
   display: block;
 }
 
+/* numbered step chip — reuses the .ichip box inside the .feat grid */
+.tt-landing .ichip.num {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 20px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue), var(--blue2));
+}
+
+/* single-column prose panel (prevention section) */
+.tt-landing .panel {
+  padding: 26px 30px;
+  max-width: 760px;
+}
+.tt-landing .panel p {
+  color: var(--slate3);
+  font-size: 16px;
+  margin: 0;
+}
+.tt-landing .panel em {
+  color: var(--slate4);
+  font-style: normal;
+}
+
+/* FAQ accordion — native <details>, no JS */
+.tt-landing .faq {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 760px;
+}
+.tt-landing .faq details {
+  border: 1px solid var(--gline);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0 18px;
+}
+.tt-landing .faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 16px 0;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 15.5px;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tt-landing .faq summary::-webkit-details-marker {
+  display: none;
+}
+.tt-landing .faq summary::after {
+  content: "+";
+  font-family: var(--lmono);
+  font-size: 18px;
+  color: var(--bluel);
+  flex: none;
+}
+.tt-landing .faq details[open] summary::after {
+  content: "\2013";
+}
+.tt-landing .faq details p {
+  margin: 0 0 16px;
+  color: var(--slate4);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tt-landing * {
     animation: none !important;
