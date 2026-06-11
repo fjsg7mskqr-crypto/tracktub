@@ -1,95 +1,54 @@
-"use client";
-
-import { useState } from "react";
+import { createClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useDB, shareTurnover, toggleConfirmedTag } from "@/lib/store";
-import {
-  turnoverById,
-  propertyById,
-  userName,
-  currentUser,
-  issueTagsOf,
-  shareCount,
-  openCount,
-} from "@/lib/selectors";
-import { formatDateTime, timeAgo, tagLabel } from "@/lib/format";
-import { PhotoThumb } from "@/components/PhotoThumb";
-import { Seal } from "@/components/Seal";
 import { Icon } from "@/components/Icon";
+import { Seal } from "@/components/Seal";
+import { photoPublicUrl } from "@/lib/supabase/storage";
+import { formatDateTime } from "@/lib/format";
+import ProofActions from "./ProofActions";
 
-export default function TurnoverPage() {
-  const tid = String(useParams().id);
-  const db = useDB();
-  const [toast, setToast] = useState<string | null>(null);
-  const [summary, setSummary] = useState<string | null>(null);
+export default async function TurnoverPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: turnoverIdParam } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  function flash(msg: string) {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2000);
-  }
+  const { data: t } = await supabase
+    .from("turnover")
+    .select(
+      `id, submitted_at_server, urgent, notes, share_token, status,
+       property:property(id, name, address),
+       submitter:profile(full_name, email),
+       photos:photo(slot, storage_path, confirmed_tags),
+       issues:issue_tag(tag, source, confirmed_at)`
+    )
+    .eq("id", turnoverIdParam)
+    .single();
+  if (!t) notFound();
 
-  if (!db) return <div className="skeleton">Loading…</div>;
-  const t = turnoverById(db, tid);
-  if (!t)
-    return (
-      <div className="empty">
-        Turnover not found. <Link href="/">Back to cockpit</Link>
-      </div>
-    );
-
-  const p = propertyById(db, t.propertyId);
-  const me = currentUser(db);
-  const isOperator = me.role === "operator";
-  const issues = Array.from(new Set(issueTagsOf(t)));
-  const link =
-    (typeof window !== "undefined" ? window.location.origin : "") +
-    `/proof/${t.shareToken}`;
-
-  const pendingSuggestions = t.photos.flatMap((ph) =>
-    ph.suggestedTags
-      .filter((tag) => !ph.confirmedTags.includes(tag))
-      .map((tag) => ({ slot: ph.slot, tag }))
-  );
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(link);
-      flash("Proof link copied");
-    } catch {
-      flash("Copy failed — select the link manually");
-    }
-  }
-  function share(channel: string) {
-    shareTurnover(t!.id, channel);
-    flash(`Shared via ${channel}`);
-  }
-  function draftSummary() {
-    const issueLine = issues.length
-      ? `Issues noted: ${issues.map(tagLabel).join(", ")}.`
-      : "No issues — the tub was clean and guest-ready.";
-    setSummary(
-      `Turnover summary — ${p?.name}\n` +
-        `${formatDateTime(t!.submittedAtServer)}, completed by ${userName(db!, t!.submitterId)}.\n` +
-        `${issueLine}` +
-        (t!.notes ? `\nNotes: ${t!.notes}` : "") +
-        `\nProof: ${link}`
-    );
-  }
+  const property = Array.isArray(t.property) ? t.property[0] : t.property;
+  const submitter = Array.isArray(t.submitter) ? t.submitter[0] : t.submitter;
+  const submitterName = submitter?.full_name ?? submitter?.email ?? "Unknown";
+  const openIssues = (t.issues ?? []).filter((i) => !i.confirmed_at);
 
   return (
     <div className="stack" style={{ maxWidth: 720 }}>
       <div className="crumb">
         <Link href="/">Cockpit</Link> /{" "}
-        <Link href={`/p/${t.propertyId}`}>{p?.name}</Link> / Turnover
+        <Link href={`/p/${property?.id}`}>{property?.name}</Link> / Turnover
       </div>
 
       <div className="spread pagehead">
         <div>
-          <h1 style={{ fontSize: 21 }}>{p?.name}</h1>
+          <h1 style={{ fontSize: 21 }}>{property?.name}</h1>
           <div className="small muted" style={{ marginTop: 3 }}>
-            {formatDateTime(t.submittedAtServer)} ·{" "}
-            {userName(db, t.submitterId)}
+            {formatDateTime(t.submitted_at_server)} · {submitterName}
           </div>
         </div>
         <div className="row wrap" style={{ justifyContent: "flex-end" }}>
@@ -97,9 +56,9 @@ export default function TurnoverPage() {
             <Icon name="lock" size={12} /> Locked
           </span>
           {t.urgent && <span className="badge danger">Urgent</span>}
-          {issues.length > 0 ? (
+          {openIssues.length > 0 ? (
             <span className="badge warn">
-              {issues.map(tagLabel).join(", ")}
+              {openIssues.map((i) => i.tag).join(", ")}
             </span>
           ) : (
             <span className="badge ok">Clean</span>
@@ -109,9 +68,22 @@ export default function TurnoverPage() {
 
       <div className="card pad stack">
         <div className="photos">
-          {t.photos.map((ph) => (
-            <PhotoThumb key={ph.slot} photo={ph} enlargeable />
-          ))}
+          {(t.photos ?? [])
+            .filter((ph) => ph.storage_path)
+            .map((ph) => (
+              <img
+                key={ph.slot}
+                src={photoPublicUrl(ph.storage_path!)}
+                alt={ph.slot}
+                style={{
+                  width: 80,
+                  height: 80,
+                  objectFit: "cover",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+              />
+            ))}
         </div>
         {t.notes && (
           <div>
@@ -122,32 +94,6 @@ export default function TurnoverPage() {
           </div>
         )}
       </div>
-
-      {/* AI suggestions pending human confirmation */}
-      {isOperator && pendingSuggestions.length > 0 && (
-        <div className="card pad stack">
-          <div className="label" style={{ marginBottom: 0 }}>
-            AI suggestions awaiting confirmation{" "}
-            <span className="mock-tag">AI mock</span>
-          </div>
-          {pendingSuggestions.map(({ slot, tag }) => (
-            <div key={`${slot}:${tag}`} className="spread small">
-              <span>
-                AI flagged <strong>{tagLabel(tag)}</strong> on the {slot} shot
-              </span>
-              <button
-                className="btn sm"
-                onClick={() => {
-                  toggleConfirmedTag(t.id, slot, tag);
-                  flash("Confirmed");
-                }}
-              >
-                Confirm
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Proof — the differentiator */}
       <div className="card pad stack">
@@ -163,59 +109,10 @@ export default function TurnoverPage() {
           </span>
         </div>
 
-        <div className="row" style={{ gap: 8 }}>
-          <input className="input mono" readOnly value={link} />
-          <button className="btn" onClick={copyLink}>
-            <Icon name="link" size={14} /> Copy
-          </button>
-        </div>
-
-        {isOperator && (
-          <div className="row wrap">
-            <button
-              className="btn primary sm"
-              onClick={() => share("Owner email")}
-            >
-              <Icon name="share" size={15} /> Share with owner
-            </button>
-            <button className="btn sm" onClick={() => share("Guest / Airbnb")}>
-              <Icon name="share" size={15} /> Share with guest / Airbnb
-            </button>
-            <a
-              className="btn ghost sm"
-              href={link}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Icon name="link" size={15} /> Open public view
-            </a>
-          </div>
-        )}
-
-        {shareCount(t) > 0 ? (
-          <div className="stack" style={{ gap: 6 }}>
-            <div className="label" style={{ marginBottom: 0 }}>
-              Shared {shareCount(t)}× · opened {openCount(t)}×
-            </div>
-            {t.shares.map((s, i) => (
-              <div key={i} className="spread small muted">
-                <span>
-                  {s.channel} · {timeAgo(s.sharedAt)}
-                </span>
-                <span className={s.opens.length ? "badge ok" : "badge"}>
-                  {s.opens.length
-                    ? `opened ${s.opens.length}×`
-                    : "not opened yet"}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="tiny dim" style={{ margin: 0 }}>
-            Not shared yet. Sharing + recipient opens are the wedge signal (PRD
-            §12).
-          </p>
-        )}
+        <ProofActions
+          shareToken={t.share_token}
+          turnoverDate={t.submitted_at_server}
+        />
 
         <hr className="divider" />
         <div className="row wrap small dim">
@@ -234,50 +131,11 @@ export default function TurnoverPage() {
         </div>
       </div>
 
-      {isOperator && (
-        <div className="card pad stack">
-          <div className="spread">
-            <div className="label" style={{ marginBottom: 0 }}>
-              AI owner summary <span className="mock-tag">AI mock</span>
-            </div>
-            <button className="btn sm" onClick={draftSummary}>
-              <Icon name="sparkle" size={14} /> Draft summary
-            </button>
-          </div>
-          {summary && (
-            <>
-              <textarea
-                className="textarea mono small"
-                rows={6}
-                readOnly
-                value={summary}
-              />
-              <button
-                className="btn sm"
-                style={{ alignSelf: "flex-start" }}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(summary);
-                    flash("Summary copied");
-                  } catch {
-                    flash("Copy failed");
-                  }
-                }}
-              >
-                Copy summary
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
       <p className="tiny dim row" style={{ gap: 6, alignItems: "flex-start" }}>
         <Icon name="lock" size={13} style={{ marginTop: 1, flex: "none" }} />
         This record is locked and unchanged since submission. Corrections create
         a new turnover — the original is preserved.
       </p>
-
-      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
