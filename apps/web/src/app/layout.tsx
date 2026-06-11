@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Shell } from "@/components/Shell";
 import { getURL } from "@/lib/url";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -50,6 +51,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jbMono.variable}`}>
       <body>
         <Shell>{children}</Shell>
+        <Analytics />
       </body>
     </html>
   );
