@@ -111,6 +111,7 @@ export default async function TurnoverPage({
 
         <ProofActions
           shareToken={t.share_token}
+          turnoverId={t.id}
           turnoverDate={t.submitted_at_server}
         />
 
