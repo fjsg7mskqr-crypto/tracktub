@@ -19,7 +19,7 @@ Every substantive claim is tagged so we never confuse belief with fact:
 
 ## 1. TL;DR
 
-TrackTub is the **dispute-grade evidence layer for short-term-rental (STR) turnovers**, starting with the highest-friction, highest-liability amenity: the **hot tub**. Operators and their cleaning staff capture a guided photo set per turnover through a no-install PWA; TrackTub wraps it in tamper-resistant proof (server timestamp, verified submitter, capture-time geolocation + geofence, immutable record, audit log, signed PDF). Property owners get a read-only portal; guests/Airbnb get a shareable verifiable link. A light **chemistry-aware layer** (bather-load reminders, water-clarity flags) rides on the photos staff already capture — turning proof into prevention. The hot tub is the **wedge**; the long-term vision is a **whole-property Proof OS for STR turnovers** that eventually covers the biggest dispute category of all — check-in/check-out condition, damage, and security deposits.
+TrackTub helps **self-managed short-term-rental (STR) hosts** know their hot tub was **guest-ready — without being there**, starting with the highest-friction, highest-liability amenity: the **hot tub**. The "dispute-grade evidence" it produces is the reassurance underneath — how a host settles an owner or guest question — not the opening pitch. Operators and their cleaning staff capture a guided photo set per turnover through a no-install PWA; TrackTub wraps it in tamper-resistant proof (server timestamp, verified submitter, capture-time geolocation + geofence, immutable record, audit log, signed PDF). Property owners get a read-only portal; guests/Airbnb get a shareable verifiable link. A light **chemistry-aware layer** (bather-load reminders, water-clarity flags) rides on the photos staff already capture — turning proof into prevention. The hot tub is the **wedge**; the long-term vision is a **whole-property Proof OS for STR turnovers** that eventually covers the biggest dispute category of all — check-in/check-out condition, damage, and security deposits.
 
 Go-to-market is **freemium** (free for 1 property, paid at 2+). Validation is **lean ship-to-learn**: a short interview round, then a *thin free MVP* (guided capture + operator cockpit) whose real usage is the test — proceed only if it activates and the capture habit sticks (§12).
 
@@ -43,11 +43,11 @@ The single sharpest framing: **the tub is the operator's smallest amenity but on
 
 ## 3. Who we serve
 
-### Buyer / primary user — STR operator or property manager
-`[Hypothesis]` Manages **3+ STR properties**, at least some with hot tubs. Feels the pain most past ~5 properties. Holds the budget. Wants a cockpit and dispute insurance.
+### Buyer / primary user — self-managed STR host
+`[Decision 2026-06-11]` A **self-managed Airbnb/VRBO host** in a seasonal tourist market (mountain/coastal/lake), **1–5 properties**, at least one with a hot tub, who manages turnovers **themselves or with one cleaner**. Tracks nothing formally today. Wants **peace of mind first** (was it guest-ready?), **proof second** (can I show it?). Larger portfolios and spa-service companies need team/dispatch features — a **v2** expansion, not the v1 buyer.
 
-### Submitter — cleaning staff / turnover crew
-Often low-tech, high-churn, paid per turnover. **Adoption is the existential risk** — if staff won't submit, nothing else matters. Implication: capture must be a sub-10-minute, no-install, guided flow.
+### Submitter — the host themselves, or their cleaner
+Often the host on a 1–5 property operation, or low-tech, high-churn, paid-per-turnover help. **Adoption is the existential risk** — if whoever does the turnover won't submit, nothing else matters. Implication: capture must be a sub-10-minute, no-install, guided flow.
 
 ### Recipient — property owner (the PM's client)
 `[Decision]` Owners get a **read-only portal** to view their own properties' proof (a *fast-follow* after the thin MVP — §8.0). This is the "viewer" role anticipated in the `/goal` skill, realized.
@@ -292,11 +292,12 @@ Recruit ~5 operators from Stage 1 onto the free MVP (capture + cockpit, §8.0). 
 
 `[Hypothesis]` Condensed from `marketing-reference.md`.
 
-- **Positioning:** "Guest-ready hot tub proof for every turnover — built for STR operators." Avoid generic "maintenance app" / consumer "spa" keywords.
-- **Hooks:** guest-ready compliance · dispute insurance · multi-property cockpit.
+- **Positioning:** "Know your hot tub was guest-ready — without being there." Lead with peace of mind; close with proof. Avoid leading with "dispute-grade evidence" (too abstract for this buyer) or consumer "spa" / "maintenance app" keywords.
+- **Hooks:** peace of mind · know it got done · prove it if anyone asks.
 - **Channels (ranked):** regional STR Facebook groups → BiggerPockets STR forum → LinkedIn → host meetups → YouTube/Loom demo → Instagram (optional). Reddit/X for learning only.
 - **Content pillars:** turnover SOP (lead magnet), dispute prevention, scaling 10+ tubs.
 - **Growth tactics:** free tier as the top-of-funnel wedge (free for 1 property), free 15-min tub-audit call, early-user case-study PDF, hot-tub-service-company co-referral, referral (one free month of paid).
+- **First 10 customers:** existing client (2 tubs) → DM outreach "do you have a system?" (not pitching) → physical demos in a tourist town → realtor warm intro. Public business email / Facebook page only.
 - **Compliance:** no Airbnb DM outreach, no scraped lists, no group spam.
 
 ---
