@@ -15,7 +15,7 @@ const PLATES = [
   { src: "/landing/full-frame.jpg", label: "Full frame" },
   { src: "/landing/water-level.jpg", label: "Water level/clarity" },
   { src: "/landing/control-panel.jpg", label: "Control panel" },
-  { src: "/landing/cover.jpg", label: "Cover" },
+  { src: "/landing/water-chemistry.jpg", label: "Water chemistry" },
 ];
 
 /** Small green check used across the proof card + pricing. */
@@ -261,7 +261,7 @@ export default function Landing() {
             <div className="glass fcard">
               <div className="ichip num">1</div>
               <h3>Snap the guided set</h3>
-              <p>Full frame, water, control panel, cover — the same four shots every turnover, right from your phone. No app to install.</p>
+              <p>Full frame, water, control panel, water chemistry — the same four shots every turnover, right from your phone. No app to install.</p>
             </div>
             <div className="glass fcard">
               <div className="ichip num">2</div>
@@ -303,10 +303,10 @@ export default function Landing() {
                 </svg>
               </div>
               <h3>4 guided photos</h3>
-              <p>Full frame, water level, control panel, cover — the same set every clean, in under ten minutes.</p>
+              <p>Full frame, water level, control panel, water chemistry — the same set every clean, in under ten minutes.</p>
               <div className="ui">
                 <div className="uigrid">
-                  {["Full frame", "Water level", "Control panel", "Cover"].map((l) => (
+                  {["Full frame", "Water level", "Control panel", "Water chemistry"].map((l) => (
                     <div key={l} className="uichk">
                       <Check size={13} color="#34D399" w={3} />
                       {l}
