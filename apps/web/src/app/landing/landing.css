@@ -163,23 +163,37 @@
 }
 .tt-landing .navlinks {
   display: flex;
-  gap: 20px;
-  margin-left: 24px;
+  gap: 30px;
+  margin: 0 auto;
 }
-/* Mono + uppercase + tracked, matching the rest of the app's nav (globals.css .navlinks). */
+/* Clean sans, sentence case, centered — deliberately NOT the app's mono/caps nav. */
 .tt-landing .navlinks a {
-  color: var(--slate4);
-  font-family: var(--lmono);
-  font-size: 11.5px;
+  position: relative;
+  color: var(--slate3);
+  font-family: var(--sans);
+  font-size: 14px;
   font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  transition: color 0.16s ease;
+}
+.tt-landing .navlinks a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -6px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: var(--blue);
+  transition: right 0.22s ease;
 }
 .tt-landing .navlinks a:hover {
   color: var(--white);
 }
+.tt-landing .navlinks a:hover::after {
+  right: 0;
+}
 .tt-landing .nav .sp {
-  margin-left: auto;
   display: flex;
   gap: 10px;
 }
