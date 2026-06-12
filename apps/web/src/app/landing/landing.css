@@ -141,20 +141,17 @@
   gap: 6px;
   font-family: var(--disp);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--green);
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.4);
-  border-radius: 999px;
-  padding: 3px 11px;
 }
 
 .tt-landing .nav {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-top: 18px;
-  padding: 11px 18px;
+  margin-top: 8px;
+  padding: 17px 4px;
+  border-bottom: 1px solid var(--gline);
 }
 .tt-landing .brandlockup {
   height: 24px;
@@ -163,35 +160,18 @@
 }
 .tt-landing .navlinks {
   display: flex;
-  gap: 30px;
+  gap: 28px;
   margin: 0 auto;
 }
-/* Clean sans, sentence case, centered — deliberately NOT the app's mono/caps nav. */
 .tt-landing .navlinks a {
-  position: relative;
-  color: var(--slate3);
+  color: var(--slate4);
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: -0.01em;
   transition: color 0.16s ease;
-}
-.tt-landing .navlinks a::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 100%;
-  bottom: -6px;
-  height: 1.5px;
-  border-radius: 2px;
-  background: var(--blue);
-  transition: right 0.22s ease;
 }
 .tt-landing .navlinks a:hover {
   color: var(--white);
-}
-.tt-landing .navlinks a:hover::after {
-  right: 0;
 }
 .tt-landing .nav .sp {
   display: flex;

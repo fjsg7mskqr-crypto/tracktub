@@ -46,7 +46,7 @@ export default function Landing() {
       />
       <div className="wrap">
         {/* NAV */}
-        <div className="nav glass">
+        <div className="nav">
           <Lockup className="brandlockup" />
           <div className="navlinks">
             <a href="#why">Why it matters</a>
