@@ -141,20 +141,17 @@
   gap: 6px;
   font-family: var(--disp);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--green);
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.4);
-  border-radius: 999px;
-  padding: 3px 11px;
 }
 
 .tt-landing .nav {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-top: 18px;
-  padding: 11px 18px;
+  margin-top: 8px;
+  padding: 17px 4px;
+  border-bottom: 1px solid var(--gline);
 }
 .tt-landing .brandlockup {
   height: 24px;
@@ -163,23 +160,21 @@
 }
 .tt-landing .navlinks {
   display: flex;
-  gap: 20px;
-  margin-left: 24px;
+  gap: 28px;
+  margin: 0 auto;
 }
-/* Mono + uppercase + tracked, matching the rest of the app's nav (globals.css .navlinks). */
 .tt-landing .navlinks a {
   color: var(--slate4);
-  font-family: var(--lmono);
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--font-space), system-ui, sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: color 0.16s ease;
 }
 .tt-landing .navlinks a:hover {
   color: var(--white);
 }
 .tt-landing .nav .sp {
-  margin-left: auto;
   display: flex;
   gap: 10px;
 }
@@ -805,6 +800,201 @@
   width: 100%;
   height: 12px;
   display: block;
+}
+
+/* numbered step chip — reuses the .ichip box inside the .feat grid */
+.tt-landing .ichip.num {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 20px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue), var(--blue2));
+}
+
+/* prevention panel — text + image, two columns */
+.tt-landing .readypanel {
+  padding: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+}
+.tt-landing .readypanel .ptext {
+  padding: 28px 30px;
+  align-self: center;
+}
+.tt-landing .readypanel .ptext p {
+  color: var(--slate3);
+  font-size: 16px;
+  margin: 0;
+}
+.tt-landing .readypanel .ptext em {
+  color: var(--slate4);
+  font-style: normal;
+}
+.tt-landing .readypanel .pimg {
+  background-size: cover;
+  background-position: center;
+  min-height: 230px;
+  border-left: 1px solid var(--gline);
+}
+
+/* lifestyle band — wide image, dark overlay, caption */
+.tt-landing .band {
+  position: relative;
+  overflow: hidden;
+  min-height: 340px;
+  display: flex;
+  align-items: flex-end;
+  background-size: cover;
+  background-position: center 38%;
+}
+.tt-landing .band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, rgba(8, 9, 10, 0.93) 6%, rgba(8, 9, 10, 0.55) 46%, rgba(8, 9, 10, 0.18));
+}
+.tt-landing .bandcopy {
+  position: relative;
+  z-index: 1;
+  padding: 32px 34px 34px;
+  max-width: 520px;
+}
+.tt-landing .bandcopy h2 {
+  font-size: 30px;
+  font-weight: 700;
+}
+.tt-landing .bandcopy p {
+  color: var(--slate3);
+  font-size: 15.5px;
+  margin-top: 9px;
+}
+
+@media (max-width: 880px) {
+  .tt-landing .readypanel {
+    grid-template-columns: 1fr;
+  }
+  .tt-landing .readypanel .pimg {
+    min-height: 180px;
+    border-left: none;
+    border-top: 1px solid var(--gline);
+  }
+}
+
+/* FAQ accordion — native <details>, no JS */
+.tt-landing .faq {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 760px;
+}
+.tt-landing .faq details {
+  border: 1px solid var(--gline);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0 18px;
+}
+.tt-landing .faq summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 16px 0;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 15.5px;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tt-landing .faq summary::-webkit-details-marker {
+  display: none;
+}
+.tt-landing .faq summary::after {
+  content: "+";
+  font-family: var(--lmono);
+  font-size: 18px;
+  color: var(--bluel);
+  flex: none;
+}
+.tt-landing .faq details[open] summary::after {
+  content: "\2013";
+}
+.tt-landing .faq details p {
+  margin: 0 0 16px;
+  color: var(--slate4);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+/* dashboard mock — "your tubs at a glance" */
+.tt-landing .dashwrap {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.tt-landing .dash {
+  padding: 6px 6px 8px;
+}
+.tt-landing .dashhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 16px 13px;
+}
+.tt-landing .dashtitle {
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--white);
+}
+.tt-landing .dashstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--lmono);
+  font-size: 11.5px;
+  color: var(--slate3);
+}
+.tt-landing .drow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-top: 1px solid var(--gline);
+}
+.tt-landing .dprop b {
+  display: block;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--white);
+}
+.tt-landing .dprop .dsub {
+  font-family: var(--lmono);
+  font-size: 10.5px;
+  color: var(--slate4);
+}
+.tt-landing .dstatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 5px 11px;
+}
+.tt-landing .dstatus.ok {
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+.tt-landing .dstatus.warn {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.34);
 }
 
 @media (prefers-reduced-motion: reduce) {
