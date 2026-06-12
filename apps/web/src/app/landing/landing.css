@@ -932,6 +932,76 @@
   line-height: 1.55;
 }
 
+/* dashboard mock — "your tubs at a glance" */
+.tt-landing .dashwrap {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.tt-landing .dash {
+  padding: 6px 6px 8px;
+}
+.tt-landing .dashhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 16px 13px;
+}
+.tt-landing .dashtitle {
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--white);
+}
+.tt-landing .dashstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--lmono);
+  font-size: 11.5px;
+  color: var(--slate3);
+}
+.tt-landing .drow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-top: 1px solid var(--gline);
+}
+.tt-landing .dprop b {
+  display: block;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--white);
+}
+.tt-landing .dprop .dsub {
+  font-family: var(--lmono);
+  font-size: 10.5px;
+  color: var(--slate4);
+}
+.tt-landing .dstatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 5px 11px;
+}
+.tt-landing .dstatus.ok {
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+.tt-landing .dstatus.warn {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.34);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tt-landing * {
     animation: none !important;
