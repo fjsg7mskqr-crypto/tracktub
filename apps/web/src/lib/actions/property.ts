@@ -62,3 +62,18 @@ export async function createPropertyAction(
 
   return { ok: true, propertyId: property.id };
 }
+
+// WTP fake-door (PRD §12): logs paid intent when an operator hits the
+// 2nd-property wall and opts into the paid waitlist. No charge, no card.
+export async function joinPaidWaitlistAction(): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { ok: false };
+  const { error } = await supabase
+    .from("waitlist")
+    .insert({ email: user.email, source: "wtp_fake_door" });
+  // Unique-email conflict still counts as intent.
+  return { ok: !error || error.code === "23505" };
+}
