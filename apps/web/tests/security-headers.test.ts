@@ -51,4 +51,18 @@ describe("security headers", () => {
     const csp = (await loadHeaders())["Content-Security-Policy-Report-Only"];
     expect(csp).toContain("connect-src 'self';");
   });
+
+  it("reports CSP violations to Sentry during the report-only burn-in", async () => {
+    const headers = await loadHeaders();
+    const csp = headers["Content-Security-Policy-Report-Only"];
+    // Legacy (Safari/Firefox) + modern (Chrome) reporting, both pointed at the
+    // Sentry security-header endpoint derived from the baked DSN.
+    expect(csp).toMatch(
+      /report-uri https:\/\/\S+sentry\.io\/api\/\d+\/security\/\?sentry_key=\w+/,
+    );
+    expect(csp).toContain("report-to csp-endpoint");
+    expect(headers["Reporting-Endpoints"]).toMatch(
+      /^csp-endpoint="https:\/\/\S+sentry\.io\/api\/\d+\/security\//,
+    );
+  });
 });

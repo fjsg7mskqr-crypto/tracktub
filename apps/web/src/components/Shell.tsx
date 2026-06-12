@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useDB, setCurrentUser, resetDemo } from "@/lib/store";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Seal } from "@/components/Seal";
 import { Icon } from "@/components/Icon";
 
@@ -14,11 +15,16 @@ const NAV = [
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const db = useDB();
   const pathname = usePathname() ?? "/";
+  const [email, setEmail] = useState<string | null>(null);
 
-  // Public pages render with no operator chrome (no login, no demo nav): the
-  // marketing landing and shareable proof links each bring their own layout.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setEmail(data.user?.email ?? null));
+  }, []);
+
   if (pathname.startsWith("/proof") || pathname.startsWith("/landing"))
     return <>{children}</>;
 
@@ -45,40 +51,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
-          <div className="row" style={{ marginLeft: "auto" }}>
-            {db && (
-              <>
-                <span
-                  className="dim"
-                  style={{ color: "var(--ink-3)", display: "inline-flex" }}
-                  title="Switch role"
-                >
-                  <Icon name="user" size={15} />
-                </span>
-                <select
-                  className="input mono"
-                  aria-label="Switch role"
-                  style={{ width: "auto", padding: "6px 10px", fontSize: 12 }}
-                  value={db.currentUserId}
-                  onChange={(e) => setCurrentUser(e.target.value)}
-                >
-                  {db.users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="btn ghost sm"
-                  onClick={() => {
-                    if (confirm("Reset all demo data to the seed?")) resetDemo();
-                  }}
-                >
-                  <Icon name="reset" size={15} />
-                  Reset
-                </button>
-              </>
+          <div className="row" style={{ marginLeft: "auto", gap: 12 }}>
+            {email && (
+              <span className="dim small" style={{ color: "var(--ink-3)" }}>
+                {email}
+              </span>
             )}
+            <form action="/auth/signout" method="post">
+              <button type="submit" className="btn ghost sm">
+                <Icon name="user" size={15} /> Sign out
+              </button>
+            </form>
           </div>
         </div>
       </header>

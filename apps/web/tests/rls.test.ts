@@ -345,4 +345,207 @@ describe.skipIf(!ready)("RLS isolation", () => {
       .single();
     expect(after?.action).toBe("INSERT");
   }, 30_000);
+
+  // ── Anon proof link access ─────────────────────────────────────────────────
+  describe("Proof link — anon access", () => {
+    const anonClient = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as ReturnType<typeof createClient<Database>>);
+
+    let proofOrgId: string;
+    let proofTurnoverLockedId: string;
+    let proofShareToken: string;
+    let proofTurnoverDraftId: string;
+    let proofPhotoId: string;
+    let proofOperator: AuthedUser;
+
+    beforeAll(async () => {
+      const { data: org } = await admin
+        .from("org")
+        .insert({ name: "RLS Proof Org" })
+        .select("id")
+        .single();
+      proofOrgId = org!.id;
+      createdOrgIds.push(proofOrgId);
+
+      proofOperator = await makeUser("proofop");
+      await admin
+        .from("membership")
+        .insert({ user_id: proofOperator.id, org_id: proofOrgId, role: "operator" });
+
+      const { data: prop } = await admin
+        .from("property")
+        .insert({ org_id: proofOrgId, name: "Proof Test Property" })
+        .select("id")
+        .single();
+
+      proofShareToken = randomUUID();
+      const { data: locked } = await admin
+        .from("turnover")
+        .insert({
+          property_id: prop!.id,
+          submitter_id: proofOperator.id,
+          status: "submitted_locked",
+          share_token: proofShareToken,
+          urgent: false,
+          notes: "",
+        })
+        .select("id")
+        .single();
+      proofTurnoverLockedId = locked!.id;
+
+      const { data: ph } = await admin
+        .from("photo")
+        .insert({ turnover_id: proofTurnoverLockedId, slot: "wide" })
+        .select("id")
+        .single();
+      proofPhotoId = ph!.id;
+
+      await admin
+        .from("issue_tag")
+        .insert({ turnover_id: proofTurnoverLockedId, tag: "foam", source: "human" });
+
+      const { data: draft } = await admin
+        .from("turnover")
+        .insert({
+          property_id: prop!.id,
+          submitter_id: proofOperator.id,
+          status: "draft",
+          share_token: null,
+          urgent: false,
+          notes: "",
+        })
+        .select("id")
+        .single();
+      proofTurnoverDraftId = draft!.id;
+    });
+
+    it("anon can read a locked turnover via its share_token", async () => {
+      const { data, error } = await anonClient
+        .from("turnover")
+        .select("id, share_token, status")
+        .eq("share_token", proofShareToken)
+        .single();
+      expect(error).toBeNull();
+      expect(data?.id).toBe(proofTurnoverLockedId);
+      expect(data?.status).toBe("submitted_locked");
+    });
+
+    it("anon cannot read a draft turnover (no share_token)", async () => {
+      const { data } = await anonClient
+        .from("turnover")
+        .select("id")
+        .eq("id", proofTurnoverDraftId);
+      expect(data).toHaveLength(0);
+    });
+
+    it("anon can read photos of a locked shared turnover", async () => {
+      const { data, error } = await anonClient
+        .from("photo")
+        .select("id")
+        .eq("turnover_id", proofTurnoverLockedId);
+      expect(error).toBeNull();
+      expect(data?.length).toBeGreaterThan(0);
+      expect(data?.[0].id).toBe(proofPhotoId);
+    });
+
+    it("anon cannot read photos of a draft/non-shared turnover", async () => {
+      const { data } = await anonClient
+        .from("photo")
+        .select("id")
+        .eq("turnover_id", proofTurnoverDraftId);
+      expect(data).toHaveLength(0);
+    });
+
+    it("anon can read issue tags of a locked shared turnover", async () => {
+      const { data, error } = await anonClient
+        .from("issue_tag")
+        .select("tag")
+        .eq("turnover_id", proofTurnoverLockedId);
+      expect(error).toBeNull();
+      expect(data?.map((i) => i.tag)).toContain("foam");
+    });
+
+    it("anon cannot read issue tags of a draft/non-shared turnover", async () => {
+      const { data } = await anonClient
+        .from("issue_tag")
+        .select("tag")
+        .eq("turnover_id", proofTurnoverDraftId);
+      expect(data).toHaveLength(0);
+    });
+
+    // ── proof_event: share/open tracking (PRD §16 wedge signal) ─────────────
+    describe("proof_event", () => {
+      it("org member can insert share_copied as themselves on a locked turnover", async () => {
+        const { error } = await proofOperator.client.from("proof_event").insert({
+          turnover_id: proofTurnoverLockedId,
+          kind: "share_copied",
+          actor_user_id: proofOperator.id,
+        });
+        expect(error).toBeNull();
+      });
+
+      it("cannot insert link_opened directly or attribute a share to someone else", async () => {
+        const direct = await proofOperator.client.from("proof_event").insert({
+          turnover_id: proofTurnoverLockedId,
+          kind: "link_opened",
+          actor_user_id: proofOperator.id,
+        });
+        expect(direct.error).not.toBeNull();
+
+        const spoofed = await proofOperator.client.from("proof_event").insert({
+          turnover_id: proofTurnoverLockedId,
+          kind: "share_copied",
+          actor_user_id: operatorB.id,
+        });
+        expect(spoofed.error).not.toBeNull();
+      });
+
+      it("other orgs and anon cannot read events; append-only (delete blocked)", async () => {
+        const otherOrg = await operatorB.client.from("proof_event").select("id");
+        expect(otherOrg.data).toEqual([]);
+
+        const anonRead = await anonClient.from("proof_event").select("id");
+        expect(anonRead.data ?? []).toEqual([]);
+
+        await proofOperator.client
+          .from("proof_event")
+          .delete()
+          .eq("turnover_id", proofTurnoverLockedId);
+        const after = await admin
+          .from("proof_event")
+          .select("id")
+          .eq("turnover_id", proofTurnoverLockedId);
+        expect((after.data ?? []).length).toBeGreaterThan(0);
+      });
+
+      it("anon record_proof_open records for a valid token and no-ops for a bad one", async () => {
+        const ok = await anonClient.rpc("record_proof_open", {
+          p_share_token: proofShareToken,
+        });
+        expect(ok.error).toBeNull();
+
+        const bad = await anonClient.rpc("record_proof_open", {
+          p_share_token: "not-a-real-token",
+        });
+        expect(bad.error).toBeNull();
+
+        const rows = await admin
+          .from("proof_event")
+          .select("kind")
+          .eq("turnover_id", proofTurnoverLockedId);
+        expect(rows.data!.filter((r) => r.kind === "link_opened")).toHaveLength(1);
+      });
+
+      it("founder_metrics is denied for normal users and anon", async () => {
+        const denied = await proofOperator.client.rpc("founder_metrics");
+        expect(denied.error).not.toBeNull();
+
+        const anonDenied = await anonClient.rpc("founder_metrics");
+        expect(anonDenied.error).not.toBeNull();
+      });
+    });
+  });
 });

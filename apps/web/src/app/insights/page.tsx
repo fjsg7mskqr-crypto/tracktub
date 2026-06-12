@@ -1,10 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { useDB } from "@/lib/store";
-import { lastTurnover, issueTagsOf, shareCount, openCount } from "@/lib/selectors";
-import { withinHours } from "@/lib/selectors";
-import { timeAgo } from "@/lib/format";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 function Gate({
   label,
@@ -29,7 +24,10 @@ function Gate({
           {pass ? "● on track" : "● below target"}
         </span>
       </div>
-      <div className="row" style={{ alignItems: "baseline", gap: 8, marginTop: 6 }}>
+      <div
+        className="row"
+        style={{ alignItems: "baseline", gap: 8, marginTop: 6 }}
+      >
         <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: "-0.03em" }}>
           {value}
         </div>
@@ -42,36 +40,91 @@ function Gate({
   );
 }
 
-export default function Insights() {
-  const db = useDB();
-  if (!db) return <div className="skeleton">Loading…</div>;
+const WEEKS = 4;
 
-  const locked = db.turnovers.filter((t) => t.status === "locked");
-  const props = db.properties;
+export default async function Insights() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  const recentProps = props.filter((p) =>
-    withinHours(lastTurnover(db, p.id)?.submittedAtServer ?? null, 24 * 7)
-  ).length;
-  const activationPct = props.length
-    ? Math.round((recentProps / props.length) * 100)
+  const since = new Date(
+    Date.now() - WEEKS * 7 * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  // All org-scoped by RLS: the user only ever sees their own workspace.
+  const [{ data: properties }, { data: turnovers }, { data: events }] =
+    await Promise.all([
+      supabase.from("property").select("id, name"),
+      supabase
+        .from("turnover")
+        .select(
+          "id, property_id, submitted_at_server, photos:photo(id), issues:issue_tag(confirmed_at)"
+        )
+        .eq("status", "submitted_locked")
+        .gte("submitted_at_server", since),
+      supabase.from("proof_event").select("turnover_id, kind"),
+    ]);
+
+  const props = properties ?? [];
+  const locked = turnovers ?? [];
+  const evs = events ?? [];
+
+  const complete = locked.filter((t) => (t.photos ?? []).length >= 4).length;
+  const completePct = locked.length
+    ? Math.round((complete / locked.length) * 100)
+    : 0;
+  const openIssues = locked.reduce(
+    (n, t) => n + (t.issues ?? []).filter((i) => !i.confirmed_at).length,
+    0
+  );
+
+  const lockedIds = new Set(locked.map((t) => t.id));
+  const sharedIds = new Set(
+    evs
+      .filter((e) => e.kind === "share_copied" && lockedIds.has(e.turnover_id))
+      .map((e) => e.turnover_id)
+  );
+  const opens = evs.filter((e) => e.kind === "link_opened").length;
+  const sharePct = locked.length
+    ? Math.round((sharedIds.size / locked.length) * 100)
     : 0;
 
-  const shared = locked.filter((t) => shareCount(t) > 0).length;
-  const sharePct = locked.length ? Math.round((shared / locked.length) * 100) : 0;
-  const opens = locked.reduce((n, t) => n + openCount(t), 0);
+  const perProperty = props.map((p) => {
+    const count = locked.filter((t) => t.property_id === p.id).length;
+    return { id: p.id, name: p.name, perWeek: (count / WEEKS).toFixed(1), count };
+  });
 
-  const openIssues = props.reduce((n, p) => {
-    const t = lastTurnover(db, p.id);
-    return n + (t ? new Set(issueTagsOf(t)).size : 0);
-  }, 0);
+  // Founder section: env allowlist gates rendering; the SECURITY DEFINER
+  // founder_metrics() RPC re-checks the email server-side regardless.
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  let founder: Record<string, number> | null = null;
+  if (user.email && adminEmails.includes(user.email.toLowerCase())) {
+    const { data } = await supabase.rpc("founder_metrics");
+    founder = (data as Record<string, number>) ?? null;
+  }
+
+  const activationPct = founder?.orgs
+    ? Math.round((founder.activated_orgs / founder.orgs) * 100)
+    : 0;
+  const retentionPct = founder?.activated_orgs
+    ? Math.round((founder.retained_orgs / founder.activated_orgs) * 100)
+    : 0;
+  const founderSharePct = founder?.locked_turnovers
+    ? Math.round((founder.shared_turnovers / founder.locked_turnovers) * 100)
+    : 0;
 
   return (
     <div className="stack">
       <div className="pagehead">
         <h1>Insights</h1>
         <p className="muted small" style={{ marginTop: 4 }}>
-          Founder view — does the thin MVP clear its gates? Numbers are live from
-          your activity in this demo.
+          Your workspace over the last {WEEKS} weeks — live from your turnover
+          records.
         </p>
       </div>
 
@@ -82,87 +135,110 @@ export default function Insights() {
           <div className="sub">guest-ready proofs on file</div>
         </div>
         <div className="tile">
-          <div className="k">Proof opens</div>
+          <div className="k">Complete 4-photo rate</div>
+          <div className="v">{locked.length ? `${completePct}%` : "—"}</div>
+          <div className="sub">full evidence sets</div>
+        </div>
+        <div className="tile">
+          <div className="k">Proof links shared</div>
+          <div className="v">{locked.length ? `${sharePct}%` : "—"}</div>
+          <div className="sub">of turnovers, link copied or opened</div>
+        </div>
+        <div className="tile">
+          <div className="k">Recipient opens</div>
           <div className="v">{opens}</div>
-          <div className="sub">recipients viewed a link</div>
+          <div className="sub">someone viewed a proof link</div>
         </div>
         <div className="tile">
           <div className="k">Open issues</div>
-          <div className="v" style={{ color: openIssues ? "var(--warn)" : undefined }}>
+          <div
+            className="v"
+            style={{ color: openIssues ? "var(--warn)" : undefined }}
+          >
             {openIssues}
           </div>
-          <div className="sub">flagged on last visits</div>
+          <div className="sub">unconfirmed flags on recent visits</div>
         </div>
-        <div className="tile">
-          <div className="k">WTP intents</div>
-          <div className="v" style={{ color: db.waitlist.length ? "var(--ok)" : undefined }}>
-            {db.waitlist.length}
-          </div>
-          <div className="sub">hit the $12/mo fake-door</div>
-        </div>
-      </div>
-
-      <h3 style={{ fontSize: 16, marginTop: 6 }}>Validation gates (PRD §12 / §16)</h3>
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        <Gate
-          label="Activation"
-          value={`${activationPct}%`}
-          target="≥60%"
-          pass={activationPct >= 60}
-          hint="Properties with a turnover in the last 7 days. Proxy for week-1 activation."
-        />
-        <Gate
-          label="Wedge — proof shared"
-          value={`${sharePct}%`}
-          target="≥30%"
-          pass={sharePct >= 30}
-          hint="Locked turnovers whose proof link was shared. Tests whether operators reach for proof."
-        />
-        <Gate
-          label="Recipient opens"
-          value={`${opens}`}
-          target="trend ↑"
-          pass={opens > 0}
-          hint="Owners/guests opening shared links — two-sided proof value."
-        />
-        <Gate
-          label="WTP intent"
-          value={`${db.waitlist.length}`}
-          target="trend ↑"
-          pass={db.waitlist.length > 0}
-          hint="Operators trying to add a 2nd property at $12/mo (the fake-door)."
-        />
       </div>
 
       <div className="card pad stack">
         <div className="label" style={{ marginBottom: 0 }}>
-          Paid waitlist (WTP fake-door)
+          Turnovers per property
         </div>
-        {db.waitlist.length === 0 ? (
+        {perProperty.length === 0 ? (
           <p className="small muted" style={{ margin: 0 }}>
-            No intents yet. Try{" "}
-            <Link href="/add-property">Add property</Link> to log one.
+            No properties yet.
           </p>
         ) : (
           <div className="stack" style={{ gap: 6 }}>
-            {db.waitlist.map((w, i) => (
-              <div key={i} className="spread small">
+            {perProperty.map((p) => (
+              <div key={p.id} className="spread small">
                 <span>
-                  <strong>{w.propertyName}</strong>
-                  {w.note ? <span className="dim"> — {w.note}</span> : null}
+                  <strong>{p.name}</strong>
                 </span>
-                <span className="dim tiny">{timeAgo(w.at)}</span>
+                <span className="dim">
+                  {p.count} in {WEEKS} wks ({p.perWeek}/wk)
+                </span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <p className="tiny dim">
-        Reminder (PRD): this lean path tests <strong>use</strong>, not{" "}
-        <strong>willingness-to-pay</strong> — the fake-door is only a proxy until
-        a real paywall ships.
-      </p>
+      {founder && (
+        <>
+          <h3 style={{ fontSize: 16, marginTop: 6 }}>
+            Founder view — validation gates (PRD §12 / §16)
+          </h3>
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            }}
+          >
+            <Gate
+              label="Activation"
+              value={`${activationPct}%`}
+              target="≥60%"
+              pass={activationPct >= 60}
+              hint={`Orgs with a locked turnover in their first week (${founder.activated_orgs}/${founder.orgs}).`}
+            />
+            <Gate
+              label="Retention"
+              value={`${retentionPct}%`}
+              target="≥50%"
+              pass={retentionPct >= 50}
+              hint={`Activated orgs still submitting after week 1 (${founder.retained_orgs}/${founder.activated_orgs}).`}
+            />
+            <Gate
+              label="Wedge — proof shared"
+              value={`${founderSharePct}%`}
+              target="≥30%"
+              pass={founderSharePct >= 30}
+              hint={`Locked turnovers whose proof link was shared (${founder.shared_turnovers}/${founder.locked_turnovers}).`}
+            />
+            <Gate
+              label="Recipient opens"
+              value={`${founder.total_opens}`}
+              target="trend ↑"
+              pass={founder.total_opens > 0}
+              hint={`Proof links opened by recipients across ${founder.opened_turnovers} turnovers.`}
+            />
+            <Gate
+              label="WTP intent"
+              value={`${founder.wtp_intents}`}
+              target="trend ↑"
+              pass={founder.wtp_intents > 0}
+              hint="Operators who joined the paid waitlist at the $12/mo fake-door."
+            />
+          </div>
+          <p className="tiny dim">
+            Cross-org founder view — PostHog has the cohort-accurate funnels.
+            Reminder (PRD): this lean path tests <strong>use</strong>, not{" "}
+            <strong>willingness-to-pay</strong>.
+          </p>
+        </>
+      )}
     </div>
   );
 }

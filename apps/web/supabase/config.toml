@@ -7,3 +7,10 @@
 # This minimal config exists so the supabase/ directory is well-formed and the
 # migrations/ history is linkable should anyone use the CLI later.
 project_id = "slkxwpiiludisrnwnxlg"
+
+# Automated `supabase start` (the CI RLS gate) applies the migrations but must
+# NOT run seed.sql: the dev seed uses unsubstituted :operator_uid/:staff_uid
+# placeholders that aren't valid UUIDs and would abort the start. The RLS
+# isolation suite provisions and tears down its own users/orgs.
+[db.seed]
+enabled = false
