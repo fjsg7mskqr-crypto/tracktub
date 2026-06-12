@@ -12,6 +12,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rls": "vitest run tests/rls.test.ts",
     "promo:status": "bash ../../scripts/promo-status.sh"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "@supabase/ssr": "0.12.0",
     "@supabase/supabase-js": "2.108.1",
     "next": "^15.1.0",
+    "posthog-js": "^1.386.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { joinWaitlist, type WaitlistState } from "./actions";
+import { track } from "@/lib/analytics";
 
 const INITIAL: WaitlistState = { status: "idle" };
 
@@ -20,6 +21,10 @@ const srOnly = {
  *  launch CTA and left-aligned in the hero. */
 export function LandingWaitlist({ cta = "Get early access" }: { cta?: string }) {
   const [state, formAction, pending] = useActionState(joinWaitlist, INITIAL);
+
+  useEffect(() => {
+    if (state.status === "ok") track("waitlist_joined");
+  }, [state.status]);
 
   if (state.status === "ok" || state.status === "already") {
     return (

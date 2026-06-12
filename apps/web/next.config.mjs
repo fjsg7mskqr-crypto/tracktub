@@ -29,12 +29,32 @@ function connectSrc() {
   return sources.join(" ");
 }
 
+/** Sentry's Security-Header report endpoint, derived from the same DSN the
+ *  browser SDK uses (env-overridable, with the baked fallback). This is what
+ *  makes the Report-Only burn-in (#38) measurable: violations land in Sentry
+ *  instead of only users' consoles. */
+function sentryCspReportUri() {
+  const dsn =
+    cleanEnv("NEXT_PUBLIC_SENTRY_DSN") ??
+    "https://95ef95ac9eefd2ee1f0c31b83284943b@o4510660925718528.ingest.us.sentry.io/4511538300846080";
+  try {
+    const { protocol, host, username, pathname } = new URL(dsn);
+    const projectId = pathname.replace(/^\//, "");
+    if (!username || !projectId) return undefined;
+    return `${protocol}//${host}/api/${projectId}/security/?sentry_key=${username}`;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Report-Only while we burn in (issue #38); enforcement is tracked in #41.
  *  Demo photos are data:/blob: URLs and fonts are self-hosted via next/font,
  *  so the allowlist stays tight. `frame-ancestors` only bites once enforced —
- *  X-Frame-Options below covers clickjacking in the meantime. */
-function contentSecurityPolicy() {
-  return [
+ *  X-Frame-Options below covers clickjacking in the meantime. Violations are
+ *  reported to Sentry via report-uri (Safari/Firefox) + report-to (Chrome,
+ *  paired with the Reporting-Endpoints header below). */
+function contentSecurityPolicy(reportUri) {
+  const directives = [
     "default-src 'self'",
     // Next.js injects inline bootstrap scripts; dev additionally needs eval for
     // react-refresh. Nonce-based script-src lands with enforcement (#41).
@@ -49,14 +69,25 @@ function contentSecurityPolicy() {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-  ].join("; ");
+  ];
+  if (reportUri) {
+    directives.push(`report-uri ${reportUri}`, "report-to csp-endpoint");
+  }
+  return directives.join("; ");
 }
+
+const cspReportUri = sentryCspReportUri();
 
 const securityHeaders = [
   {
     key: "Content-Security-Policy-Report-Only",
-    value: contentSecurityPolicy(),
+    value: contentSecurityPolicy(cspReportUri),
   },
+  // Names the `report-to csp-endpoint` group referenced by the CSP above, for
+  // browsers on the Reporting API (Chrome). report-uri covers the rest.
+  ...(cspReportUri
+    ? [{ key: "Reporting-Endpoints", value: `csp-endpoint="${cspReportUri}"` }]
+    : []),
   {
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",

@@ -1,43 +1,48 @@
-"use client";
-
-import { useParams } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { useDB, recordOpen } from "@/lib/store";
-import { PhotoThumb } from "@/components/PhotoThumb";
+import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
 import { Seal } from "@/components/Seal";
 import { Icon } from "@/components/Icon";
-import { formatDateTime, tagLabel } from "@/lib/format";
-import { propertyById, userName, issueTagsOf } from "@/lib/selectors";
+import { photoPublicUrl } from "@/lib/supabase/storage";
+import { formatDateTime } from "@/lib/format";
 
-export default function ProofPage() {
-  const token = String(useParams().token);
-  const db = useDB();
-  const opened = useRef(false);
+export default async function ProofPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  const supabase = await createClient();
 
-  useEffect(() => {
-    if (db && !opened.current) {
-      opened.current = true;
-      recordOpen(token); // recipient opened the proof (wedge signal)
-    }
-  }, [db, token]);
+  // Anon read — works because of the turnover_public_proof RLS policy.
+  const { data: t } = await supabase
+    .from("turnover")
+    .select(
+      `id, submitted_at_server, urgent, notes, share_token,
+       property:property(name, address),
+       submitter:profile(full_name, email),
+       photos:photo(slot, storage_path),
+       issues:issue_tag(tag, source, confirmed_at)`
+    )
+    .eq("share_token", token)
+    .eq("status", "submitted_locked")
+    .single();
 
-  if (!db)
-    return (
-      <div className="skeleton" style={{ minHeight: "60vh" }}>
-        Loading proof…
-      </div>
-    );
+  if (!t) notFound();
 
-  const t = db.turnovers.find((x) => x.shareToken === token);
-  if (!t)
-    return (
-      <div className="empty" style={{ minHeight: "60vh" }}>
-        This proof link is not valid.
-      </div>
-    );
+  // Wedge-signal instrumentation (PRD §16): count the recipient open
+  // server-side. The RPC validates the token, so anon can't forge events.
+  // Instrumentation must never break the public proof page.
+  try {
+    await supabase.rpc("record_proof_open", { p_share_token: token });
+  } catch {
+    /* non-critical */
+  }
 
-  const p = propertyById(db, t.propertyId);
-  const issues = Array.from(new Set(issueTagsOf(t)));
+  const property = Array.isArray(t.property) ? t.property[0] : t.property;
+  const submitter = Array.isArray(t.submitter) ? t.submitter[0] : t.submitter;
+  const submitterName =
+    submitter?.full_name ?? submitter?.email ?? "Staff member";
+  const openIssues = (t.issues ?? []).filter((i) => !i.confirmed_at);
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
@@ -45,7 +50,6 @@ export default function ProofPage() {
         className="container"
         style={{ maxWidth: 640, padding: "26px 18px 70px" }}
       >
-        {/* public header */}
         <div className="row" style={{ marginBottom: 18, gap: 10 }}>
           <span style={{ display: "inline-flex" }}>
             <Seal size={24} />
@@ -70,8 +74,13 @@ export default function ProofPage() {
             <div>
               <div className="eyebrow">Turnover proof</div>
               <h1 style={{ fontSize: 26, marginTop: 4 }}>
-                {p?.name ?? "Property"}
+                {property?.name ?? "Property"}
               </h1>
+              {property?.address && (
+                <div className="small dim" style={{ marginTop: 2 }}>
+                  {property.address}
+                </div>
+              )}
             </div>
             <div
               style={{ textAlign: "center", flex: "none" }}
@@ -88,15 +97,27 @@ export default function ProofPage() {
           </div>
 
           <div className="photos">
-            {t.photos.map((ph) => (
-              <PhotoThumb key={ph.slot} photo={ph} enlargeable />
-            ))}
+            {(t.photos ?? [])
+              .filter((ph) => ph.storage_path)
+              .map((ph) => (
+                <img
+                  key={ph.slot}
+                  src={photoPublicUrl(ph.storage_path!)}
+                  alt={ph.slot}
+                  style={{
+                    width: "calc(25% - 6px)",
+                    aspectRatio: "1",
+                    objectFit: "cover",
+                    borderRadius: 8,
+                  }}
+                />
+              ))}
           </div>
 
-          {issues.length > 0 ? (
+          {openIssues.length > 0 ? (
             <div className="note warn">
               <strong>Issues flagged on this visit:</strong>{" "}
-              {issues.map(tagLabel).join(", ")}.
+              {openIssues.map((i) => i.tag).join(", ")}.
             </div>
           ) : (
             <div className="note">No issues flagged — tub was guest-ready.</div>
@@ -105,25 +126,20 @@ export default function ProofPage() {
           <hr className="divider" />
 
           <dl className="kv">
-            <dt>Property</dt>
-            <dd>
-              {p?.name}
-              <div className="tiny dim">{p?.address}</div>
-            </dd>
             <dt>Captured</dt>
             <dd>
-              {formatDateTime(t.submittedAtServer)}{" "}
+              {formatDateTime(t.submitted_at_server)}{" "}
               <span className="tiny dim">(server time)</span>
             </dd>
             <dt>Submitted by</dt>
-            <dd>{userName(db, t.submitterId)}</dd>
+            <dd>{submitterName}</dd>
             <dt>Record</dt>
             <dd>
               <span className="row" style={{ gap: 6 }}>
                 <Icon name="lock" size={14} /> Locked — unchanged since
                 submission
               </span>
-              <span className="mono tiny dim">#{t.shareToken}</span>
+              <span className="mono tiny dim">#{t.share_token}</span>
             </dd>
           </dl>
 

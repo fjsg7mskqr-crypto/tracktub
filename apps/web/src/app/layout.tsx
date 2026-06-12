@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Shell } from "@/components/Shell";
+import { Analytics } from "@/components/Analytics";
 import { getURL } from "@/lib/url";
 
 const inter = Inter({
@@ -49,6 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jbMono.variable}`}>
       <body>
+        <Analytics />
         <Shell>{children}</Shell>
       </body>
     </html>
