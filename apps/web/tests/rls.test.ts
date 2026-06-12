@@ -359,6 +359,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
     let proofShareToken: string;
     let proofTurnoverDraftId: string;
     let proofPhotoId: string;
+    let proofOperator: AuthedUser;
 
     beforeAll(async () => {
       const { data: org } = await admin
@@ -369,7 +370,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
       proofOrgId = org!.id;
       createdOrgIds.push(proofOrgId);
 
-      const proofOperator = await makeUser("proofop");
+      proofOperator = await makeUser("proofop");
       await admin
         .from("membership")
         .insert({ user_id: proofOperator.id, org_id: proofOrgId, role: "operator" });
@@ -473,6 +474,78 @@ describe.skipIf(!ready)("RLS isolation", () => {
         .select("tag")
         .eq("turnover_id", proofTurnoverDraftId);
       expect(data).toHaveLength(0);
+    });
+
+    // ── proof_event: share/open tracking (PRD §16 wedge signal) ─────────────
+    describe("proof_event", () => {
+      it("org member can insert share_copied as themselves on a locked turnover", async () => {
+        const { error } = await proofOperator.client.from("proof_event").insert({
+          turnover_id: proofTurnoverLockedId,
+          kind: "share_copied",
+          actor_user_id: proofOperator.id,
+        });
+        expect(error).toBeNull();
+      });
+
+      it("cannot insert link_opened directly or attribute a share to someone else", async () => {
+        const direct = await proofOperator.client.from("proof_event").insert({
+          turnover_id: proofTurnoverLockedId,
+          kind: "link_opened",
+          actor_user_id: proofOperator.id,
+        });
+        expect(direct.error).not.toBeNull();
+
+        const spoofed = await proofOperator.client.from("proof_event").insert({
+          turnover_id: proofTurnoverLockedId,
+          kind: "share_copied",
+          actor_user_id: operatorB.id,
+        });
+        expect(spoofed.error).not.toBeNull();
+      });
+
+      it("other orgs and anon cannot read events; append-only (delete blocked)", async () => {
+        const otherOrg = await operatorB.client.from("proof_event").select("id");
+        expect(otherOrg.data).toEqual([]);
+
+        const anonRead = await anonClient.from("proof_event").select("id");
+        expect(anonRead.data ?? []).toEqual([]);
+
+        await proofOperator.client
+          .from("proof_event")
+          .delete()
+          .eq("turnover_id", proofTurnoverLockedId);
+        const after = await admin
+          .from("proof_event")
+          .select("id")
+          .eq("turnover_id", proofTurnoverLockedId);
+        expect((after.data ?? []).length).toBeGreaterThan(0);
+      });
+
+      it("anon record_proof_open records for a valid token and no-ops for a bad one", async () => {
+        const ok = await anonClient.rpc("record_proof_open", {
+          p_share_token: proofShareToken,
+        });
+        expect(ok.error).toBeNull();
+
+        const bad = await anonClient.rpc("record_proof_open", {
+          p_share_token: "not-a-real-token",
+        });
+        expect(bad.error).toBeNull();
+
+        const rows = await admin
+          .from("proof_event")
+          .select("kind")
+          .eq("turnover_id", proofTurnoverLockedId);
+        expect(rows.data!.filter((r) => r.kind === "link_opened")).toHaveLength(1);
+      });
+
+      it("founder_metrics is denied for normal users and anon", async () => {
+        const denied = await proofOperator.client.rpc("founder_metrics");
+        expect(denied.error).not.toBeNull();
+
+        const anonDenied = await anonClient.rpc("founder_metrics");
+        expect(anonDenied.error).not.toBeNull();
+      });
     });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,6 +9,7 @@ import { PHOTO_SLOTS } from "@/lib/types";
 import type { PhotoSlot } from "@/lib/types";
 import { slotTint } from "@/lib/format";
 import { Icon } from "@/components/Icon";
+import { track } from "@/lib/analytics";
 
 interface CapturedPhoto {
   slot: PhotoSlot;
@@ -35,6 +36,10 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [urgent, setUrgent] = useState(false);
+
+  useEffect(() => {
+    track("turnover_started", { property_id: propertyId });
+  }, [propertyId]);
 
   const total = PHOTO_SLOTS.length;
   const onReview = step >= total;
@@ -94,6 +99,10 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
     startTransition(async () => {
       try {
         const result = await submitTurnoverAction(formData);
+        track("turnover_submitted", {
+          property_id: propertyId,
+          turnover_id: result.id,
+        });
         photos.forEach((ph) => ph && URL.revokeObjectURL(ph.previewUrl));
         router.push(`/t/${result.id}`);
       } catch (err) {

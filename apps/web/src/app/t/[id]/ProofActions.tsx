@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
+import { recordProofShare } from "@/lib/actions/proofEvent";
+import { track } from "@/lib/analytics";
 
 interface Props {
   shareToken: string | null;
+  turnoverId: string;
   turnoverDate: string;
 }
 
-export default function ProofActions({ shareToken }: Props) {
+export default function ProofActions({ shareToken, turnoverId }: Props) {
   const [toast, setToast] = useState<string | null>(null);
 
   if (!shareToken) return <p className="small dim">No proof link available.</p>;
@@ -23,9 +26,15 @@ export default function ProofActions({ shareToken }: Props) {
     window.setTimeout(() => setToast(null), 2000);
   }
 
+  function logShare() {
+    void recordProofShare(turnoverId);
+    track("proof_link_copied", { turnover_id: turnoverId });
+  }
+
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(link);
+      logShare();
       flash("Proof link copied");
     } catch {
       flash("Copy failed — select the link manually");
@@ -41,7 +50,12 @@ export default function ProofActions({ shareToken }: Props) {
         </button>
       </div>
       <div className="row wrap">
-        <a className="btn ghost sm" href={link} target="_blank" rel="noreferrer">
+        <a
+          className="btn ghost sm"
+          href={link}
+          target="_blank"
+          rel="noreferrer"
+        >
           <Icon name="link" size={15} /> Open public view
         </a>
       </div>

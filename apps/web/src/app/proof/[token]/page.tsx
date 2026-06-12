@@ -29,6 +29,15 @@ export default async function ProofPage({
 
   if (!t) notFound();
 
+  // Wedge-signal instrumentation (PRD §16): count the recipient open
+  // server-side. The RPC validates the token, so anon can't forge events.
+  // Instrumentation must never break the public proof page.
+  try {
+    await supabase.rpc("record_proof_open", { p_share_token: token });
+  } catch {
+    /* non-critical */
+  }
+
   const property = Array.isArray(t.property) ? t.property[0] : t.property;
   const submitter = Array.isArray(t.submitter) ? t.submitter[0] : t.submitter;
   const submitterName =

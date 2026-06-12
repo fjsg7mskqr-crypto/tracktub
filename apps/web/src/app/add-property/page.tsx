@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createPropertyAction } from "@/lib/actions/property";
+import {
+  createPropertyAction,
+  joinPaidWaitlistAction,
+} from "@/lib/actions/property";
+import { track } from "@/lib/analytics";
 
 export default function AddProperty() {
   const router = useRouter();
@@ -13,6 +17,8 @@ export default function AddProperty() {
   const [tubNotes, setTubNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showWtp, setShowWtp] = useState(false);
+  const [joined, setJoined] = useState(false);
+  const [joining, startJoin] = useTransition();
 
   function handleSubmit() {
     if (!name.trim()) return;
@@ -24,8 +30,10 @@ export default function AddProperty() {
     startTransition(async () => {
       const result = await createPropertyAction(formData);
       if (result.ok) {
+        track("property_created", { property_id: result.propertyId });
         router.push(`/p/${result.propertyId}`);
       } else if ("wtp" in result) {
+        track("wtp_fake_door_viewed");
         setShowWtp(true);
       } else {
         setError(result.error);
@@ -52,6 +60,30 @@ export default function AddProperty() {
           <p className="tiny dim" style={{ margin: 0 }}>
             (PRD §12 WTP fake-door — this logs your intent. No charge, no card.)
           </p>
+          {joined ? (
+            <div className="note">
+              You&apos;re on the list — we&apos;ll reach out when the paid plan
+              is ready.
+            </div>
+          ) : (
+            <div className="row">
+              <button
+                className="btn primary"
+                disabled={joining}
+                onClick={() =>
+                  startJoin(async () => {
+                    const result = await joinPaidWaitlistAction();
+                    if (result.ok) {
+                      track("paid_waitlist_joined");
+                      setJoined(true);
+                    }
+                  })
+                }
+              >
+                {joining ? "Joining…" : "Join the paid waitlist"}
+              </button>
+            </div>
+          )}
           <div className="row">
             <Link href="/" className="btn">
               ← Back to Cockpit
