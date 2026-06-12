@@ -55,7 +55,6 @@ export default function ProofActions({ shareToken, turnoverId }: Props) {
           href={link}
           target="_blank"
           rel="noreferrer"
-          onClick={logShare}
         >
           <Icon name="link" size={15} /> Open public view
         </a>

@@ -10,9 +10,13 @@ export async function recordProofShare(turnoverId: string): Promise<void> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("proof_event").insert({
-    turnover_id: turnoverId,
-    kind: "share_copied",
-    actor_user_id: user.id,
-  });
+  try {
+    await supabase.from("proof_event").insert({
+      turnover_id: turnoverId,
+      kind: "share_copied",
+      actor_user_id: user.id,
+    });
+  } catch {
+    // Fire-and-forget instrumentation — never propagate to the caller.
+  }
 }

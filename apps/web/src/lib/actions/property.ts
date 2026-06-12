@@ -75,5 +75,7 @@ export async function joinPaidWaitlistAction(): Promise<{ ok: boolean }> {
     .from("waitlist")
     .insert({ email: user.email, source: "wtp_fake_door" });
   // Unique-email conflict still counts as intent.
-  return { ok: !error || error.code === "23505" };
+  if (!error || error.code === "23505") return { ok: true };
+  console.error("Failed to join paid waitlist:", error);
+  return { ok: false };
 }

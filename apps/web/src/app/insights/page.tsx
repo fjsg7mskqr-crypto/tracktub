@@ -93,7 +93,7 @@ export default async function Insights() {
 
   const perProperty = props.map((p) => {
     const count = locked.filter((t) => t.property_id === p.id).length;
-    return { name: p.name, perWeek: (count / WEEKS).toFixed(1), count };
+    return { id: p.id, name: p.name, perWeek: (count / WEEKS).toFixed(1), count };
   });
 
   // Founder section: env allowlist gates rendering; the SECURITY DEFINER
@@ -172,7 +172,7 @@ export default async function Insights() {
         ) : (
           <div className="stack" style={{ gap: 6 }}>
             {perProperty.map((p) => (
-              <div key={p.name} className="spread small">
+              <div key={p.id} className="spread small">
                 <span>
                   <strong>{p.name}</strong>
                 </span>
