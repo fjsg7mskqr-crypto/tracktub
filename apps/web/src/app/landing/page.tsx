@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import "./landing.css";
 import { Lockup, Mark, Waterline } from "./_marks";
 import { LandingWaitlist } from "./LandingWaitlist";
@@ -55,9 +54,6 @@ export default function Landing() {
             <a href="#faq">FAQ</a>
           </div>
           <div className="sp">
-            <Link href="/login" className="btn ghost sm">
-              Sign in
-            </Link>
             <a href="#join" className="btn sm">
               Get early access
             </a>
