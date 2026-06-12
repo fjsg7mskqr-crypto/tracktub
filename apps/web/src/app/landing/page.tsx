@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 const PLATES = [
   { src: "/landing/full.jpg", label: "Full frame" },
-  { src: "/landing/water.jpg", label: "Water level/clarity" },
+  { src: "/landing/water-level.jpg", label: "Water level/clarity" },
   { src: "/landing/panel.jpg", label: "Control panel" },
   { src: "/landing/cover.jpg", label: "Cover" },
 ];
