@@ -144,11 +144,6 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* WATERLINE DIVIDER */}
-        <div className="divider">
-          <Waterline strokeWidth={1.6} />
-        </div>
-
         {/* WHY IT MATTERS */}
         <div className="section" id="why">
           <span className="eyebrow">Peace of mind</span>
