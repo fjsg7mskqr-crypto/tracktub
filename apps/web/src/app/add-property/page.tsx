@@ -8,6 +8,7 @@ import {
   joinPaidWaitlistAction,
 } from "@/lib/actions/property";
 import { track } from "@/lib/analytics";
+import { Button, Card, Input, Label, Note, Textarea } from "@/components/ui";
 
 export default function AddProperty() {
   const router = useRouter();
@@ -48,11 +49,11 @@ export default function AddProperty() {
           <Link href="/">Cockpit</Link> / Add property
         </div>
         <h1>Add a 2nd property</h1>
-        <div className="note">
+        <Note>
           You&apos;re on the <strong>Free plan</strong> (1 property included).
           Additional properties are <strong>$12 / property / month</strong>.
-        </div>
-        <div className="card pad stack">
+        </Note>
+        <Card className="stack">
           <p className="small" style={{ margin: 0 }}>
             Multi-property paid plan is coming. Join the waitlist and we&apos;ll
             reach out when it&apos;s available — at $12/mo per property.
@@ -61,14 +62,14 @@ export default function AddProperty() {
             (PRD §12 WTP fake-door — this logs your intent. No charge, no card.)
           </p>
           {joined ? (
-            <div className="note">
+            <Note>
               You&apos;re on the list — we&apos;ll reach out when the paid plan
               is ready.
-            </div>
+            </Note>
           ) : (
             <div className="row">
-              <button
-                className="btn primary"
+              <Button
+                variant="primary"
                 disabled={joining}
                 onClick={() =>
                   startJoin(async () => {
@@ -81,7 +82,7 @@ export default function AddProperty() {
                 }
               >
                 {joining ? "Joining…" : "Join the paid waitlist"}
-              </button>
+              </Button>
             </div>
           )}
           <div className="row">
@@ -89,7 +90,7 @@ export default function AddProperty() {
               ← Back to Cockpit
             </Link>
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -100,42 +101,39 @@ export default function AddProperty() {
         <Link href="/">Cockpit</Link> / Add property
       </div>
       <h1>Add a property</h1>
-      <div className="note">
+      <Note>
         Your <strong>Free plan</strong> includes 1 property.
-      </div>
+      </Note>
 
-      <div className="card pad stack">
+      <Card className="stack">
         <div>
-          <label className="label" htmlFor="pn">
+          <Label eyebrow htmlFor="pn">
             Property name <span style={{ color: "var(--urgent)" }}>*</span>
-          </label>
-          <input
+          </Label>
+          <Input
             id="pn"
-            className="input"
             placeholder="e.g. Aspen Ridge Cabin"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
         </div>
         <div>
-          <label className="label" htmlFor="addr">
+          <Label eyebrow htmlFor="addr">
             Address (optional)
-          </label>
-          <input
+          </Label>
+          <Input
             id="addr"
-            className="input"
             placeholder="123 Main St, Aspen CO"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           />
         </div>
         <div>
-          <label className="label" htmlFor="notes">
+          <Label eyebrow htmlFor="notes">
             Tub notes (optional)
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="notes"
-            className="textarea"
             rows={3}
             placeholder="Model, quirks, recurring issues…"
             value={tubNotes}
@@ -147,14 +145,15 @@ export default function AddProperty() {
             {error}
           </p>
         )}
-        <button
-          className="btn primary block"
+        <Button
+          variant="primary"
+          block
           disabled={!name.trim() || isPending}
           onClick={handleSubmit}
         >
           {isPending ? "Creating…" : "Create property →"}
-        </button>
-      </div>
+        </Button>
+      </Card>
     </div>
   );
 }
