@@ -1,7 +1,9 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeEmail } from "@/lib/email";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 export type WaitlistState = {
   status: "idle" | "ok" | "already" | "error";
@@ -15,6 +17,19 @@ export async function joinWaitlist(
   _prev: WaitlistState,
   formData: FormData,
 ): Promise<WaitlistState> {
+  // Throttle waitlist submissions per IP (issue #42). No-op until Upstash is
+  // configured; fails open, so a limiter hiccup never blocks a real signup.
+  const { success } = await checkRateLimit(
+    "waitlist",
+    getClientIp(await headers()),
+  );
+  if (!success) {
+    return {
+      status: "error",
+      message: "Too many attempts — please wait a moment and try again.",
+    };
+  }
+
   let email: string;
   try {
     email = normalizeEmail(String(formData.get("email") ?? ""));

@@ -2,6 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnvSafe } from "@/lib/env";
+import {
+  bucketForPath,
+  checkRateLimit,
+  getClientIp,
+  tooManyRequests,
+} from "@/lib/ratelimit";
 
 /** Paths reachable without a session: the login form, the auth callback, the
  *  marketing landing page, shared proof links, and the invite-accept page.
@@ -30,6 +36,18 @@ const PUBLIC_PATHS = [
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+
+  // Rate-limit the abuse-prone public surfaces (login, auth callback, proof
+  // links) before any other work (issue #42). No-op until Upstash is configured,
+  // and checkRateLimit fails open, so this can never 500 the site.
+  const bucket = bucketForPath(request.nextUrl.pathname);
+  if (bucket) {
+    const { success, reset } = await checkRateLimit(
+      bucket,
+      getClientIp(request.headers),
+    );
+    if (!success) return tooManyRequests(reset);
+  }
 
   // Middleware runs on every route, so it must never throw — a throw here is a
   // site-wide 500 (MIDDLEWARE_INVOCATION_FAILED). If Supabase isn't configured,
