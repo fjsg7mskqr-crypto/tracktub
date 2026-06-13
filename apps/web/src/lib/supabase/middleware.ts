@@ -98,7 +98,7 @@ export async function updateSession(request: NextRequest) {
 
     if (!user && !isPublic) {
       const url = request.nextUrl.clone();
-      // Root is the authed cockpit; a logged-out visitor there is marketing
+      // Root is the authed dashboard; a logged-out visitor there is marketing
       // traffic, so send them to the public landing page instead of a login
       // wall. Deeper app paths keep redirecting to /login.
       url.pathname = path === "/" ? "/landing" : "/login";
