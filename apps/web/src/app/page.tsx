@@ -32,7 +32,7 @@ export default async function Home() {
       `id, name, address,
        turnover(
          id, submitted_at_server, status, urgent,
-         photo(slot, storage_path),
+         photo(slot, storage_path, phase),
          issue_tag(tag, confirmed_at),
          water_reading(sanitizer_ppm)
        )`
@@ -143,7 +143,7 @@ export default async function Home() {
               {p.last?.photo && p.last.photo.length > 0 && (
                 <div className="photos" style={{ marginTop: 10 }}>
                   {p.last.photo
-                    .filter((ph) => ph.storage_path)
+                    .filter((ph) => ph.storage_path && ph.phase === "after")
                     .slice(0, 4)
                     .map((ph) => (
                       <img

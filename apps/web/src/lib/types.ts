@@ -4,12 +4,24 @@ export type Role = "operator" | "staff" | "owner";
 
 export type PhotoSlot = "wide" | "waterline" | "panel" | "cover";
 
+/** before = single "as found" shot; after = guest-ready guided set */
+export type CapturePhase = "before" | "after";
+
+// The guided AFTER set — the dispute-grade, guest-ready evidence.
 export const PHOTO_SLOTS: { slot: PhotoSlot; label: string; hint: string }[] = [
   { slot: "wide", label: "Wide shot", hint: "The whole tub area" },
   { slot: "waterline", label: "Waterline", hint: "Water clarity at the line" },
   { slot: "panel", label: "Control panel", hint: "Readout / chemistry" },
   { slot: "cover", label: "Cover & filter", hint: "Cover condition + filter" },
 ];
+
+// The single BEFORE shot — proves the starting state. Stored as one photo row
+// with slot = "wide", phase = "before".
+export const BEFORE_SHOT: { slot: PhotoSlot; label: string; hint: string } = {
+  slot: "wide",
+  label: "Before — how you found it",
+  hint: "One quick shot of the tub as you found it",
+};
 
 export type IssueTag =
   | "water_cloudy"

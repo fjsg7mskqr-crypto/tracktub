@@ -252,6 +252,7 @@ export type Database = {
           confirmed_tags: string[]
           created_at: string
           id: string
+          phase: Database["public"]["Enums"]["capture_phase"]
           slot: Database["public"]["Enums"]["photo_slot"]
           storage_path: string | null
           turnover_id: string
@@ -262,6 +263,7 @@ export type Database = {
           confirmed_tags?: string[]
           created_at?: string
           id?: string
+          phase?: Database["public"]["Enums"]["capture_phase"]
           slot: Database["public"]["Enums"]["photo_slot"]
           storage_path?: string | null
           turnover_id: string
@@ -272,6 +274,7 @@ export type Database = {
           confirmed_tags?: string[]
           created_at?: string
           id?: string
+          phase?: Database["public"]["Enums"]["capture_phase"]
           slot?: Database["public"]["Enums"]["photo_slot"]
           storage_path?: string | null
           turnover_id?: string
@@ -638,6 +641,7 @@ export type Database = {
       record_proof_open: { Args: { p_share_token: string }; Returns: undefined }
     }
     Enums: {
+      capture_phase: "before" | "after"
       member_role: "operator" | "staff" | "owner"
       photo_slot: "wide" | "waterline" | "panel" | "cover"
       turnover_status: "draft" | "submitted_locked"
@@ -771,6 +775,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      capture_phase: ["before", "after"],
       member_role: ["operator", "staff", "owner"],
       photo_slot: ["wide", "waterline", "panel", "cover"],
       turnover_status: ["draft", "submitted_locked"],
