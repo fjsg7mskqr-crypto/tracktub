@@ -711,4 +711,117 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(error).not.toBeNull();
     });
   });
+
+  // ── Water readings (issue #99) ─────────────────────────────────────────────
+  describe("Water readings", () => {
+    const anonClient = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as ReturnType<typeof createClient<Database>>);
+
+    it("staff can add a reading to a draft turnover on an assigned property, not an unassigned one", async () => {
+      const { data: to } = await staffA.client
+        .from("turnover")
+        .insert({ property_id: propAssigned, submitter_id: staffA.id, status: "draft" })
+        .select("id")
+        .single();
+      const { error: okErr } = await staffA.client.from("water_reading").insert({
+        turnover_id: to!.id,
+        property_id: propAssigned,
+        ph: 7.4,
+        sanitizer_ppm: 4,
+        temp_f: 100,
+      });
+      expect(okErr).toBeNull();
+
+      // A draft turnover on the unassigned property (created by admin); staff
+      // cannot attach a reading to it.
+      const { data: toU } = await admin
+        .from("turnover")
+        .insert({ property_id: propUnassigned, submitter_id: operatorA.id, status: "draft" })
+        .select("id")
+        .single();
+      const { error: denyErr } = await staffA.client.from("water_reading").insert({
+        turnover_id: toU!.id,
+        property_id: propUnassigned,
+        ph: 7.4,
+      });
+      expect(denyErr).not.toBeNull();
+    });
+
+    it("a reading is immutable once the turnover is locked", async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({ property_id: propAssigned, submitter_id: operatorA.id, status: "draft" })
+        .select("id")
+        .single();
+      const { data: r, error: insErr } = await operatorA.client
+        .from("water_reading")
+        .insert({ turnover_id: to!.id, property_id: propAssigned, ph: 7.5 })
+        .select("id")
+        .single();
+      expect(insErr).toBeNull();
+
+      await admin
+        .from("turnover")
+        .update({ status: "submitted_locked" })
+        .eq("id", to!.id);
+
+      // USING denies the update on a locked turnover → 0 rows; value unchanged.
+      await operatorA.client
+        .from("water_reading")
+        .update({ ph: 9.9 })
+        .eq("id", r!.id);
+      const { data: after } = await admin
+        .from("water_reading")
+        .select("ph")
+        .eq("id", r!.id)
+        .single();
+      expect(Number(after?.ph)).toBe(7.5);
+    });
+
+    it("anon reads a reading only through a locked + shared turnover", async () => {
+      const token = randomUUID();
+      const { data: shared } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "submitted_locked",
+          share_token: token,
+        })
+        .select("id")
+        .single();
+      await admin
+        .from("water_reading")
+        .insert({ turnover_id: shared!.id, property_id: propAssigned, ph: 7.6 });
+
+      const { data: unshared } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "submitted_locked",
+          share_token: null,
+        })
+        .select("id")
+        .single();
+      await admin
+        .from("water_reading")
+        .insert({ turnover_id: unshared!.id, property_id: propAssigned, ph: 7.6 });
+
+      const okRead = await anonClient
+        .from("water_reading")
+        .select("ph")
+        .eq("turnover_id", shared!.id);
+      expect((okRead.data ?? []).length).toBeGreaterThan(0);
+
+      const denyRead = await anonClient
+        .from("water_reading")
+        .select("ph")
+        .eq("turnover_id", unshared!.id);
+      expect(denyRead.data ?? []).toHaveLength(0);
+    });
+  });
 });

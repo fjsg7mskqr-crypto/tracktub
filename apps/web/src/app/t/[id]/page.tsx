@@ -5,6 +5,8 @@ import { Icon } from "@/components/Icon";
 import { Seal } from "@/components/Seal";
 import { photoPublicUrl } from "@/lib/supabase/storage";
 import { formatDateTime } from "@/lib/format";
+import { WaterReadingCard } from "@/components/WaterReadingCard";
+import { readingHasValues } from "@/lib/chemistry";
 import ProofActions from "./ProofActions";
 
 export default async function TurnoverPage({
@@ -26,7 +28,8 @@ export default async function TurnoverPage({
        property:property(id, name, address),
        submitter:profile(full_name, email),
        photos:photo(slot, storage_path, confirmed_tags),
-       issues:issue_tag(tag, source, confirmed_at)`
+       issues:issue_tag(tag, source, confirmed_at),
+       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at)`
     )
     .eq("id", turnoverIdParam)
     .single();
@@ -36,6 +39,7 @@ export default async function TurnoverPage({
   const submitter = Array.isArray(t.submitter) ? t.submitter[0] : t.submitter;
   const submitterName = submitter?.full_name ?? submitter?.email ?? "Unknown";
   const openIssues = (t.issues ?? []).filter((i) => !i.confirmed_at);
+  const reading = Array.isArray(t.water) ? t.water[0] : t.water;
 
   return (
     <div className="stack" style={{ maxWidth: 720 }}>
@@ -94,6 +98,10 @@ export default async function TurnoverPage({
           </div>
         )}
       </div>
+
+      {reading && readingHasValues(reading) && (
+        <WaterReadingCard reading={reading} />
+      )}
 
       {/* Proof — the differentiator */}
       <div className="card pad stack">
