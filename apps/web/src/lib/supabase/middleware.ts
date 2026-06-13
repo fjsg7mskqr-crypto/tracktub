@@ -3,13 +3,16 @@ import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnvSafe } from "@/lib/env";
 
-/** Paths reachable without a session: the login form, the auth callback, and
- *  the marketing landing page. Everything else requires a signed-in user.
- *  Public proof links (`/proof/*`) will rejoin this list in M2 once they read
- *  from Supabase via an anonymous `share_token` SELECT policy; until then the
- *  route serves only stale demo data, so it stays gated rather than publicly
- *  advertising a dead page. */
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/landing"];
+/** Paths reachable without a session: the login form, the auth callback, the
+ *  marketing landing page, and shared proof links. Everything else requires a
+ *  signed-in user.
+ *  `/proof/*` is public by design — a recipient opens a shared turnover's proof
+ *  link with no account ("No login required to view"). The page reads through
+ *  the anonymous `share_token` RLS policies (`turnover_public_proof` /
+ *  `photo_public_proof`, migration `20260610120000`) and records the open via
+ *  `record_proof_open`. Gating it here redirected recipients to /login and made
+ *  the PRD wedge metric (shared links opened by recipients) unmeasurable (#104). */
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/landing", "/proof"];
 
 /**
  * Refreshes the Supabase session on every request and gates protected routes.
