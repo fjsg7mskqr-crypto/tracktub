@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui";
 
-// Functional sign-in — Google OAuth via Supabase. Plain elements + minimal
-// inline styles; the UI/brand track restyles this once that foundation lands.
+// Functional sign-in — Google OAuth via Supabase. Now on the design-system
+// `Button` primitive (issue #96); this screen was previously a bespoke
+// placeholder awaiting the UI foundation.
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -44,29 +46,21 @@ export default function LoginPage() {
         padding: "0 24px",
       }}
     >
-      <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em" }}>
-        Sign in to TrackTub
-      </h1>
-      <button
-        type="button"
+      <h1 style={{ fontSize: 22 }}>Sign in to TrackTub</h1>
+      <Button
+        variant="primary"
+        block
         onClick={signInWithGoogle}
         disabled={pending}
-        style={{
-          padding: "10px 12px",
-          borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.14)",
-          background: "#ededef",
-          color: "#08090a",
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: pending ? "default" : "pointer",
-          opacity: pending ? 0.6 : 1,
-        }}
       >
         {pending ? "Redirecting…" : "Continue with Google"}
-      </button>
+      </Button>
       {error && (
-        <p role="alert" style={{ color: "#ef4444", fontSize: 13 }}>
+        <p
+          role="alert"
+          className="small"
+          style={{ color: "var(--urgent)", margin: 0 }}
+        >
           {error}
         </p>
       )}
