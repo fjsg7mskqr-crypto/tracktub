@@ -90,7 +90,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           created_at: string
-          email: string
+          email: string | null
           expires_at: string
           id: string
           invited_by: string
@@ -102,7 +102,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           created_at?: string
-          email: string
+          email?: string | null
           expires_at?: string
           id?: string
           invited_by: string
@@ -114,7 +114,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           created_at?: string
-          email?: string
+          email?: string | null
           expires_at?: string
           id?: string
           invited_by?: string
@@ -570,6 +570,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invite: { Args: { p_token: string }; Returns: string }
       app_can_capture_property: {
         Args: { p_property: string }
         Returns: boolean
@@ -584,6 +585,7 @@ export type Database = {
       }
       app_is_member: { Args: { p_org: string }; Returns: boolean }
       founder_metrics: { Args: never; Returns: Json }
+      get_invite_preview: { Args: { p_token: string }; Returns: Json }
       record_proof_open: { Args: { p_share_token: string }; Returns: undefined }
     }
     Enums: {

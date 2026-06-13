@@ -15,6 +15,19 @@ export default function LoginPage() {
     setError(null);
     setPending(true);
     const supabase = createClient();
+    // Carry a same-origin `?next=` through the OAuth round-trip so capability
+    // links (e.g. /invite/{token}) resume after sign-in. The callback route
+    // re-validates next as a same-origin path, so an open redirect is
+    // impossible even if this is tampered with. Read it from the live URL at
+    // click time to avoid forcing the page dynamic via useSearchParams.
+    const rawNext = new URLSearchParams(window.location.search).get("next");
+    const next =
+      rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+        ? rawNext
+        : null;
+    const callback = `${window.location.origin}/auth/callback${
+      next ? `?next=${encodeURIComponent(next)}` : ""
+    }`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       // Client-initiated PKCE stores a one-time code verifier in a cookie on the
@@ -23,7 +36,7 @@ export default function LoginPage() {
       // (NEXT_PUBLIC_SITE_URL), which sends preview/non-canonical deployments to
       // prod, where the verifier cookie is absent → session never minted →
       // redirect loop back to /login. Always use the live browser origin.
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: callback },
     });
     // On success the browser is redirected to Google, so this line is only
     // reached on error.

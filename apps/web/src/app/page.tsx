@@ -4,13 +4,22 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { photoPublicUrl } from "@/lib/supabase/storage";
 import { timeAgo } from "@/lib/format";
+import { getCurrentMembership } from "@/lib/auth";
+import { CleanerHome } from "./CleanerHome";
 
 export default async function Home() {
+  const membership = await getCurrentMembership();
+  if (!membership) redirect("/login");
+
+  // Cleaners get the stripped capture-only home.
+  if (membership.role === "staff") {
+    const firstName = membership.email?.split("@")[0] ?? null;
+    return <CleanerHome name={firstName} />;
+  }
+
+  // Operators and owners get the cockpit; only operators can add properties.
+  const canAdd = membership.role === "operator";
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const { data: properties } = await supabase
     .from("property")
@@ -41,9 +50,11 @@ export default async function Home() {
     <div className="stack">
       <div className="spread pagehead">
         <h1>Cockpit</h1>
-        <Link href="/add-property" className="btn primary">
-          <Icon name="plus" size={15} /> Add property
-        </Link>
+        {canAdd && (
+          <Link href="/add-property" className="btn primary">
+            <Icon name="plus" size={15} /> Add property
+          </Link>
+        )}
       </div>
 
       {cockpit.length === 0 ? (
@@ -52,15 +63,19 @@ export default async function Home() {
           style={{ textAlign: "center", padding: "40px 24px" }}
         >
           <p className="muted">
-            No properties yet. Add your first to start logging turnovers.
+            {canAdd
+              ? "No properties yet. Add your first to start logging turnovers."
+              : "No properties shared with you yet."}
           </p>
-          <Link
-            href="/add-property"
-            className="btn primary"
-            style={{ alignSelf: "center" }}
-          >
-            Add your first property →
-          </Link>
+          {canAdd && (
+            <Link
+              href="/add-property"
+              className="btn primary"
+              style={{ alignSelf: "center" }}
+            >
+              Add your first property →
+            </Link>
+          )}
         </div>
       ) : (
         <div className="stack">

@@ -54,7 +54,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jbMono.variable} ${spaceGrotesk.variable}`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${jbMono.variable} ${spaceGrotesk.variable}`}
+    >
       <body>
         <Analytics />
         <Shell>{children}</Shell>
