@@ -46,9 +46,35 @@ export async function submitTurnoverAction(
     turnover_id: string;
     storage_path: string;
     slot: Enums<"photo_slot">;
+    phase: Enums<"capture_phase">;
     captured_at: string;
     confirmed_tags: string[];
   }> = [];
+
+  // BEFORE — the single "as found" shot (slot 'wide', phase 'before'). Stored
+  // under a distinct `/before` path so it never collides with the after wide.
+  const beforeFile = formData.get("photo_before") as File | null;
+  if (beforeFile && beforeFile.size > 0) {
+    const beforePath = `${property.org_id}/${turnover.id}/before`;
+    const { error: beforeErr } = await supabase.storage
+      .from("photos")
+      .upload(beforePath, beforeFile, {
+        contentType: beforeFile.type || "image/jpeg",
+        upsert: false,
+      });
+    if (beforeErr)
+      throw new Error(`Upload failed for before: ${beforeErr.message}`);
+    photoInserts.push({
+      turnover_id: turnover.id,
+      storage_path: beforePath,
+      slot: "wide",
+      phase: "before",
+      captured_at:
+        (formData.get("capturedAt_before") as string | null) ??
+        new Date().toISOString(),
+      confirmed_tags: [],
+    });
+  }
 
   for (const slot of slots) {
     const file = formData.get(`photo_${slot}`) as File | null;
@@ -80,6 +106,7 @@ export async function submitTurnoverAction(
       turnover_id: turnover.id,
       storage_path: storagePath,
       slot,
+      phase: "after",
       captured_at: capturedAt,
       confirmed_tags: confirmedTags,
     });
