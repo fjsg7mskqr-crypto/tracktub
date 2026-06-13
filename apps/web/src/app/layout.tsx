@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Shell } from "@/components/Shell";
 import { Analytics } from "@/components/Analytics";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { getURL } from "@/lib/url";
 
 const inter = Inter({
@@ -61,6 +62,7 @@ export default function RootLayout({
       <body>
         <Analytics />
         <Shell>{children}</Shell>
+        <VercelAnalytics />
       </body>
     </html>
   );
