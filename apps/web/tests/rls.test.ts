@@ -824,4 +824,68 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(denyRead.data ?? []).toHaveLength(0);
     });
   });
+
+  // ── Chemistry trend visibility (issue #100) ────────────────────────────────
+  describe("Chemistry trend visibility", () => {
+    let readingAssignedId: string;
+    let readingUnassignedId: string;
+
+    beforeAll(async () => {
+      const seed = async (prop: string): Promise<string> => {
+        const { data: to } = await admin
+          .from("turnover")
+          .insert({
+            property_id: prop,
+            submitter_id: operatorA.id,
+            status: "submitted_locked",
+            share_token: randomUUID(),
+          })
+          .select("id")
+          .single();
+        const { data: r } = await admin
+          .from("water_reading")
+          .insert({ turnover_id: to!.id, property_id: prop, ph: 7.4, sanitizer_ppm: 4 })
+          .select("id")
+          .single();
+        return r!.id;
+      };
+      readingAssignedId = await seed(propAssigned);
+      readingUnassignedId = await seed(propUnassigned);
+    });
+
+    it("operator sees trend readings for every org property", async () => {
+      const { data: a } = await operatorA.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propAssigned);
+      expect((a ?? []).map((r) => r.id)).toContain(readingAssignedId);
+      const { data: u } = await operatorA.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propUnassigned);
+      expect((u ?? []).map((r) => r.id)).toContain(readingUnassignedId);
+    });
+
+    it("assigned staff sees trend readings only for assigned properties", async () => {
+      const { data: ok } = await staffA.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propAssigned);
+      expect((ok ?? []).map((r) => r.id)).toContain(readingAssignedId);
+
+      const { data: deny } = await staffA.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propUnassigned);
+      expect(deny ?? []).toHaveLength(0);
+    });
+
+    it("another org cannot read the readings", async () => {
+      const { data } = await operatorB.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propAssigned);
+      expect(data ?? []).toHaveLength(0);
+    });
+  });
 });

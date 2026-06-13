@@ -6,6 +6,11 @@ import { photoPublicUrl } from "@/lib/supabase/storage";
 import { timeAgo } from "@/lib/format";
 import { getCurrentMembership } from "@/lib/auth";
 import { CleanerHome } from "./CleanerHome";
+import {
+  batherLoadActive,
+  clarityFlag,
+  type TurnoverChem,
+} from "@/lib/chemistry-rules";
 
 export default async function Home() {
   const membership = await getCurrentMembership();
@@ -28,11 +33,13 @@ export default async function Home() {
        turnover(
          id, submitted_at_server, status, urgent,
          photo(slot, storage_path),
-         issue_tag(tag, confirmed_at)
+         issue_tag(tag, confirmed_at),
+         water_reading(sanitizer_ppm)
        )`
     )
     .order("created_at");
 
+  const now = Date.now();
   const cockpit = (properties ?? []).map((p) => {
     const locked = (p.turnover ?? [])
       .filter((t) => t.status === "submitted_locked")
@@ -43,7 +50,19 @@ export default async function Home() {
     const openIssues = last
       ? (last.issue_tag ?? []).filter((i) => !i.confirmed_at).length
       : 0;
-    return { ...p, last, openIssues };
+    // Chemistry-aware prompts (issue #100).
+    const chem: TurnoverChem[] = locked.map((t) => ({
+      at: t.submitted_at_server,
+      sanitizerPpm:
+        (Array.isArray(t.water_reading) ? t.water_reading[0] : t.water_reading)
+          ?.sanitizer_ppm ?? null,
+      cloudy: (t.issue_tag ?? []).some(
+        (i) => i.tag === "water_cloudy" && !i.confirmed_at
+      ),
+    }));
+    const batherLoad = batherLoadActive(chem, now);
+    const chemFlag = chem.length > 0 ? clarityFlag(chem[0]) : null;
+    return { ...p, last, openIssues, batherLoad, chemFlag };
   });
 
   return (
@@ -96,6 +115,14 @@ export default async function Home() {
                 >
                   {p.last?.urgent && (
                     <span className="badge danger">Urgent</span>
+                  )}
+                  {p.batherLoad && (
+                    <span className="badge warn">
+                      <Icon name="droplet" size={11} /> Shock due
+                    </span>
+                  )}
+                  {p.chemFlag?.reason === "low_sanitizer" && (
+                    <span className="badge warn">Low sanitizer</span>
                   )}
                   {p.openIssues > 0 ? (
                     <span className="badge warn">
