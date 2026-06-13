@@ -10,6 +10,20 @@ import type { PhotoSlot } from "@/lib/types";
 import { slotTint } from "@/lib/format";
 import { Icon } from "@/components/Icon";
 import { track } from "@/lib/analytics";
+import { Input, Label } from "@/components/ui";
+import {
+  CHEM_THRESHOLDS,
+  phOutOfRange,
+  sanitizerOutOfRange,
+  tempOutOfRange,
+} from "@/lib/chemistry";
+
+const numOrNull = (v: string): number | null => {
+  const t = v.trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+};
 
 interface CapturedPhoto {
   slot: PhotoSlot;
@@ -36,15 +50,20 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [urgent, setUrgent] = useState(false);
+  const [ph, setPh] = useState("");
+  const [sanitizer, setSanitizer] = useState("");
+  const [temp, setTemp] = useState("");
 
   useEffect(() => {
     track("turnover_started", { property_id: propertyId });
   }, [propertyId]);
 
+  // Steps: 0..total-1 = photos, total = water check, total+1 = review.
   const total = PHOTO_SLOTS.length;
-  const onReview = step >= total;
-  const slot = onReview ? null : PHOTO_SLOTS[step];
-  const capturedHere = !onReview && photos[step] != null;
+  const onWater = step === total;
+  const onReview = step > total;
+  const slot = onWater || onReview ? null : PHOTO_SLOTS[step];
+  const capturedHere = !onWater && !onReview && photos[step] != null;
   const allCaptured = photos.every((x) => x != null);
 
   function openPicker() {
@@ -89,6 +108,9 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
     formData.append("propertyId", propertyId);
     formData.append("notes", notes);
     formData.append("urgent", String(urgent));
+    formData.append("ph", ph);
+    formData.append("sanitizer_ppm", sanitizer);
+    formData.append("temp_f", temp);
     for (const ph of photos) {
       if (!ph) continue;
       formData.append(`photo_${ph.slot}`, ph.file);
@@ -147,6 +169,19 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
             }}
           />
         ))}
+        <div
+          title="Water check"
+          style={{
+            flex: 1,
+            height: 5,
+            borderRadius: 999,
+            background: onReview
+              ? "var(--brand)"
+              : onWater
+                ? "var(--brand-soft)"
+                : "var(--line)",
+          }}
+        />
         <div
           title="Review"
           style={{
@@ -253,7 +288,95 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
               disabled={!capturedHere}
               onClick={() => setStep((s) => s + 1)}
             >
-              {step === total - 1 ? "Review →" : "Next →"}
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {onWater && (
+        <div className="card pad stack">
+          <div className="spread">
+            <h2 style={{ fontSize: 18 }}>Water check</h2>
+            <span className="badge">Optional</span>
+          </div>
+          <p className="muted small" style={{ marginTop: -6 }}>
+            A quick reading makes this turnover dispute-grade and tracks the
+            water over time. Skip any you didn&apos;t measure.
+          </p>
+
+          <div className="stack" style={{ gap: 14 }}>
+            <div>
+              <Label htmlFor="ph">pH</Label>
+              <Input
+                id="ph"
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder={`${CHEM_THRESHOLDS.ph.min}–${CHEM_THRESHOLDS.ph.max}`}
+                value={ph}
+                onChange={(e) => setPh(e.target.value)}
+              />
+              {phOutOfRange(numOrNull(ph)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Outside {CHEM_THRESHOLDS.ph.min}–{CHEM_THRESHOLDS.ph.max} —
+                  re-balance before the next guest.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="sanitizer">Sanitizer (ppm)</Label>
+              <Input
+                id="sanitizer"
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder={`${CHEM_THRESHOLDS.sanitizerPpm.min}–${CHEM_THRESHOLDS.sanitizerPpm.max} ppm chlorine`}
+                value={sanitizer}
+                onChange={(e) => setSanitizer(e.target.value)}
+              />
+              {sanitizerOutOfRange(numOrNull(sanitizer)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Outside {CHEM_THRESHOLDS.sanitizerPpm.min}–
+                  {CHEM_THRESHOLDS.sanitizerPpm.max} ppm — re-shock and retest.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="temp">Temperature (°F)</Label>
+              <Input
+                id="temp"
+                type="number"
+                inputMode="decimal"
+                step="1"
+                placeholder={`≤ ${CHEM_THRESHOLDS.tempF.max}°F`}
+                value={temp}
+                onChange={(e) => setTemp(e.target.value)}
+              />
+              {tempOutOfRange(numOrNull(temp)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Above {CHEM_THRESHOLDS.tempF.max}°F — let it cool before
+                  guests use it.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="spread">
+            <button className="btn ghost" onClick={() => setStep(total - 1)}>
+              ← Back
+            </button>
+            <button className="btn primary" onClick={() => setStep(total + 1)}>
+              Review →
             </button>
           </div>
         </div>
@@ -340,7 +463,7 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
           )}
 
           <div className="spread">
-            <button className="btn ghost" onClick={() => setStep(total - 1)}>
+            <button className="btn ghost" onClick={() => setStep(total)}>
               ← Back
             </button>
             <button

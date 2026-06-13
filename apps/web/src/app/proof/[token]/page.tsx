@@ -4,6 +4,8 @@ import { Seal } from "@/components/Seal";
 import { Icon } from "@/components/Icon";
 import { photoPublicUrl } from "@/lib/supabase/storage";
 import { formatDateTime } from "@/lib/format";
+import { WaterReadingCard } from "@/components/WaterReadingCard";
+import { readingHasValues } from "@/lib/chemistry";
 
 export default async function ProofPage({
   params,
@@ -21,13 +23,16 @@ export default async function ProofPage({
        property:property(name, address),
        submitter:profile(full_name, email),
        photos:photo(slot, storage_path),
-       issues:issue_tag(tag, source, confirmed_at)`
+       issues:issue_tag(tag, source, confirmed_at),
+       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at)`
     )
     .eq("share_token", token)
     .eq("status", "submitted_locked")
     .single();
 
   if (!t) notFound();
+
+  const reading = Array.isArray(t.water) ? t.water[0] : t.water;
 
   // Wedge-signal instrumentation (PRD §16): count the recipient open
   // server-side. The RPC validates the token, so anon can't forge events.
@@ -155,6 +160,12 @@ export default async function ProofPage({
             </>
           )}
         </div>
+
+        {reading && readingHasValues(reading) && (
+          <div style={{ marginTop: 16 }}>
+            <WaterReadingCard reading={reading} />
+          </div>
+        )}
 
         <p className="tiny dim" style={{ textAlign: "center", marginTop: 16 }}>
           This record was captured through TrackTub and locked at submission.

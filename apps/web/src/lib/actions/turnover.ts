@@ -74,8 +74,7 @@ export async function submitTurnoverAction(
         contentType: file.type || "image/jpeg",
         upsert: false,
       });
-    if (upErr)
-      throw new Error(`Upload failed for ${slot}: ${upErr.message}`);
+    if (upErr) throw new Error(`Upload failed for ${slot}: ${upErr.message}`);
 
     photoInserts.push({
       turnover_id: turnover.id,
@@ -87,17 +86,42 @@ export async function submitTurnoverAction(
   }
 
   if (photoInserts.length > 0) {
-    const { error: photoErr } = await supabase.from("photo").insert(photoInserts);
+    const { error: photoErr } = await supabase
+      .from("photo")
+      .insert(photoInserts);
     if (photoErr)
       throw new Error(`Failed to save photo records: ${photoErr.message}`);
+  }
+
+  // Water check (issue #99) — must land while the turnover is still `draft`
+  // (RLS requires it). All three fields are optional; skip the row entirely if
+  // none were entered. A blank/non-numeric field becomes null.
+  const num = (key: string): number | null => {
+    const raw = (formData.get(key) as string | null)?.trim();
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const ph = num("ph");
+  const sanitizerPpm = num("sanitizer_ppm");
+  const tempF = num("temp_f");
+  if (ph !== null || sanitizerPpm !== null || tempF !== null) {
+    const { error: readingErr } = await supabase.from("water_reading").insert({
+      turnover_id: turnover.id,
+      property_id: propertyId,
+      ph,
+      sanitizer_ppm: sanitizerPpm,
+      temp_f: tempF,
+    });
+    if (readingErr)
+      throw new Error(`Failed to save water reading: ${readingErr.message}`);
   }
 
   const { error: lockErr } = await supabase
     .from("turnover")
     .update({ status: "submitted_locked" })
     .eq("id", turnover.id);
-  if (lockErr)
-    throw new Error(`Failed to lock turnover: ${lockErr.message}`);
+  if (lockErr) throw new Error(`Failed to lock turnover: ${lockErr.message}`);
 
   return { id: turnover.id, shareToken };
 }

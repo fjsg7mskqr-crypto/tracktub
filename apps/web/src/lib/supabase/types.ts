@@ -565,6 +565,54 @@ export type Database = {
         }
         Relationships: []
       }
+      water_reading: {
+        Row: {
+          created_at: string
+          id: string
+          ph: number | null
+          property_id: string
+          recorded_at: string
+          sanitizer_ppm: number | null
+          temp_f: number | null
+          turnover_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ph?: number | null
+          property_id: string
+          recorded_at?: string
+          sanitizer_ppm?: number | null
+          temp_f?: number | null
+          turnover_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ph?: number | null
+          property_id?: string
+          recorded_at?: string
+          sanitizer_ppm?: number | null
+          temp_f?: number | null
+          turnover_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "water_reading_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "water_reading_turnover_id_fkey"
+            columns: ["turnover_id"]
+            isOneToOne: true
+            referencedRelation: "turnover"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
