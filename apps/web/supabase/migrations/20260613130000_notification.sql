@@ -23,6 +23,10 @@ create table notification (
   read_at timestamptz
 );
 create index on notification (user_id, read_at);
+-- One ready-notification per (recipient, turnover): lets the writer be
+-- idempotent (on conflict do nothing) if the fan-out is ever retried.
+create unique index notification_recipient_turnover_idx
+  on notification (user_id, turnover_id, type);
 
 alter table notification enable row level security;
 
@@ -35,6 +39,13 @@ create policy notification_update_own on notification
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 -- No insert/delete policies: all writes flow through notify_turnover_ready().
+
+-- Defense-in-depth: the only mutation a recipient may make is marking a row
+-- read. Column-level privileges restrict UPDATE to `read_at` so the message,
+-- scope columns, etc. can never be rewritten even on one's own row. (The
+-- definer writer below inserts as its owner, so this does not affect fan-out.)
+revoke update on table notification from authenticated;
+grant update (read_at) on table notification to authenticated;
 
 -- Fan-out writer. Called from the submit action after the turnover locks.
 -- Inserts one `turnover_ready` row per operator/owner membership of the
@@ -60,8 +71,11 @@ begin
   where t.id = p_turnover_id
     and t.status = 'submitted_locked';
 
-  -- Unknown turnover, or one that isn't locked yet: no-op.
-  if v_org_id is null then
+  -- No-op unless the turnover exists, is locked, AND the caller is authorized to
+  -- capture that property (operator or assigned staff). This gate stops any
+  -- authenticated user from invoking this definer RPC to spam another org's
+  -- hosts — only the legitimate submitter's path reaches the fan-out.
+  if v_org_id is null or not app_can_capture_property(v_property_id) then
     return;
   end if;
 
@@ -71,7 +85,8 @@ begin
   from membership m
   where m.org_id = v_org_id
     and m.role in ('operator', 'owner')
-    and m.user_id <> v_submitter;
+    and m.user_id <> v_submitter
+  on conflict (user_id, turnover_id, type) do nothing;
 
   return query
     select pr.email

@@ -11,10 +11,12 @@ export async function markNotificationRead(id: string): Promise<void> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase
+  const { error } = await supabase
     .from("notification")
     .update({ read_at: new Date().toISOString() })
     .eq("id", id);
+  if (error)
+    throw new Error(`Failed to mark notification read: ${error.message}`);
   revalidatePath("/");
 }
 
@@ -26,9 +28,11 @@ export async function markAllNotificationsRead(): Promise<void> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase
+  const { error } = await supabase
     .from("notification")
     .update({ read_at: new Date().toISOString() })
     .is("read_at", null);
+  if (error)
+    throw new Error(`Failed to mark notifications read: ${error.message}`);
   revalidatePath("/");
 }
