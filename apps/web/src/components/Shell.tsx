@@ -16,6 +16,7 @@ const NAV_BY_ROLE: Record<MemberRole, NavItem[]> = {
   operator: [
     { href: "/", label: "Dashboard" },
     { href: "/team", label: "Team" },
+    { href: "/chemistry", label: "Chemistry" },
     { href: "/insights", label: "Insights" },
     { href: "/add-property", label: "Add property" },
   ],
