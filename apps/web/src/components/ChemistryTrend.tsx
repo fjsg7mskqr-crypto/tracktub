@@ -77,8 +77,16 @@ function Cell({ value, flagged }: { value: number | null; flagged: boolean }) {
 }
 
 /** Per-property chemistry trend (issue #100): sparklines + a recent-readings
- *  table, with out-of-range points/values flagged. `readings` is newest-first. */
-export function ChemistryTrend({ readings }: { readings: TrendReading[] }) {
+ *  table, with out-of-range points/values flagged. `readings` is newest-first.
+ *  `compact` renders only the 3-metric sparkline grid (no card/header/table) —
+ *  used by the cross-property /chemistry screen, which supplies its own card. */
+export function ChemistryTrend({
+  readings,
+  compact = false,
+}: {
+  readings: TrendReading[];
+  compact?: boolean;
+}) {
   if (readings.length === 0) return null;
   const chrono = [...readings].reverse();
 
@@ -89,6 +97,35 @@ export function ChemistryTrend({ readings }: { readings: TrendReading[] }) {
     sanitizerOutOfRange
   );
   const tempPts = points(chrono, (r) => r.temp_f, tempOutOfRange);
+
+  const metrics = (
+    <div
+      className="grid"
+      style={{
+        gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+        gap: 16,
+      }}
+    >
+      <Metric
+        label="pH"
+        pts={phPts}
+        band={{ min: CHEM_THRESHOLDS.ph.min, max: CHEM_THRESHOLDS.ph.max }}
+      />
+      <Metric
+        label="Sanitizer"
+        unit="ppm"
+        pts={sanitizerPts}
+        band={{
+          min: CHEM_THRESHOLDS.sanitizerPpm.min,
+          max: CHEM_THRESHOLDS.sanitizerPpm.max,
+        }}
+      />
+      <Metric label="Temp" unit="°F" pts={tempPts} />
+    </div>
+  );
+
+  if (compact) return metrics;
+
   const recent = readings.slice(0, 8);
 
   return (
@@ -100,29 +137,7 @@ export function ChemistryTrend({ readings }: { readings: TrendReading[] }) {
         </span>
       </div>
 
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-          gap: 16,
-        }}
-      >
-        <Metric
-          label="pH"
-          pts={phPts}
-          band={{ min: CHEM_THRESHOLDS.ph.min, max: CHEM_THRESHOLDS.ph.max }}
-        />
-        <Metric
-          label="Sanitizer"
-          unit="ppm"
-          pts={sanitizerPts}
-          band={{
-            min: CHEM_THRESHOLDS.sanitizerPpm.min,
-            max: CHEM_THRESHOLDS.sanitizerPpm.max,
-          }}
-        />
-        <Metric label="Temp" unit="°F" pts={tempPts} />
-      </div>
+      {metrics}
 
       <hr className="divider" />
 
