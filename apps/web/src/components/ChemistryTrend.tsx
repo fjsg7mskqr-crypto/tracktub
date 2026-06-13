@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Icon } from "@/components/Icon";
 import { Mono } from "@/components/ui";
 import { Sparkline, type SparkPoint } from "@/components/Sparkline";
@@ -124,9 +125,69 @@ export function ChemistryTrend({
     </div>
   );
 
-  if (compact) return metrics;
-
   const recent = readings.slice(0, 8);
+
+  const thLabel: CSSProperties = {
+    fontFamily: "var(--mono)",
+    fontSize: 11,
+    fontWeight: 400,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "var(--text-dim)",
+  };
+  const table = (
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr>
+          <th style={{ ...thLabel, textAlign: "left", padding: "6px 0" }}>
+            When
+          </th>
+          <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
+            pH
+          </th>
+          <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
+            Sanitizer
+          </th>
+          <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
+            Temp
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {recent.map((r, i) => (
+          <tr key={i} style={{ borderTop: "1px solid var(--border)" }}>
+            <td className="small dim" style={{ padding: "8px 0" }}>
+              {formatDateTime(r.recorded_at)}
+            </td>
+            <td style={{ textAlign: "right", padding: "8px 0" }}>
+              <Cell value={r.ph} flagged={phOutOfRange(r.ph)} />
+            </td>
+            <td style={{ textAlign: "right", padding: "8px 0" }}>
+              <Cell
+                value={r.sanitizer_ppm}
+                flagged={sanitizerOutOfRange(r.sanitizer_ppm)}
+              />
+            </td>
+            <td style={{ textAlign: "right", padding: "8px 0" }}>
+              <Cell value={r.temp_f} flagged={tempOutOfRange(r.temp_f)} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  // Compact (cross-property /chemistry screen): sparklines + the titled
+  // readings table, but no outer card/header — the caller supplies the card.
+  if (compact) {
+    return (
+      <>
+        {metrics}
+        <hr className="divider" />
+        {table}
+      </>
+    );
+  }
 
   return (
     <div className="card pad stack">
@@ -141,37 +202,7 @@ export function ChemistryTrend({
 
       <hr className="divider" />
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr className="label">
-            <th style={{ textAlign: "left", padding: "6px 0" }}>When</th>
-            <th style={{ textAlign: "right", padding: "6px 0" }}>pH</th>
-            <th style={{ textAlign: "right", padding: "6px 0" }}>Sanitizer</th>
-            <th style={{ textAlign: "right", padding: "6px 0" }}>Temp</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recent.map((r, i) => (
-            <tr key={i} style={{ borderTop: "1px solid var(--border)" }}>
-              <td className="small dim" style={{ padding: "8px 0" }}>
-                {formatDateTime(r.recorded_at)}
-              </td>
-              <td style={{ textAlign: "right", padding: "8px 0" }}>
-                <Cell value={r.ph} flagged={phOutOfRange(r.ph)} />
-              </td>
-              <td style={{ textAlign: "right", padding: "8px 0" }}>
-                <Cell
-                  value={r.sanitizer_ppm}
-                  flagged={sanitizerOutOfRange(r.sanitizer_ppm)}
-                />
-              </td>
-              <td style={{ textAlign: "right", padding: "8px 0" }}>
-                <Cell value={r.temp_f} flagged={tempOutOfRange(r.temp_f)} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {table}
     </div>
   );
 }
