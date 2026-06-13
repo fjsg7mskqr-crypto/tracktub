@@ -79,7 +79,7 @@ export default async function PropertyPage({
   return (
     <div className="stack">
       <div className="crumb">
-        <Link href="/">Cockpit</Link> / {property.name}
+        <Link href="/">Dashboard</Link> / {property.name}
       </div>
 
       <div className="spread pagehead">

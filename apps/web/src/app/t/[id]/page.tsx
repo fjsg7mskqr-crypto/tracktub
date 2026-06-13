@@ -44,7 +44,7 @@ export default async function TurnoverPage({
   return (
     <div className="stack" style={{ maxWidth: 720 }}>
       <div className="crumb">
-        <Link href="/">Cockpit</Link> /{" "}
+        <Link href="/">Dashboard</Link> /{" "}
         <Link href={`/p/${property?.id}`}>{property?.name}</Link> / Turnover
       </div>
 

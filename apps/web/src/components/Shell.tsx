@@ -10,17 +10,17 @@ import { resolveRole, type MemberRole } from "@/lib/role";
 
 type NavItem = { href: string; label: string };
 
-// Nav by role (issue #97). Operator = full host cockpit; staff = capture-only
-// home (no nav); owner = read-only properties.
+// Nav by role (issue #97). Operator = full host nav; staff = capture-only
+// home (no nav); owner = read-only dashboard.
 const NAV_BY_ROLE: Record<MemberRole, NavItem[]> = {
   operator: [
-    { href: "/", label: "Properties" },
+    { href: "/", label: "Dashboard" },
     { href: "/team", label: "Team" },
     { href: "/insights", label: "Insights" },
     { href: "/add-property", label: "Add property" },
   ],
   staff: [],
-  owner: [{ href: "/", label: "Properties" }],
+  owner: [{ href: "/", label: "Dashboard" }],
 };
 
 export function Shell({ children }: { children: React.ReactNode }) {

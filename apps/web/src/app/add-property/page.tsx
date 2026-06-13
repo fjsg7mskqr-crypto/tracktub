@@ -46,7 +46,7 @@ export default function AddProperty() {
     return (
       <div className="stack" style={{ maxWidth: 560 }}>
         <div className="crumb">
-          <Link href="/">Cockpit</Link> / Add property
+          <Link href="/">Dashboard</Link> / Add property
         </div>
         <h1>Add a 2nd property</h1>
         <Note>
@@ -87,7 +87,7 @@ export default function AddProperty() {
           )}
           <div className="row">
             <Link href="/" className="btn">
-              ← Back to Cockpit
+              ← Back to Dashboard
             </Link>
           </div>
         </Card>
@@ -98,7 +98,7 @@ export default function AddProperty() {
   return (
     <div className="stack" style={{ maxWidth: 560 }}>
       <div className="crumb">
-        <Link href="/">Cockpit</Link> / Add property
+        <Link href="/">Dashboard</Link> / Add property
       </div>
       <h1>Add a property</h1>
       <Note>

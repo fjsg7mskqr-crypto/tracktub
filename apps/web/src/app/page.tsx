@@ -22,7 +22,7 @@ export default async function Home() {
     return <CleanerHome name={firstName} />;
   }
 
-  // Operators and owners get the cockpit; only operators can add properties.
+  // Operators and owners get the dashboard; only operators can add properties.
   const canAdd = membership.role === "operator";
   const supabase = await createClient();
 
@@ -40,7 +40,7 @@ export default async function Home() {
     .order("created_at");
 
   const now = Date.now();
-  const cockpit = (properties ?? []).map((p) => {
+  const propertyCards = (properties ?? []).map((p) => {
     const locked = (p.turnover ?? [])
       .filter((t) => t.status === "submitted_locked")
       .sort((a, b) =>
@@ -68,7 +68,7 @@ export default async function Home() {
   return (
     <div className="stack">
       <div className="spread pagehead">
-        <h1>Cockpit</h1>
+        <h1>Your hot tubs</h1>
         {canAdd && (
           <Link href="/add-property" className="btn primary">
             <Icon name="plus" size={15} /> Add property
@@ -76,7 +76,7 @@ export default async function Home() {
         )}
       </div>
 
-      {cockpit.length === 0 ? (
+      {propertyCards.length === 0 ? (
         <div
           className="card pad stack"
           style={{ textAlign: "center", padding: "40px 24px" }}
@@ -98,7 +98,7 @@ export default async function Home() {
         </div>
       ) : (
         <div className="stack">
-          {cockpit.map((p) => (
+          {propertyCards.map((p) => (
             <Link key={p.id} href={`/p/${p.id}`} className="card card-link pad">
               <div className="spread" style={{ marginBottom: 8 }}>
                 <div>
