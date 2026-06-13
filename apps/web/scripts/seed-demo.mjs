@@ -42,6 +42,10 @@ const CLEANER = { email: "demo-cleaner@tracktub.test", password: DEMO_PASSWORD, 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const IMG_DIR = join(__dirname, "..", "public", "landing");
 const SLOT_IMG = { wide: "full-frame.jpg", waterline: "water-level.jpg", panel: "control-panel.jpg", cover: "water-chemistry.jpg" };
+// The single "as found" BEFORE shot (slot 'wide', phase 'before'), stored under a
+// distinct `/before` path so it never collides with the after wide — mirrors the
+// real capture flow in src/lib/actions/turnover.ts.
+const BEFORE_IMG = "full-frame.jpg";
 
 const admin = createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
 
@@ -66,7 +70,7 @@ async function authed({ email, password }) {
   return c;
 }
 
-async function makeTurnover(client, { propertyId, orgId, actorId, notes, urgent = false, issue = null, share = false, water = null }) {
+async function makeTurnover(client, { propertyId, orgId, actorId, notes, urgent = false, issue = null, share = false, opens = 0, notify = false, water = null }) {
   const shareToken = crypto.randomUUID();
   const { data: t, error } = await client
     .from("turnover")
@@ -75,6 +79,20 @@ async function makeTurnover(client, { propertyId, orgId, actorId, notes, urgent 
     .single();
   if (error) throw new Error(`turnover insert: ${error.message}`);
 
+  // BEFORE — the single "as found" shot (slot 'wide', phase 'before') under a
+  // distinct `/before` path so it never collides with the after wide.
+  const beforeBuf = readFileSync(join(IMG_DIR, BEFORE_IMG));
+  const beforePath = `${orgId}/${t.id}/before`;
+  const { error: bUpErr } = await client.storage
+    .from("photos")
+    .upload(beforePath, beforeBuf, { contentType: "image/jpeg", upsert: false });
+  if (bUpErr) throw new Error(`upload before: ${bUpErr.message}`);
+  const { error: bErr } = await client
+    .from("photo")
+    .insert({ turnover_id: t.id, storage_path: beforePath, slot: "wide", phase: "before", captured_at: new Date().toISOString(), confirmed_tags: [] });
+  if (bErr) throw new Error(`photo row before: ${bErr.message}`);
+
+  // AFTER — the guided guest-ready set (4 slots, phase 'after').
   for (const [slot, file] of Object.entries(SLOT_IMG)) {
     const buf = readFileSync(join(IMG_DIR, file));
     const path = `${orgId}/${t.id}/${slot}`;
@@ -84,7 +102,7 @@ async function makeTurnover(client, { propertyId, orgId, actorId, notes, urgent 
     if (upErr) throw new Error(`upload ${slot}: ${upErr.message}`);
     const { error: pErr } = await client
       .from("photo")
-      .insert({ turnover_id: t.id, storage_path: path, slot, captured_at: new Date().toISOString(), confirmed_tags: [] });
+      .insert({ turnover_id: t.id, storage_path: path, slot, phase: "after", captured_at: new Date().toISOString(), confirmed_tags: [] });
     if (pErr) throw new Error(`photo row ${slot}: ${pErr.message}`);
   }
 
@@ -119,6 +137,18 @@ async function makeTurnover(client, { propertyId, orgId, actorId, notes, urgent 
       .from("proof_event")
       .insert({ turnover_id: t.id, kind: "share_copied", actor_user_id: actorId });
     if (evErr) throw new Error(`proof_event: ${evErr.message}`);
+  }
+  // Recipient opens — recorded server-side via the share-token-gated RPC, just
+  // like the public proof page does on render. Drives the Insights "opens" tile.
+  for (let i = 0; i < opens; i++) {
+    const { error: opErr } = await client.rpc("record_proof_open", { p_share_token: shareToken });
+    if (opErr) throw new Error(`record_proof_open: ${opErr.message}`);
+  }
+  // Host "ready" fan-out — mirrors the submit action: notifies the property's
+  // operators/owners (excluding the submitter) that the tub is guest-ready.
+  if (notify) {
+    const { error: nErr } = await client.rpc("notify_turnover_ready", { p_turnover_id: t.id });
+    if (nErr) throw new Error(`notify_turnover_ready: ${nErr.message}`);
   }
   return t.id;
 }
@@ -215,9 +245,9 @@ async function main() {
   if (saErr && saErr.code !== "23505") throw new Error(`staff_assignment: ${saErr.message}`);
 
   // ── Live turnovers (RLS capturer path) — these are each property's latest ──
-  // Ridgeline: healthy contrast tub.
+  // Ridgeline: healthy contrast tub. Shared + opened a few times (Insights).
   await makeTurnover(hc, {
-    propertyId: byName["Ridgeline A-Frame"], orgId, actorId: host.id, share: true,
+    propertyId: byName["Ridgeline A-Frame"], orgId, actorId: host.id, share: true, opens: 3,
     notes: "Filters rinsed, water clear, cover latched. Guest-ready.",
     water: { ph: 7.4, sanitizer_ppm: 4, temp_f: 101 },
   });
@@ -227,17 +257,19 @@ async function main() {
     notes: "Cloudy after a big group — shocked the tub, will recheck before check-in.",
     water: { ph: 7.9, sanitizer_ppm: 2, temp_f: 104 },
   });
-  // Pine Chalet: a single low-sanitizer dip (not back-to-back).
+  // Pine Chalet: a single low-sanitizer dip (not back-to-back). Shared + opened.
   await makeTurnover(hc, {
-    propertyId: byName["Pine Chalet"], orgId, actorId: host.id, share: true,
+    propertyId: byName["Pine Chalet"], orgId, actorId: host.id, share: true, opens: 2,
     notes: "Routine turnover — sanitizer reading came back low, re-dosing.",
     water: { ph: 7.3, sanitizer_ppm: 2, temp_f: 100 },
   });
 
   // A cleaner-captured turnover on their assigned property (scoped staff capture).
+  // `notify: true` fires the ready fan-out as the cleaner → the host (operator)
+  // gets the unread `turnover_ready` banner on first load.
   const cc = await authed(CLEANER);
   await makeTurnover(cc, {
-    propertyId: byName["Ridgeline A-Frame"], orgId, actorId: cleaner.id,
+    propertyId: byName["Ridgeline A-Frame"], orgId, actorId: cleaner.id, notify: true,
     notes: "Quick turn between guests — looks good.",
     water: { ph: 7.5, sanitizer_ppm: 4, temp_f: 100 },
   });
@@ -262,6 +294,8 @@ async function main() {
   console.log(`  cleaner: ${CLEANER.email}  /  ${CLEANER.password}`);
   console.log("  3 properties; chemistry: Lakeview = shock due + low sanitizer,");
   console.log("  Pine Chalet = low sanitizer dip, Ridgeline = healthy (multi-point trends).");
+  console.log("  before/after photo sets, shared proof links + recipient opens,");
+  console.log("  and an unread 'turnover ready' notification waiting for the host.");
 }
 
 main().catch((e) => {
