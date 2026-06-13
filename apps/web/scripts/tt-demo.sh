@@ -25,6 +25,14 @@ supabase start >/dev/null 2>&1 || supabase start
 # Pull the local stack's URL + keys.
 set -a; eval "$(supabase status -o env 2>/dev/null)"; set +a
 
+# Demo password: reuse the one already in .env.development.local if present
+# (so re-runs keep the seeded login working), else generate a fresh one. Never
+# committed — lives only in the gitignored env file.
+ENVFILE=".env.development.local"
+DEMO_PASSWORD="$(grep -E '^DEMO_PASSWORD=' "$ENVFILE" 2>/dev/null | cut -d= -f2- || true)"
+if [ -z "$DEMO_PASSWORD" ]; then DEMO_PASSWORD="demo-$(openssl rand -hex 12)"; fi
+export DEMO_PASSWORD
+
 if [ "$cmd" = "reset" ]; then
   echo "▶ Resetting local DB (re-applying migrations)…"
   supabase db reset >/dev/null
@@ -33,7 +41,7 @@ fi
 echo "▶ Seeding demo data…"
 SEED_ARGS=""
 [ "$cmd" = "reset" ] && SEED_ARGS="--force"
-SUPABASE_URL="$API_URL" SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" ANON_KEY="$ANON_KEY" \
+SUPABASE_URL="$API_URL" SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" ANON_KEY="$ANON_KEY" DEMO_PASSWORD="$DEMO_PASSWORD" \
   node scripts/seed-demo.mjs $SEED_ARGS
 
 echo "▶ Pointing dev at the local stack (.env.development.local)…"
@@ -42,6 +50,7 @@ cat > .env.development.local <<EOF
 # Overrides .env.local in development. Run \`tt-demo stop\` to revert.
 NEXT_PUBLIC_SUPABASE_URL=$API_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY
+DEMO_PASSWORD=$DEMO_PASSWORD
 EOF
 
 echo ""

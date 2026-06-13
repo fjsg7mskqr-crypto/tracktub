@@ -4,9 +4,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const DEMO = {
-  host: { email: "demo-host@tracktub.test", password: "demo-pass-1234" },
-  cleaner: { email: "demo-cleaner@tracktub.test", password: "demo-pass-1234" },
+const DEMO_EMAIL = {
+  host: "demo-host@tracktub.test",
+  cleaner: "demo-cleaner@tracktub.test",
 } as const;
 
 export async function GET(request: NextRequest) {
@@ -14,8 +14,16 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // The seeded demo password is injected by tt-demo (never committed).
+  const password = process.env.DEMO_PASSWORD;
+  if (!password) {
+    return new NextResponse("Demo login unavailable — run `tt-demo` to seed the local stack.", {
+      status: 503,
+    });
+  }
+
   const as = request.nextUrl.searchParams.get("as") === "cleaner" ? "cleaner" : "host";
-  const creds = DEMO[as];
+  const creds = { email: DEMO_EMAIL[as], password };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(creds);

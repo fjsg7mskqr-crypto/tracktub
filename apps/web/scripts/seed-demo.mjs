@@ -29,8 +29,15 @@ if (!/127\.0\.0\.1|localhost/.test(URL)) {
   process.exit(1);
 }
 
-const HOST = { email: "demo-host@tracktub.test", password: "demo-pass-1234", name: "Ethan (demo host)" };
-const CLEANER = { email: "demo-cleaner@tracktub.test", password: "demo-pass-1234", name: "Maria R. (demo cleaner)" };
+// The demo password is supplied by tt-demo via env (generated, gitignored) so
+// no credential is ever committed to the repo.
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+if (!DEMO_PASSWORD) {
+  console.error("Missing DEMO_PASSWORD. Run via tt-demo (it generates one).");
+  process.exit(1);
+}
+const HOST = { email: "demo-host@tracktub.test", password: DEMO_PASSWORD, name: "Ethan (demo host)" };
+const CLEANER = { email: "demo-cleaner@tracktub.test", password: DEMO_PASSWORD, name: "Maria R. (demo cleaner)" };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const IMG_DIR = join(__dirname, "..", "public", "landing");
