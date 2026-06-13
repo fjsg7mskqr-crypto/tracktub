@@ -88,8 +88,21 @@ jobs:
       # Boots the local stack in Docker and applies every migration in
       # supabase/migrations. Seeding is disabled in config.toml (the dev seed
       # has unsubstituted :placeholders); the suite provisions its own data.
+      #
+      # Retried: `supabase start` intermittently fails health checks while
+      # pulling/booting the edge-runtime container (observed as `Error status
+      # 502`), turning a healthy commit red. Migrations apply on a fresh stack,
+      # so a clean retry recovers; we tear down between attempts.
       - name: Start local Supabase
-        run: supabase start
+        run: |
+          for attempt in 1 2 3; do
+            if supabase start; then exit 0; fi
+            echo "::warning title=supabase start::attempt $attempt failed; cleaning up and retrying"
+            supabase stop --no-backup || true
+            sleep 5
+          done
+          echo "::error title=supabase start::failed after 3 attempts"
+          exit 1
 
       # The local stack's anon/service keys are static, non-secret demo JWTs.
       # Feed them to the suite via the same env vars the app reads.

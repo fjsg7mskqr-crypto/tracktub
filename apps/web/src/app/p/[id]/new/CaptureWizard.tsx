@@ -5,11 +5,25 @@ import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { submitTurnoverAction } from "@/lib/actions/turnover";
-import { PHOTO_SLOTS } from "@/lib/types";
+import { PHOTO_SLOTS, BEFORE_SHOT } from "@/lib/types";
 import type { PhotoSlot } from "@/lib/types";
 import { slotTint } from "@/lib/format";
 import { Icon } from "@/components/Icon";
 import { track } from "@/lib/analytics";
+import { Input, Label } from "@/components/ui";
+import {
+  CHEM_THRESHOLDS,
+  phOutOfRange,
+  sanitizerOutOfRange,
+  tempOutOfRange,
+} from "@/lib/chemistry";
+
+const numOrNull = (v: string): number | null => {
+  const t = v.trim();
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+};
 
 interface CapturedPhoto {
   slot: PhotoSlot;
@@ -23,12 +37,24 @@ interface Props {
   propertyName: string;
 }
 
+// Step flow (founder's intended order):
+//   0          = BEFORE — one "as found" shot
+//   1          = chemistry / water check
+//   2..2+N-1   = AFTER — the guided N-slot guest-ready set
+//   2+N        = review & submit
+const AFTER_COUNT = PHOTO_SLOTS.length;
+const STEP_BEFORE = 0;
+const STEP_WATER = 1;
+const STEP_AFTER_START = 2;
+const STEP_REVIEW = STEP_AFTER_START + AFTER_COUNT;
+
 export default function CaptureWizard({ propertyId, propertyName }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const [step, setStep] = useState(0);
-  const [photos, setPhotos] = useState<(CapturedPhoto | null)[]>(() =>
+  const [step, setStep] = useState(STEP_BEFORE);
+  const [beforePhoto, setBeforePhoto] = useState<CapturedPhoto | null>(null);
+  const [afterPhotos, setAfterPhotos] = useState<(CapturedPhoto | null)[]>(() =>
     PHOTO_SLOTS.map(() => null)
   );
   const [processing, setProcessing] = useState(false);
@@ -36,16 +62,38 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [urgent, setUrgent] = useState(false);
+  const [ph, setPh] = useState("");
+  const [sanitizer, setSanitizer] = useState("");
+  const [temp, setTemp] = useState("");
 
   useEffect(() => {
     track("turnover_started", { property_id: propertyId });
   }, [propertyId]);
 
-  const total = PHOTO_SLOTS.length;
-  const onReview = step >= total;
-  const slot = onReview ? null : PHOTO_SLOTS[step];
-  const capturedHere = !onReview && photos[step] != null;
-  const allCaptured = photos.every((x) => x != null);
+  const onBefore = step === STEP_BEFORE;
+  const onWater = step === STEP_WATER;
+  const onReview = step === STEP_REVIEW;
+  const afterIndex =
+    step >= STEP_AFTER_START && step < STEP_REVIEW
+      ? step - STEP_AFTER_START
+      : -1;
+  const onAfter = afterIndex >= 0;
+
+  // The capture tile is shared by the before shot and each after slot.
+  const activeSlot = onBefore
+    ? BEFORE_SHOT
+    : onAfter
+      ? PHOTO_SLOTS[afterIndex]
+      : null;
+  const activeCaptured = onBefore
+    ? beforePhoto
+    : onAfter
+      ? afterPhotos[afterIndex]
+      : null;
+
+  const beforeDone = beforePhoto != null;
+  const afterDone = afterPhotos.every((x) => x != null);
+  const allCaptured = beforeDone && afterDone;
 
   function openPicker() {
     setCaptureError(null);
@@ -55,19 +103,25 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !slot) return;
+    if (!file || !activeSlot) return;
     setProcessing(true);
     setCaptureError(null);
     try {
-      const prev = photos[step];
-      if (prev) URL.revokeObjectURL(prev.previewUrl);
       const captured: CapturedPhoto = {
-        slot: slot.slot,
+        slot: activeSlot.slot,
         file,
         previewUrl: URL.createObjectURL(file),
         capturedAt: new Date().toISOString(),
       };
-      setPhotos((prev) => prev.map((x, i) => (i === step ? captured : x)));
+      if (onBefore) {
+        if (beforePhoto) URL.revokeObjectURL(beforePhoto.previewUrl);
+        setBeforePhoto(captured);
+      } else if (onAfter) {
+        const idx = afterIndex;
+        const prev = afterPhotos[idx];
+        if (prev) URL.revokeObjectURL(prev.previewUrl);
+        setAfterPhotos((arr) => arr.map((x, i) => (i === idx ? captured : x)));
+      }
     } catch {
       setCaptureError("Could not load that photo — try another.");
     } finally {
@@ -76,9 +130,15 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
   }
 
   function retake() {
-    const prev = photos[step];
-    if (prev) URL.revokeObjectURL(prev.previewUrl);
-    setPhotos((prev) => prev.map((x, i) => (i === step ? null : x)));
+    if (onBefore) {
+      if (beforePhoto) URL.revokeObjectURL(beforePhoto.previewUrl);
+      setBeforePhoto(null);
+    } else if (onAfter) {
+      const idx = afterIndex;
+      const prev = afterPhotos[idx];
+      if (prev) URL.revokeObjectURL(prev.previewUrl);
+      setAfterPhotos((arr) => arr.map((x, i) => (i === idx ? null : x)));
+    }
     setCaptureError(null);
     openPicker();
   }
@@ -89,11 +149,18 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
     formData.append("propertyId", propertyId);
     formData.append("notes", notes);
     formData.append("urgent", String(urgent));
-    for (const ph of photos) {
-      if (!ph) continue;
-      formData.append(`photo_${ph.slot}`, ph.file);
-      formData.append(`capturedAt_${ph.slot}`, ph.capturedAt);
-      formData.append(`tags_${ph.slot}`, JSON.stringify([]));
+    formData.append("ph", ph);
+    formData.append("sanitizer_ppm", sanitizer);
+    formData.append("temp_f", temp);
+    if (beforePhoto) {
+      formData.append("photo_before", beforePhoto.file);
+      formData.append("capturedAt_before", beforePhoto.capturedAt);
+    }
+    for (const p of afterPhotos) {
+      if (!p) continue;
+      formData.append(`photo_${p.slot}`, p.file);
+      formData.append(`capturedAt_${p.slot}`, p.capturedAt);
+      formData.append(`tags_${p.slot}`, JSON.stringify([]));
     }
     setSubmitError(null);
     startTransition(async () => {
@@ -103,7 +170,8 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
           property_id: propertyId,
           turnover_id: result.id,
         });
-        photos.forEach((ph) => ph && URL.revokeObjectURL(ph.previewUrl));
+        if (beforePhoto) URL.revokeObjectURL(beforePhoto.previewUrl);
+        afterPhotos.forEach((p) => p && URL.revokeObjectURL(p.previewUrl));
         router.push(`/t/${result.id}`);
       } catch (err) {
         setSubmitError(
@@ -112,6 +180,9 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
       }
     });
   }
+
+  const segBg = (filled: boolean, active: boolean) =>
+    filled ? "var(--brand)" : active ? "var(--brand-soft)" : "var(--line)";
 
   return (
     <div className="stack" style={{ maxWidth: 480, margin: "0 auto" }}>
@@ -128,22 +199,38 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
         <Link href={`/p/${propertyId}`}>{propertyName}</Link> / New turnover
       </div>
 
-      {/* progress */}
+      {/* progress: 1 before · 1 water · N after · review */}
       <div className="row" style={{ gap: 6 }}>
+        <div
+          title={BEFORE_SHOT.label}
+          style={{
+            flex: 1,
+            height: 5,
+            borderRadius: 999,
+            background: segBg(beforeDone, onBefore),
+          }}
+        />
+        <div
+          title="Water check"
+          style={{
+            flex: 1,
+            height: 5,
+            borderRadius: 999,
+            background: segBg(step > STEP_WATER, onWater),
+          }}
+        />
         {PHOTO_SLOTS.map((s, i) => (
           <div
             key={s.slot}
-            title={s.label}
+            title={`After — ${s.label}`}
             style={{
               flex: 1,
               height: 5,
               borderRadius: 999,
-              background:
-                i < step || photos[i]
-                  ? "var(--brand)"
-                  : i === step
-                    ? "var(--brand-soft)"
-                    : "var(--line)",
+              background: segBg(
+                afterPhotos[i] != null || step > STEP_AFTER_START + i,
+                step === STEP_AFTER_START + i
+              ),
             }}
           />
         ))}
@@ -158,29 +245,31 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
         />
       </div>
 
-      {!onReview && slot && (
+      {(onBefore || onAfter) && activeSlot && (
         <div className="card pad stack">
           <div className="spread">
             <h2 style={{ fontSize: 18 }}>
-              {slot.label}
-              <span className="dim small" style={{ fontWeight: 500 }}>
-                {" "}
-                · step {step + 1} of {total}
-              </span>
+              {activeSlot.label}
+              {onAfter && (
+                <span className="dim small" style={{ fontWeight: 500 }}>
+                  {" "}
+                  · After — guest-ready · step {afterIndex + 1} of {AFTER_COUNT}
+                </span>
+              )}
             </h2>
             <span className="badge">
               <Icon name="camera" size={12} /> Required
             </span>
           </div>
           <p className="muted small" style={{ marginTop: -6 }}>
-            {slot.hint}
+            {activeSlot.hint}
           </p>
 
-          {capturedHere ? (
+          {activeCaptured ? (
             <div style={{ maxWidth: 360, margin: "0 auto", width: "100%" }}>
               <img
-                src={(photos[step] as CapturedPhoto).previewUrl}
-                alt={slot.label}
+                src={activeCaptured.previewUrl}
+                alt={activeSlot.label}
                 style={{
                   width: "100%",
                   borderRadius: 14,
@@ -203,7 +292,7 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
               type="button"
               onClick={openPicker}
               disabled={processing}
-              aria-label={`Capture the ${slot.label.toLowerCase()}`}
+              aria-label={`Capture the ${activeSlot.label.toLowerCase()}`}
               style={{
                 appearance: "none",
                 font: "inherit",
@@ -217,7 +306,7 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
                 placeItems: "center",
                 color: "#fff",
                 cursor: processing ? "default" : "pointer",
-                background: `radial-gradient(120% 85% at 28% 18%, rgba(255,255,255,.25), rgba(255,255,255,0) 55%), linear-gradient(150deg, ${slotTint(slot.slot)[0]}, ${slotTint(slot.slot)[1]})`,
+                background: `radial-gradient(120% 85% at 28% 18%, rgba(255,255,255,.25), rgba(255,255,255,0) 55%), linear-gradient(150deg, ${slotTint(activeSlot.slot)[0]}, ${slotTint(activeSlot.slot)[1]})`,
               }}
             >
               <div style={{ textAlign: "center", opacity: 0.92 }}>
@@ -225,7 +314,7 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
                 <div className="small" style={{ marginTop: 4 }}>
                   {processing
                     ? "Processing…"
-                    : `Tap to capture the ${slot.label.toLowerCase()}`}
+                    : `Tap to capture the ${activeSlot.label.toLowerCase()}`}
                 </div>
               </div>
             </button>
@@ -243,17 +332,108 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
           <div className="spread">
             <button
               className="btn ghost"
-              disabled={step === 0}
-              onClick={() => setStep((s) => Math.max(0, s - 1))}
+              disabled={onBefore}
+              onClick={() => setStep((s) => Math.max(STEP_BEFORE, s - 1))}
             >
               ← Back
             </button>
             <button
               className="btn primary"
-              disabled={!capturedHere}
+              disabled={!activeCaptured}
               onClick={() => setStep((s) => s + 1)}
             >
-              {step === total - 1 ? "Review →" : "Next →"}
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {onWater && (
+        <div className="card pad stack">
+          <div className="spread">
+            <h2 style={{ fontSize: 18 }}>Water check</h2>
+            <span className="badge">Optional</span>
+          </div>
+          <p className="muted small" style={{ marginTop: -6 }}>
+            A quick reading makes this turnover dispute-grade and tracks the
+            water over time. Skip any you didn&apos;t measure.
+          </p>
+
+          <div className="stack" style={{ gap: 14 }}>
+            <div>
+              <Label htmlFor="ph">pH</Label>
+              <Input
+                id="ph"
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder={`${CHEM_THRESHOLDS.ph.min}–${CHEM_THRESHOLDS.ph.max}`}
+                value={ph}
+                onChange={(e) => setPh(e.target.value)}
+              />
+              {phOutOfRange(numOrNull(ph)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Outside {CHEM_THRESHOLDS.ph.min}–{CHEM_THRESHOLDS.ph.max} —
+                  re-balance before the next guest.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="sanitizer">Sanitizer (ppm)</Label>
+              <Input
+                id="sanitizer"
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder={`${CHEM_THRESHOLDS.sanitizerPpm.min}–${CHEM_THRESHOLDS.sanitizerPpm.max} ppm chlorine`}
+                value={sanitizer}
+                onChange={(e) => setSanitizer(e.target.value)}
+              />
+              {sanitizerOutOfRange(numOrNull(sanitizer)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Outside {CHEM_THRESHOLDS.sanitizerPpm.min}–
+                  {CHEM_THRESHOLDS.sanitizerPpm.max} ppm — re-shock and retest.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="temp">Temperature (°F)</Label>
+              <Input
+                id="temp"
+                type="number"
+                inputMode="decimal"
+                step="1"
+                placeholder={`≤ ${CHEM_THRESHOLDS.tempF.max}°F`}
+                value={temp}
+                onChange={(e) => setTemp(e.target.value)}
+              />
+              {tempOutOfRange(numOrNull(temp)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Above {CHEM_THRESHOLDS.tempF.max}°F — let it cool before
+                  guests use it.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="spread">
+            <button className="btn ghost" onClick={() => setStep(STEP_BEFORE)}>
+              ← Back
+            </button>
+            <button
+              className="btn primary"
+              onClick={() => setStep(STEP_AFTER_START)}
+            >
+              After set →
             </button>
           </div>
         </div>
@@ -278,28 +458,49 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
             />
             <span>
               {allCaptured
-                ? "All 4 required shots captured."
+                ? `Before shot + all ${AFTER_COUNT} guest-ready shots captured.`
                 : "Some required shots are missing."}
             </span>
           </div>
 
-          <div className="photos">
-            {photos.map(
-              (ph) =>
-                ph && (
-                  <img
-                    key={ph.slot}
-                    src={ph.previewUrl}
-                    alt={ph.slot}
-                    style={{
-                      width: 80,
-                      height: 80,
-                      objectFit: "cover",
-                      borderRadius: 8,
-                    }}
-                  />
-                )
-            )}
+          <div>
+            <div className="label">How it was found</div>
+            <div className="photos">
+              {beforePhoto && (
+                <img
+                  src={beforePhoto.previewUrl}
+                  alt={BEFORE_SHOT.label}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    objectFit: "cover",
+                    borderRadius: 8,
+                  }}
+                />
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="label">Guest-ready</div>
+            <div className="photos">
+              {afterPhotos.map(
+                (p) =>
+                  p && (
+                    <img
+                      key={p.slot}
+                      src={p.previewUrl}
+                      alt={p.slot}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                      }}
+                    />
+                  )
+              )}
+            </div>
           </div>
 
           <div>
@@ -340,7 +541,10 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
           )}
 
           <div className="spread">
-            <button className="btn ghost" onClick={() => setStep(total - 1)}>
+            <button
+              className="btn ghost"
+              onClick={() => setStep(STEP_REVIEW - 1)}
+            >
               ← Back
             </button>
             <button

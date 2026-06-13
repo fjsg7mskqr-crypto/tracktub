@@ -1,8 +1,8 @@
 # TrackTub — Product Requirements Document
 
-> **Status:** Draft v0.3 — pre-validation (synthesis + lean ship-to-learn + freemium)
+> **Status:** Draft v0.4 — v1 built, demo-stage (synthesis + lean ship-to-learn + freemium)
 > **Owner:** Ethan Novak (ethan@nhs-llc.com)
-> **Last updated:** 2026-06-04
+> **Last updated:** 2026-06-13
 > **Audience:** Internal shared source of truth for the founder **and** the AI agent(s) building this. Not a customer handout. The *product's* goal is to earn attention from real STR operators; *this document's* goal is to keep us aligned on what we are building and why.
 
 ## How to read this document
@@ -13,7 +13,7 @@ Every substantive claim is tagged so we never confuse belief with fact:
 - **`[Hypothesis]`** — a belief we have **not** validated with primary research. Treat as a bet to test, not a fact.
 - **`[Validated]`** — backed by logged interviews or pilot data.
 
-> ⚠️ **Reality check:** As of 2026-06-04 there are **zero `[Validated]` claims.** `interview-log.csv` is header-only; no interviews have been run. Effectively the entire problem and market thesis below is `[Hypothesis]`. Our validation method (§12) is now **lean ship-to-learn**: a short interview round (with a **recruitment kill-gate before any code**), then a *thin free MVP* whose real usage either confirms the thesis or kills it (§12 gate). Note the deliberate trade — this path tests **use**, not **willingness-to-pay** (§17 R3). Do not let the polish of this document create false confidence.
+> ⚠️ **Reality check:** As of 2026-06-13 there are still **zero `[Validated]` claims.** `interview-log.csv` is header-only; no interviews have been run. Effectively the entire problem and market thesis below is `[Hypothesis]`. **Build status note:** v1 (and several fast-follows) is now *built* and running as a demo (see §8.0 "Shipped"), but **building is not validating** — code shipping ahead of the interview round is a deliberate build-first bet, not evidence the thesis is right. Our validation method (§12) remains **lean ship-to-learn**: a short interview round (with a **recruitment gate**), then real usage of the MVP either confirms the thesis or kills it (§12 gate). Note the deliberate trade — this path tests **use**, not **willingness-to-pay** (§17 R3). Do not let the polish of this document — or the existence of working code — create false confidence.
 
 ---
 
@@ -110,7 +110,7 @@ The capability (tamper-resistant, geofenced, shareable proof) is amenity-agnosti
 2. **AI suggests, human confirms.** `[Decision]` A machine is never the system of record by itself.
 3. **Zero staff friction.** No install, no training, sub-10-minute guided capture, or staff won't use it.
 4. **Validate with the thinnest shippable thing.** We learn from *real usage of a thin free MVP*, not stated preference or paid pilots. Caution: free usage proves *use*, not *willingness-to-pay* — so we bake a WTP probe into the free tier (§12). We also don't build *blind*: code starts only once ≥3 operators commit to onboarding (§12 pre-build gate).
-5. **Don't expand scope until the gate is met.** No proof export, owner portal, AI, or chemistry build until the thin MVP clears its activation gate (§12, §16).
+5. **Don't expand scope until the gate is met.** No proof export, owner portal, AI, or chemistry build until the thin MVP clears its activation gate (§12, §16). *(2026-06-13: in practice this discipline was not held — the chemistry layer and other fast-follows were built ahead of the gate; see Appendix A D20. The principle still stands as the intended posture; the gate now governs go-to-market rather than code existence.)*
 
 ---
 
@@ -118,34 +118,42 @@ The capability (tamper-resistant, geofenced, shareable proof) is amenity-agnosti
 
 > Build order is sequenced in §13.
 
-### 8.0 Scope phasing (thin MVP vs. fast-follow) `[Decision]`
+### 8.0 Scope phasing (shipped vs. fast-follow) `[Decision]`
 
-v1 is a **thin free MVP**; everything else is **fast-follow**, gated on the §12 activation gate.
+> **Status update (2026-06-13):** the original plan was a *thin* free MVP (capture + cockpit + thin proof) with everything else gated on §12. In practice the build ran ahead of validation — v1 plus several planned fast-follows are now **built and demoable**. The table below reflects what is **actually on `main`** versus what is still genuinely unbuilt. The §12 gates still apply to the *go-to-market* decision (do we push paid, build heavy proof, etc.) even though the code exists.
 
-| In the thin free MVP (v1) | Fast-follow (after the gate) |
+| Shipped (v1, on `main`) | Fast-follow (still unbuilt) |
 |---|---|
-| 8.1 Turnover capture (PWA) | 8.2 *Heavy* proof: signed PDF + geofence badge |
-| 8.3 Operator cockpit | 8.4 Owner portal · 8.5 AI assist · 8.6 reminders · 8.7 landing · 8.8 chemistry |
-| 8.2 *Thin* proof primitives: timestamp · immutable · shareable link | |
+| 8.1 Turnover capture PWA — guided photo flow + chemistry water-check step | 8.2 *Heavy* proof: cryptographically signed PDF + geofence verification badge |
+| 8.2 *Thin* proof primitives: server timestamp · immutable-after-submit · shareable read-only link (anon-accessible) | 8.4 Owner *portal* (read-only owner login + RLS-scoped views) |
+| 8.3 Operator dashboard (the cockpit) | 8.5 AI assist (vision tag-suggest + completeness check) |
+| Roles + invite-accept flow + **Team** page (coverage + activity) — owner/team collaboration | 8.6 *Real* email/cron reminder delivery (in-app ready notification is demo-stage, see §8.6) |
+| 8.8 Chemistry-aware layer: water-check capture, bather-load reminders, water-clarity flags, trends | |
+| Insights rebuild + `proof_event` tracking + PostHog instrumentation (see §16) | |
 
-Why this split: the thin MVP tests the existential risk (will staff capture? do operators return?) **and a taste of the differentiator** (will operators *share* the proof link? — §12 wedge signal), for minimal build. The *expensive* proof (signed PDF, geofence verification badge) and the owner portal stay deferred until the gate clears. `[Decision D16]`
+> **Demo-stage refinements (in progress, epic #113 — not yet on `main` as of 2026-06-13):** capture reordered to **before → chemistry → after**; in-app "turnover ready → host notified" signal; "cockpit"→**Dashboard** naming pass. These polish the shipped v1 for the founder dress-rehearsal demo; they do not change scope or strategy.
 
-### 8.1 Turnover capture (PWA) — *the staff experience* `[v1]`
+Why this once mattered: the thin MVP was meant to test the existential risk (will staff capture? do operators return?) **and a taste of the differentiator** (will operators *share* the proof link? — §12 wedge signal) for minimal build, deferring expensive proof and the owner portal until the §12 gate cleared. `[Decision D16]` Those validation gates are unchanged; the build simply moved faster than the validation.
+
+### 8.1 Turnover capture (PWA) — *the staff experience* `[shipped]`
 - No-install PWA opened from a link; staff authenticated and scoped to **assigned properties only**.
-- **Guided photo flow**, minimum 4 shots `[Decision, from concierge guide]`: (1) wide tub area, (2) waterline / water clarity, (3) control panel / chemistry, (4) cover + filter.
+- **Guided photo flow**, minimum 4 shots `[Decision, from concierge guide]`: (1) wide tub area, (2) waterline / water clarity, (3) control panel / chemistry, (4) cover + filter. Photos are compressed client-side with a lightbox preview.
+- **Chemistry water-check step** (shipped with §8.8): structured **water-readings** (pH / sanitizer / temp / clarity) captured inline and tied to the turnover — builds the chemistry dataset and powers the §8.8 flags/trends.
 - Free-text notes (smells, panel errors, guest-reported issues) + **Urgent** flag.
 - Staff assignment per property.
-- *(Optional, chemistry-aware)* `[Hypothesis]` structured **water-readings** field (pH / sanitizer / temp) tied to the stay it follows — cheap to add, builds the chemistry dataset from day one even before §8.8 ships.
+- Submit **locks** the turnover (immutable; see §8.2).
 - Target: **submit in under 10 minutes.**
+
+> **Demo-stage reorder (epic #113, in progress — not yet on `main`):** the flow is being resequenced to **① before photo (1 shot) → ② chemistry test → ③ after photos (guided wide / waterline / panel / cover) → ④ notes / urgent → submit**, with photos tagged `before` / `after`. This better matches the real turnover narrative for the founder demo; it refines the shipped flow above without changing scope.
 
 ### 8.2 Evidence / proof model — *the differentiator*
 `[Decision]` Split by cost so v1 tests the wedge cheaply:
 
-**In v1 — thin proof primitives `[v1]`** (nearly free; this is what §12 measures):
+**Shipped — thin proof primitives `[shipped]`** (nearly free; this is what §12 measures):
 - **Server-side timestamp** (never trust device clock).
 - **Verified submitter identity** (who, which org, which property — comes with auth).
 - **Immutable after submit** — photos/record locked; corrections create new versions; append-only change log.
-- **Shareable read-only link** — a public URL to the turnover (photos + server time + submitter), no login, no signed PDF yet. The seed of the differentiator and the thing we measure (share rate, §12).
+- **Shareable read-only link** — a public, anon-accessible URL (`/proof/[token]`) to the turnover (photos + server time + submitter), no login, no signed PDF yet. The seed of the differentiator and the thing we measure (share rate, §12).
 
 **Fast-follow — heavy proof `[fast-follow]`** (expensive; build only after the gate):
 - **Capture-time geolocation + geofence** ("taken at the property") via the browser Geolocation API, stamped server-side. `[Decision]` We do **not** read photo EXIF (PWAs strip it; our captured metadata is more tamper-resistant).
@@ -153,11 +161,13 @@ Why this split: the thin MVP tests the existential risk (will staff capture? do 
 
 > `[Decision]` Even the fast-follow stays **"medium evidence"** — credible enough to settle ~95% of disputes, *without* full legal chain-of-custody (cryptographic content-addressing / notarization), a vision-phase item only if a real legal case demands it.
 
-### 8.3 Operator dashboard — *the cockpit* `[v1]`
+### 8.3 Operator dashboard — *the cockpit* `[shipped]`
 Per property: last turnover date + who submitted, photo galleries with tags, open issues (`water_cloudy`, `cover_damage`, …), tasks, recurring-maintenance due, alerts (urgent flags, failed geofence, overdue turnover).
 
 ### 8.4 Owner portal — *read-only* `[fast-follow]`
 `[Decision]` Owners log in and see **only their own properties'** turnovers and proof, anytime. Invite flow + RLS-scoped.
+
+> **Shipped adjacent — team collaboration `[shipped]`:** the underlying **roles + invite-accept flow** and a **Team page** (per-property coverage + recent activity) are built and on `main`. This is operator/staff collaboration; the dedicated **read-only owner portal** above (owner login + owner-scoped views) is still the unbuilt fast-follow.
 
 ### 8.5 AI assist — *supporting, bounded* `[fast-follow]`
 `[Decision]` Server-side vision model that:
@@ -167,13 +177,15 @@ Per property: last turnover date + who submitted, photo galleries with tags, ope
 - Hard rule: **never auto-only; never the system of record alone.**
 
 ### 8.6 Recurring tasks + reminders `[fast-follow]`
-`[Decision, from roadmap]` Recurring maintenance tasks + **email reminders** via Supabase **cron / edge functions** (e.g., "filter change due," "turnover not logged before today's check-in").
+`[Decision, from roadmap]` Recurring maintenance tasks + **email reminders** via Supabase **cron / edge functions** (e.g., "filter change due," "turnover not logged before today's check-in"). **Real email/cron delivery remains unbuilt fast-follow.**
 
-### 8.7 Landing page `[fast-follow]`
-STR-focused marketing site: positioning headline, 3 benefit bullets (compliance, dispute trail, multi-property cockpit), "human-confirmed" trust line, **free-signup CTA + paid-tier waitlist**. SEO per `marketing-reference.md`. **Track free signups → activation → 2nd-property/paid intent.**
+> **Shipped/demo-stage:** chemistry-driven **bather-load reminders** and **water-clarity flags** surface in-app today (§8.8). An in-app **"turnover ready → host notified"** signal on the Dashboard is a demo-stage refinement in progress (epic #113); the email is stubbed/logged locally for the demo — real send still belongs to the fast-follow above.
 
-### 8.8 Chemistry-aware layer (light) — *the synthesis differentiator* `[fast-follow, gated]`
-`[Decision, gated]` Rides on data we already capture — no sensors, no hardware:
+### 8.7 Landing page `[shipped]`
+STR-focused marketing site: positioning headline, benefit bullets, "human-confirmed" trust line, **paid-tier waitlist capture**. SEO per `marketing-reference.md`. **Track free signups → activation → 2nd-property/paid intent.** Shipped and live (public `/landing`, relaunched on the self-managed-host ICP); the sign-in surface is intentionally gated during this pre-launch demo phase.
+
+### 8.8 Chemistry-aware layer (light) — *the synthesis differentiator* `[shipped]`
+`[Decision, gated → built]` Rides on data we already capture — no sensors, no hardware. **Built and on `main`** (water-check capture + bather-load reminders + clarity flags + trends); note this shipped *ahead* of the §12 `chem_pain` bridge question, so the differentiator is built but its STR demand is still unvalidated (§17 R10):
 - **Bather-load reminder:** back-to-back / high-occupancy stays trigger a "shock the tub before next check-in" prompt (uses turnover cadence, not chemistry sensors).
 - **Water-clarity flag:** the AI's `water_cloudy` suggestion (§8.5) surfaces as an open issue with a recommended action before check-in.
 - **Chemistry trend log:** the optional water-readings (§8.1) accumulate per property for simple trend views.
@@ -265,24 +277,24 @@ Recruit ~5 operators from Stage 1 onto the free MVP (capture + cockpit, §8.0). 
 
 ## 13. Build sequencing
 
-**Thin MVP (v1) — start only once the §12 recruitment gate clears; then build, ship free, measure:**
+**Thin MVP (v1) — ✅ DONE (built ahead of the §12 recruitment gate; gate still governs go-to-market):**
 
-1. **Scaffold** Next.js + Supabase monorepo: org / property / turnover schema + **RLS**.
-2. **Turnover capture PWA**: guided 4-photo flow, upload, notes, urgent flag, staff assignment, server timestamp, immutable-after-submit, append-only change log.
-3. **Operator cockpit**: per-property status, last visit, galleries, open issues, alerts.
-4. **Thin proof primitives**: shareable read-only proof link (the v1 taste of the wedge).
-5. **Free-tier gating + analytics**: 1 property free; "add 2nd property → pricing/waitlist" WTP fake-door; instrument activation, retention, **proof-share + recipient-open**.
+1. ✅ **Scaffold** Next.js + Supabase monorepo: org / property / turnover schema + **RLS**.
+2. ✅ **Turnover capture PWA**: guided 4-photo flow, upload, notes, urgent flag, staff assignment, server timestamp, immutable-after-submit, append-only change log.
+3. ✅ **Operator cockpit**: per-property status, last visit, galleries, open issues, alerts.
+4. ✅ **Thin proof primitives**: shareable read-only proof link (the v1 taste of the wedge), anon-accessible.
+5. ✅ **Free-tier gating + analytics**: instrumentation for activation, retention, **proof-share + recipient-open** (`proof_event` + PostHog, no-op until key set); WTP fake-door is the remaining piece to wire.
 
-→ **Ship to ~5 operators. Hold here until the §12 gates clear (activation + retention; watch the wedge + WTP signals).**
+→ Original plan: **ship to ~5 operators and hold here until the §12 gates clear.** In practice the build continued into the fast-follows below before the cohort/interviews ran — so the **§12 gates now govern the go-to-market decision (paid push, further investment), not whether the code exists.**
 
-**Fast-follow (only after the gate):**
+**Fast-follow:**
 
-6. **Heavy proof**: capture-time geolocation + geofence, cryptographically signed PDF + "Verified by TrackTub" badge.
-7. **Owner portal** (read-only, RLS-scoped) + invite flow.
-8. **AI assist**: vision suggest + completeness check (+ optional summary); human confirm.
-9. **Recurring tasks + email reminders** (cron / edge).
-10. **Chemistry-aware layer** (§8.8) — *if* the §12 bridge question cleared ≥40% `chem_pain`.
-11. **Landing page** + SEO + free-signup/paid-waitlist analytics.
+6. ⏳ **Heavy proof** — *pending*: capture-time geolocation + geofence, cryptographically signed PDF + "Verified by TrackTub" badge.
+7. ⏳ **Owner portal** (read-only, RLS-scoped) — *pending*; the **roles + invite-accept flow + Team page are ✅ shipped** (operator/staff collaboration), the owner-login portal itself is not.
+8. ⏳ **AI assist** — *pending*: vision suggest + completeness check (+ optional summary); human confirm.
+9. ⏳ **Recurring tasks + email reminders** (cron / edge) — *pending* for real delivery; an in-app turnover-ready notification is a demo-stage refinement (epic #113).
+10. ✅ **Chemistry-aware layer** (§8.8) — **shipped** (built ahead of the §12 `chem_pain` bridge; demand still unvalidated).
+11. ✅ **Landing page** + waitlist analytics — **shipped** (public `/landing`, live).
 
 > No native app or third-party integrations until well after PMF.
 
@@ -396,6 +408,8 @@ Forks resolved during the grilling sessions (2026-06-03 → 06-04):
 | 17 | Wedge validation signal | **Proof-link share rate** (≥~30% of turnovers shared, `[Hypothesis]`) + recipient open rate. Near-zero share = "proof" isn't the pull → revisit positioning before building heavy proof. |
 | 18 | Pre-build kill-switch | **Recruitment-commitment gate** — write no code until ≥3 of ~5 interviewed operators commit (start date + staff contacts). Can't fill the cohort for a free tool → stop. Behavior, not stated pain. |
 | 19 | Threshold tuning (§18) | Working `[Hypothesis]` defaults: price **$12/property/mo**; cohort **5**; recruitment gate **≥3/5**; activation **≥60%**, retention **≥50%**, wedge share **≥30%**; geofence **150 m**; owner = viewer (same role); WTP fake-door = waitlist tease, not hard wall. Jurisdiction regulation = open research spike. |
+| 20 (2026-06-13) | **Build-first execution** (v1 + fast-follows built ahead of validation) | The team **built v1 and several fast-follows before running the §12 interview round** — capture PWA, dashboard, thin proof (anon-accessible `/proof` link), roles + invite + Team page, the chemistry-aware layer (§8.8, ahead of the `chem_pain` gate), Insights + `proof_event`/PostHog, and the live `/landing`. `[Decision]` This is a deliberate build-first bet, **not** validation: the §12 gates now govern the **go-to-market** decision (paid push, heavy-proof investment), not whether code exists. Building ≠ validating (§17 R1). |
+| 21 (2026-06-13) | **Demo-stage refinements** (epic #113, founder dress-rehearsal) | `[Decision]` Polish the shipped v1 for a self-contained localhost demo without changing scope/strategy: capture reordered to **before → chemistry → after** (`before`/`after`-tagged photos); in-app **"turnover ready → host notified"** signal (email stubbed/logged locally; real send stays fast-follow); **"cockpit" → "Dashboard"** naming pass ("Your hot tubs"). In progress on a feature branch as of 2026-06-13; demo stays on `main` + localhost (live site untouched). |
 
 ---
 

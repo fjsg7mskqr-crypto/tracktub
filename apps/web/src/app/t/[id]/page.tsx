@@ -5,6 +5,8 @@ import { Icon } from "@/components/Icon";
 import { Seal } from "@/components/Seal";
 import { photoPublicUrl } from "@/lib/supabase/storage";
 import { formatDateTime } from "@/lib/format";
+import { WaterReadingCard } from "@/components/WaterReadingCard";
+import { readingHasValues } from "@/lib/chemistry";
 import ProofActions from "./ProofActions";
 
 export default async function TurnoverPage({
@@ -25,8 +27,9 @@ export default async function TurnoverPage({
       `id, submitted_at_server, urgent, notes, share_token, status,
        property:property(id, name, address),
        submitter:profile(full_name, email),
-       photos:photo(slot, storage_path, confirmed_tags),
-       issues:issue_tag(tag, source, confirmed_at)`
+       photos:photo(slot, storage_path, confirmed_tags, phase),
+       issues:issue_tag(tag, source, confirmed_at),
+       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at)`
     )
     .eq("id", turnoverIdParam)
     .single();
@@ -36,11 +39,16 @@ export default async function TurnoverPage({
   const submitter = Array.isArray(t.submitter) ? t.submitter[0] : t.submitter;
   const submitterName = submitter?.full_name ?? submitter?.email ?? "Unknown";
   const openIssues = (t.issues ?? []).filter((i) => !i.confirmed_at);
+  const reading = Array.isArray(t.water) ? t.water[0] : t.water;
+
+  const allPhotos = (t.photos ?? []).filter((ph) => ph.storage_path);
+  const beforePhotos = allPhotos.filter((ph) => ph.phase === "before");
+  const afterPhotos = allPhotos.filter((ph) => ph.phase !== "before");
 
   return (
     <div className="stack" style={{ maxWidth: 720 }}>
       <div className="crumb">
-        <Link href="/">Cockpit</Link> /{" "}
+        <Link href="/">Dashboard</Link> /{" "}
         <Link href={`/p/${property?.id}`}>{property?.name}</Link> / Turnover
       </div>
 
@@ -67,12 +75,33 @@ export default async function TurnoverPage({
       </div>
 
       <div className="card pad stack">
-        <div className="photos">
-          {(t.photos ?? [])
-            .filter((ph) => ph.storage_path)
-            .map((ph) => (
+        {beforePhotos.length > 0 && (
+          <div>
+            <div className="label">How it was found</div>
+            <div className="photos">
+              {beforePhotos.map((ph) => (
+                <img
+                  key={`before-${ph.slot}`}
+                  src={photoPublicUrl(ph.storage_path!)}
+                  alt={`Before — ${ph.slot}`}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    objectFit: "cover",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+          {beforePhotos.length > 0 && <div className="label">Guest-ready</div>}
+          <div className="photos">
+            {afterPhotos.map((ph) => (
               <img
-                key={ph.slot}
+                key={`after-${ph.slot}`}
                 src={photoPublicUrl(ph.storage_path!)}
                 alt={ph.slot}
                 style={{
@@ -84,6 +113,7 @@ export default async function TurnoverPage({
                 }}
               />
             ))}
+          </div>
         </div>
         {t.notes && (
           <div>
@@ -94,6 +124,10 @@ export default async function TurnoverPage({
           </div>
         )}
       </div>
+
+      {reading && readingHasValues(reading) && (
+        <WaterReadingCard reading={reading} />
+      )}
 
       {/* Proof — the differentiator */}
       <div className="card pad stack">
