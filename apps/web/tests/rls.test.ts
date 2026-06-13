@@ -548,4 +548,142 @@ describe.skipIf(!ready)("RLS isolation", () => {
       });
     });
   });
+
+  // ── Invite accept flow (issue #97) ─────────────────────────────────────────
+  describe("Invite accept flow", () => {
+    // Operators mint invites in the app via createInviteAction; here we insert
+    // them directly as admin (RLS bypassed) to exercise the accept RPCs.
+    async function makeInvite(opts: {
+      role: "staff" | "owner";
+      propertyIds: string[];
+      expired?: boolean;
+    }): Promise<string> {
+      const token = randomUUID();
+      const { error } = await admin.from("invite").insert({
+        org_id: orgA,
+        role: opts.role,
+        property_ids: opts.propertyIds,
+        token,
+        invited_by: operatorA.id,
+        email: null,
+        ...(opts.expired
+          ? { expires_at: new Date(Date.now() - 60_000).toISOString() }
+          : {}),
+      });
+      if (error) throw error;
+      return token;
+    }
+
+    it("an unaccepted invitee cannot see the org's properties", async () => {
+      const invitee = await makeUser("invitee-pending");
+      const { data } = await invitee.client
+        .from("property")
+        .select("id")
+        .eq("id", propAssigned);
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it("get_invite_preview returns a valid invite and null when expired", async () => {
+      const token = await makeInvite({ role: "staff", propertyIds: [propAssigned] });
+      const { data: preview } = await operatorA.client.rpc("get_invite_preview", {
+        p_token: token,
+      });
+      expect(preview).not.toBeNull();
+      expect((preview as { role: string }).role).toBe("staff");
+
+      const expiredToken = await makeInvite({
+        role: "staff",
+        propertyIds: [propAssigned],
+        expired: true,
+      });
+      const { data: none } = await operatorA.client.rpc("get_invite_preview", {
+        p_token: expiredToken,
+      });
+      expect(none).toBeNull();
+    });
+
+    it("staff invitee: after accept, sees only assigned and captures only assigned", async () => {
+      const invitee = await makeUser("invitee-staff");
+      const token = await makeInvite({ role: "staff", propertyIds: [propAssigned] });
+
+      const { error: acceptErr } = await invitee.client.rpc("accept_invite", {
+        p_token: token,
+      });
+      expect(acceptErr).toBeNull();
+
+      const { data: props } = await invitee.client.from("property").select("id");
+      const ids = (props ?? []).map((p) => p.id);
+      expect(ids).toContain(propAssigned);
+      expect(ids).not.toContain(propUnassigned);
+
+      const { data: canAssigned } = await invitee.client.rpc(
+        "app_can_capture_property",
+        { p_property: propAssigned },
+      );
+      expect(canAssigned).toBe(true);
+      const { data: canUnassigned } = await invitee.client.rpc(
+        "app_can_capture_property",
+        { p_property: propUnassigned },
+      );
+      expect(canUnassigned).toBe(false);
+    });
+
+    it("owner invitee: after accept, sees the property but cannot capture", async () => {
+      const invitee = await makeUser("invitee-owner");
+      const token = await makeInvite({ role: "owner", propertyIds: [propAssigned] });
+
+      const { error: acceptErr } = await invitee.client.rpc("accept_invite", {
+        p_token: token,
+      });
+      expect(acceptErr).toBeNull();
+
+      const { data: props } = await invitee.client.from("property").select("id");
+      expect((props ?? []).map((p) => p.id)).toContain(propAssigned);
+
+      const { data: canCap } = await invitee.client.rpc(
+        "app_can_capture_property",
+        { p_property: propAssigned },
+      );
+      expect(canCap).toBe(false);
+
+      const { error: insErr } = await invitee.client.from("turnover").insert({
+        property_id: propAssigned,
+        submitter_id: invitee.id,
+        status: "draft",
+      });
+      expect(insErr).not.toBeNull();
+    });
+
+    it("an expired token is rejected and creates no membership", async () => {
+      const invitee = await makeUser("invitee-expired");
+      const token = await makeInvite({
+        role: "staff",
+        propertyIds: [propAssigned],
+        expired: true,
+      });
+      const { error } = await invitee.client.rpc("accept_invite", {
+        p_token: token,
+      });
+      expect(error).not.toBeNull();
+
+      const { data: m } = await admin
+        .from("membership")
+        .select("id")
+        .eq("user_id", invitee.id)
+        .eq("org_id", orgA);
+      expect(m ?? []).toHaveLength(0);
+    });
+
+    it("a non-operator cannot create an invite (RLS blocks the insert)", async () => {
+      const outsider = await makeUser("invite-outsider");
+      const { error } = await outsider.client.from("invite").insert({
+        org_id: orgA,
+        role: "staff",
+        property_ids: [propAssigned],
+        token: randomUUID(),
+        invited_by: outsider.id,
+      });
+      expect(error).not.toBeNull();
+    });
+  });
 });
