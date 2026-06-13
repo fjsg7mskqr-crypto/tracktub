@@ -4,6 +4,13 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { photoPublicUrl } from "@/lib/supabase/storage";
 import { timeAgo } from "@/lib/format";
+import { ChemistryAlerts } from "@/components/ChemistryAlerts";
+import { ChemistryTrend, type TrendReading } from "@/components/ChemistryTrend";
+import {
+  batherLoadActive,
+  clarityFlag,
+  type TurnoverChem,
+} from "@/lib/chemistry-rules";
 
 export default async function PropertyPage({
   params,
@@ -34,11 +41,40 @@ export default async function PropertyPage({
       `id, submitted_at_server, urgent, notes, share_token,
        submitter:profile(full_name, email),
        photos:photo(slot, storage_path, confirmed_tags),
-       issues:issue_tag(tag, source, confirmed_at)`
+       issues:issue_tag(tag, source, confirmed_at),
+       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at)`
     )
     .eq("property_id", propertyId)
     .eq("status", "submitted_locked")
     .order("submitted_at_server", { ascending: false });
+
+  // ── Chemistry-aware layer (issue #100) ──────────────────────────────────────
+  const list = turnovers ?? []; // newest-first
+  const readingOf = (t: (typeof list)[number]) =>
+    Array.isArray(t.water) ? t.water[0] : t.water;
+  const chem: TurnoverChem[] = list.map((t) => ({
+    at: t.submitted_at_server,
+    sanitizerPpm: readingOf(t)?.sanitizer_ppm ?? null,
+    cloudy: (t.issues ?? []).some(
+      (i) => i.tag === "water_cloudy" && !i.confirmed_at
+    ),
+  }));
+  const batherLoad = batherLoadActive(chem, Date.now());
+  const latestFlag = chem.length > 0 ? clarityFlag(chem[0]) : null;
+  const flags = latestFlag ? [latestFlag] : [];
+  const readings: TrendReading[] = list
+    .map((t) => {
+      const r = readingOf(t);
+      return r
+        ? {
+            recorded_at: r.recorded_at,
+            ph: r.ph,
+            sanitizer_ppm: r.sanitizer_ppm,
+            temp_f: r.temp_f,
+          }
+        : null;
+    })
+    .filter((r): r is TrendReading => r !== null);
 
   return (
     <div className="stack">
@@ -62,6 +98,8 @@ export default async function PropertyPage({
         )}
       </div>
 
+      <ChemistryAlerts batherLoad={batherLoad} flags={flags} />
+
       {property.tub_notes && (
         <div className="card pad">
           <div className="label">Tub notes</div>
@@ -70,6 +108,8 @@ export default async function PropertyPage({
           </p>
         </div>
       )}
+
+      {readings.length > 0 && <ChemistryTrend readings={readings} />}
 
       <h3 style={{ fontSize: 16, marginTop: 6 }}>
         Turnover history{" "}
