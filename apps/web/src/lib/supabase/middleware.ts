@@ -60,9 +60,10 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     const path = request.nextUrl.pathname;
-    const isPublic = PUBLIC_PATHS.some(
-      (p) => path === p || path.startsWith(p + "/"),
-    );
+    const isPublic =
+      PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/")) ||
+      // Dev-only demo sign-in route (404s in production via its own guard).
+      (process.env.NODE_ENV !== "production" && path.startsWith("/dev/"));
 
     if (!user && !isPublic) {
       const url = request.nextUrl.clone();
