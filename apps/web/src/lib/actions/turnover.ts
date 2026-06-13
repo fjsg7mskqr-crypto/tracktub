@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/types";
+import { sendReadyEmail } from "@/lib/email";
 import { redirect } from "next/navigation";
 
 export async function submitTurnoverAction(
@@ -19,7 +20,7 @@ export async function submitTurnoverAction(
 
   const { data: property, error: propErr } = await supabase
     .from("property")
-    .select("id, org_id")
+    .select("id, org_id, name")
     .eq("id", propertyId)
     .single();
   if (propErr || !property)
@@ -149,6 +150,21 @@ export async function submitTurnoverAction(
     .update({ status: "submitted_locked" })
     .eq("id", turnover.id);
   if (lockErr) throw new Error(`Failed to lock turnover: ${lockErr.message}`);
+
+  // Notify the property's host(s): fan out a "turnover ready" notification to
+  // every operator/owner of the org (minus the submitter) and fire the email
+  // stub per recipient. Best-effort — the turnover is already locked, so a
+  // notification hiccup must never fail the submit (issue #117).
+  try {
+    const { data: recipients } = await supabase.rpc("notify_turnover_ready", {
+      p_turnover_id: turnover.id,
+    });
+    for (const r of recipients ?? []) {
+      await sendReadyEmail(r.email, property.name);
+    }
+  } catch {
+    // Swallow: the evidence is captured and locked regardless of notification.
+  }
 
   return { id: turnover.id, shareToken };
 }

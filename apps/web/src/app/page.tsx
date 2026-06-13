@@ -6,6 +6,7 @@ import { photoPublicUrl } from "@/lib/supabase/storage";
 import { timeAgo } from "@/lib/format";
 import { getCurrentMembership } from "@/lib/auth";
 import { CleanerHome } from "./CleanerHome";
+import { NotificationFeed } from "./NotificationFeed";
 import {
   batherLoadActive,
   clarityFlag,
@@ -25,6 +26,13 @@ export default async function Home() {
   // Operators and owners get the dashboard; only operators can add properties.
   const canAdd = membership.role === "operator";
   const supabase = await createClient();
+
+  // Unread "turnover ready" notifications for this host (RLS scopes to self).
+  const { data: notifications } = await supabase
+    .from("notification")
+    .select("id, message, created_at")
+    .is("read_at", null)
+    .order("created_at", { ascending: false });
 
   const { data: properties } = await supabase
     .from("property")
@@ -67,6 +75,7 @@ export default async function Home() {
 
   return (
     <div className="stack">
+      <NotificationFeed items={notifications ?? []} />
       <div className="spread pagehead">
         <h1>Your hot tubs</h1>
         {canAdd && (
