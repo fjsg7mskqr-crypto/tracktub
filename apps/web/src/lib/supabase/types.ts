@@ -584,6 +584,7 @@ export type Database = {
         Returns: boolean
       }
       app_is_member: { Args: { p_org: string }; Returns: boolean }
+      app_shares_org: { Args: { p_user: string }; Returns: boolean }
       founder_metrics: { Args: never; Returns: Json }
       get_invite_preview: { Args: { p_token: string }; Returns: Json }
       record_proof_open: { Args: { p_share_token: string }; Returns: undefined }

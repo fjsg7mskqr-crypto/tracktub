@@ -4,15 +4,25 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getEnvSafe } from "@/lib/env";
 
 /** Paths reachable without a session: the login form, the auth callback, the
- *  marketing landing page, and shared proof links. Everything else requires a
- *  signed-in user.
+ *  marketing landing page, shared proof links, and the invite-accept page.
+ *  Everything else requires a signed-in user.
  *  `/proof/*` is public by design — a recipient opens a shared turnover's proof
  *  link with no account ("No login required to view"). The page reads through
  *  the anonymous `share_token` RLS policies (`turnover_public_proof` /
  *  `photo_public_proof`, migration `20260610120000`) and records the open via
  *  `record_proof_open`. Gating it here redirected recipients to /login and made
- *  the PRD wedge metric (shared links opened by recipients) unmeasurable (#104). */
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/landing", "/proof"];
+ *  the PRD wedge metric (shared links opened by recipients) unmeasurable (#104).
+ *  `/invite/*` is the same capability-link shape — a signed-out invitee MUST
+ *  reach the accept screen to start the sign-in round-trip (issue #97/#98); it
+ *  reads only a SECURITY-DEFINER preview, so gating it would break the flow
+ *  without protecting anything. */
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth/callback",
+  "/landing",
+  "/proof",
+  "/invite",
+];
 
 /**
  * Refreshes the Supabase session on every request and gates protected routes.

@@ -346,6 +346,31 @@ describe.skipIf(!ready)("RLS isolation", () => {
     expect(after?.action).toBe("INSERT");
   }, 30_000);
 
+  it("a member can read co-members' profiles but not users from another org (#98)", async () => {
+    // operatorA and staffA share org A — the Team page needs co-member names.
+    const { data: coMember } = await operatorA.client
+      .from("profile")
+      .select("id, email")
+      .eq("id", staffA.id)
+      .single();
+    expect(coMember?.id).toBe(staffA.id);
+
+    // operatorB belongs to org B only — invisible to operatorA.
+    const { data: outsider } = await operatorA.client
+      .from("profile")
+      .select("id")
+      .eq("id", operatorB.id);
+    expect(outsider ?? []).toHaveLength(0);
+
+    // Self is always readable (profile_self_select).
+    const { data: self } = await operatorA.client
+      .from("profile")
+      .select("id")
+      .eq("id", operatorA.id)
+      .single();
+    expect(self?.id).toBe(operatorA.id);
+  });
+
   // ── Anon proof link access ─────────────────────────────────────────────────
   describe("Proof link — anon access", () => {
     const anonClient = ready
