@@ -346,6 +346,31 @@ describe.skipIf(!ready)("RLS isolation", () => {
     expect(after?.action).toBe("INSERT");
   }, 30_000);
 
+  it("a member can read co-members' profiles but not users from another org (#98)", async () => {
+    // operatorA and staffA share org A — the Team page needs co-member names.
+    const { data: coMember } = await operatorA.client
+      .from("profile")
+      .select("id, email")
+      .eq("id", staffA.id)
+      .single();
+    expect(coMember?.id).toBe(staffA.id);
+
+    // operatorB belongs to org B only — invisible to operatorA.
+    const { data: outsider } = await operatorA.client
+      .from("profile")
+      .select("id")
+      .eq("id", operatorB.id);
+    expect(outsider ?? []).toHaveLength(0);
+
+    // Self is always readable (profile_self_select).
+    const { data: self } = await operatorA.client
+      .from("profile")
+      .select("id")
+      .eq("id", operatorA.id)
+      .single();
+    expect(self?.id).toBe(operatorA.id);
+  });
+
   // ── Anon proof link access ─────────────────────────────────────────────────
   describe("Proof link — anon access", () => {
     const anonClient = ready
@@ -546,6 +571,321 @@ describe.skipIf(!ready)("RLS isolation", () => {
         const anonDenied = await anonClient.rpc("founder_metrics");
         expect(anonDenied.error).not.toBeNull();
       });
+    });
+  });
+
+  // ── Invite accept flow (issue #97) ─────────────────────────────────────────
+  describe("Invite accept flow", () => {
+    // Operators mint invites in the app via createInviteAction; here we insert
+    // them directly as admin (RLS bypassed) to exercise the accept RPCs.
+    async function makeInvite(opts: {
+      role: "staff" | "owner";
+      propertyIds: string[];
+      expired?: boolean;
+    }): Promise<string> {
+      const token = randomUUID();
+      const { error } = await admin.from("invite").insert({
+        org_id: orgA,
+        role: opts.role,
+        property_ids: opts.propertyIds,
+        token,
+        invited_by: operatorA.id,
+        email: null,
+        ...(opts.expired
+          ? { expires_at: new Date(Date.now() - 60_000).toISOString() }
+          : {}),
+      });
+      if (error) throw error;
+      return token;
+    }
+
+    it("an unaccepted invitee cannot see the org's properties", async () => {
+      const invitee = await makeUser("invitee-pending");
+      const { data } = await invitee.client
+        .from("property")
+        .select("id")
+        .eq("id", propAssigned);
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it("get_invite_preview returns a valid invite and null when expired", async () => {
+      const token = await makeInvite({ role: "staff", propertyIds: [propAssigned] });
+      const { data: preview } = await operatorA.client.rpc("get_invite_preview", {
+        p_token: token,
+      });
+      expect(preview).not.toBeNull();
+      expect((preview as { role: string }).role).toBe("staff");
+
+      const expiredToken = await makeInvite({
+        role: "staff",
+        propertyIds: [propAssigned],
+        expired: true,
+      });
+      const { data: none } = await operatorA.client.rpc("get_invite_preview", {
+        p_token: expiredToken,
+      });
+      expect(none).toBeNull();
+    });
+
+    it("staff invitee: after accept, sees only assigned and captures only assigned", async () => {
+      const invitee = await makeUser("invitee-staff");
+      const token = await makeInvite({ role: "staff", propertyIds: [propAssigned] });
+
+      const { error: acceptErr } = await invitee.client.rpc("accept_invite", {
+        p_token: token,
+      });
+      expect(acceptErr).toBeNull();
+
+      const { data: props } = await invitee.client.from("property").select("id");
+      const ids = (props ?? []).map((p) => p.id);
+      expect(ids).toContain(propAssigned);
+      expect(ids).not.toContain(propUnassigned);
+
+      const { data: canAssigned } = await invitee.client.rpc(
+        "app_can_capture_property",
+        { p_property: propAssigned },
+      );
+      expect(canAssigned).toBe(true);
+      const { data: canUnassigned } = await invitee.client.rpc(
+        "app_can_capture_property",
+        { p_property: propUnassigned },
+      );
+      expect(canUnassigned).toBe(false);
+    });
+
+    it("owner invitee: after accept, sees the property but cannot capture", async () => {
+      const invitee = await makeUser("invitee-owner");
+      const token = await makeInvite({ role: "owner", propertyIds: [propAssigned] });
+
+      const { error: acceptErr } = await invitee.client.rpc("accept_invite", {
+        p_token: token,
+      });
+      expect(acceptErr).toBeNull();
+
+      const { data: props } = await invitee.client.from("property").select("id");
+      expect((props ?? []).map((p) => p.id)).toContain(propAssigned);
+
+      const { data: canCap } = await invitee.client.rpc(
+        "app_can_capture_property",
+        { p_property: propAssigned },
+      );
+      expect(canCap).toBe(false);
+
+      const { error: insErr } = await invitee.client.from("turnover").insert({
+        property_id: propAssigned,
+        submitter_id: invitee.id,
+        status: "draft",
+      });
+      expect(insErr).not.toBeNull();
+    });
+
+    it("an expired token is rejected and creates no membership", async () => {
+      const invitee = await makeUser("invitee-expired");
+      const token = await makeInvite({
+        role: "staff",
+        propertyIds: [propAssigned],
+        expired: true,
+      });
+      const { error } = await invitee.client.rpc("accept_invite", {
+        p_token: token,
+      });
+      expect(error).not.toBeNull();
+
+      const { data: m } = await admin
+        .from("membership")
+        .select("id")
+        .eq("user_id", invitee.id)
+        .eq("org_id", orgA);
+      expect(m ?? []).toHaveLength(0);
+    });
+
+    it("a non-operator cannot create an invite (RLS blocks the insert)", async () => {
+      const outsider = await makeUser("invite-outsider");
+      const { error } = await outsider.client.from("invite").insert({
+        org_id: orgA,
+        role: "staff",
+        property_ids: [propAssigned],
+        token: randomUUID(),
+        invited_by: outsider.id,
+      });
+      expect(error).not.toBeNull();
+    });
+  });
+
+  // ── Water readings (issue #99) ─────────────────────────────────────────────
+  describe("Water readings", () => {
+    const anonClient = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as ReturnType<typeof createClient<Database>>);
+
+    it("staff can add a reading to a draft turnover on an assigned property, not an unassigned one", async () => {
+      const { data: to } = await staffA.client
+        .from("turnover")
+        .insert({ property_id: propAssigned, submitter_id: staffA.id, status: "draft" })
+        .select("id")
+        .single();
+      const { error: okErr } = await staffA.client.from("water_reading").insert({
+        turnover_id: to!.id,
+        property_id: propAssigned,
+        ph: 7.4,
+        sanitizer_ppm: 4,
+        temp_f: 100,
+      });
+      expect(okErr).toBeNull();
+
+      // A draft turnover on the unassigned property (created by admin); staff
+      // cannot attach a reading to it.
+      const { data: toU } = await admin
+        .from("turnover")
+        .insert({ property_id: propUnassigned, submitter_id: operatorA.id, status: "draft" })
+        .select("id")
+        .single();
+      const { error: denyErr } = await staffA.client.from("water_reading").insert({
+        turnover_id: toU!.id,
+        property_id: propUnassigned,
+        ph: 7.4,
+      });
+      expect(denyErr).not.toBeNull();
+    });
+
+    it("a reading is immutable once the turnover is locked", async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({ property_id: propAssigned, submitter_id: operatorA.id, status: "draft" })
+        .select("id")
+        .single();
+      const { data: r, error: insErr } = await operatorA.client
+        .from("water_reading")
+        .insert({ turnover_id: to!.id, property_id: propAssigned, ph: 7.5 })
+        .select("id")
+        .single();
+      expect(insErr).toBeNull();
+
+      await admin
+        .from("turnover")
+        .update({ status: "submitted_locked" })
+        .eq("id", to!.id);
+
+      // USING denies the update on a locked turnover → 0 rows; value unchanged.
+      await operatorA.client
+        .from("water_reading")
+        .update({ ph: 9.9 })
+        .eq("id", r!.id);
+      const { data: after } = await admin
+        .from("water_reading")
+        .select("ph")
+        .eq("id", r!.id)
+        .single();
+      expect(Number(after?.ph)).toBe(7.5);
+    });
+
+    it("anon reads a reading only through a locked + shared turnover", async () => {
+      const token = randomUUID();
+      const { data: shared } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "submitted_locked",
+          share_token: token,
+        })
+        .select("id")
+        .single();
+      await admin
+        .from("water_reading")
+        .insert({ turnover_id: shared!.id, property_id: propAssigned, ph: 7.6 });
+
+      const { data: unshared } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "submitted_locked",
+          share_token: null,
+        })
+        .select("id")
+        .single();
+      await admin
+        .from("water_reading")
+        .insert({ turnover_id: unshared!.id, property_id: propAssigned, ph: 7.6 });
+
+      const okRead = await anonClient
+        .from("water_reading")
+        .select("ph")
+        .eq("turnover_id", shared!.id);
+      expect((okRead.data ?? []).length).toBeGreaterThan(0);
+
+      const denyRead = await anonClient
+        .from("water_reading")
+        .select("ph")
+        .eq("turnover_id", unshared!.id);
+      expect(denyRead.data ?? []).toHaveLength(0);
+    });
+  });
+
+  // ── Chemistry trend visibility (issue #100) ────────────────────────────────
+  describe("Chemistry trend visibility", () => {
+    let readingAssignedId: string;
+    let readingUnassignedId: string;
+
+    beforeAll(async () => {
+      const seed = async (prop: string): Promise<string> => {
+        const { data: to } = await admin
+          .from("turnover")
+          .insert({
+            property_id: prop,
+            submitter_id: operatorA.id,
+            status: "submitted_locked",
+            share_token: randomUUID(),
+          })
+          .select("id")
+          .single();
+        const { data: r } = await admin
+          .from("water_reading")
+          .insert({ turnover_id: to!.id, property_id: prop, ph: 7.4, sanitizer_ppm: 4 })
+          .select("id")
+          .single();
+        return r!.id;
+      };
+      readingAssignedId = await seed(propAssigned);
+      readingUnassignedId = await seed(propUnassigned);
+    });
+
+    it("operator sees trend readings for every org property", async () => {
+      const { data: a } = await operatorA.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propAssigned);
+      expect((a ?? []).map((r) => r.id)).toContain(readingAssignedId);
+      const { data: u } = await operatorA.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propUnassigned);
+      expect((u ?? []).map((r) => r.id)).toContain(readingUnassignedId);
+    });
+
+    it("assigned staff sees trend readings only for assigned properties", async () => {
+      const { data: ok } = await staffA.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propAssigned);
+      expect((ok ?? []).map((r) => r.id)).toContain(readingAssignedId);
+
+      const { data: deny } = await staffA.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propUnassigned);
+      expect(deny ?? []).toHaveLength(0);
+    });
+
+    it("another org cannot read the readings", async () => {
+      const { data } = await operatorB.client
+        .from("water_reading")
+        .select("id")
+        .eq("property_id", propAssigned);
+      expect(data ?? []).toHaveLength(0);
     });
   });
 });

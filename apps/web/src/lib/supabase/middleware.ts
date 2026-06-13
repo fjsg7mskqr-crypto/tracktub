@@ -2,14 +2,33 @@ import { createServerClient } from "@supabase/ssr";
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnvSafe } from "@/lib/env";
+import {
+  bucketForPath,
+  checkRateLimit,
+  getClientIp,
+  tooManyRequests,
+} from "@/lib/ratelimit";
 
-/** Paths reachable without a session: the login form, the auth callback, and
- *  the marketing landing page. Everything else requires a signed-in user.
- *  Public proof links (`/proof/*`) will rejoin this list in M2 once they read
- *  from Supabase via an anonymous `share_token` SELECT policy; until then the
- *  route serves only stale demo data, so it stays gated rather than publicly
- *  advertising a dead page. */
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/landing"];
+/** Paths reachable without a session: the login form, the auth callback, the
+ *  marketing landing page, shared proof links, and the invite-accept page.
+ *  Everything else requires a signed-in user.
+ *  `/proof/*` is public by design — a recipient opens a shared turnover's proof
+ *  link with no account ("No login required to view"). The page reads through
+ *  the anonymous `share_token` RLS policies (`turnover_public_proof` /
+ *  `photo_public_proof`, migration `20260610120000`) and records the open via
+ *  `record_proof_open`. Gating it here redirected recipients to /login and made
+ *  the PRD wedge metric (shared links opened by recipients) unmeasurable (#104).
+ *  `/invite/*` is the same capability-link shape — a signed-out invitee MUST
+ *  reach the accept screen to start the sign-in round-trip (issue #97/#98); it
+ *  reads only a SECURITY-DEFINER preview, so gating it would break the flow
+ *  without protecting anything. */
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth/callback",
+  "/landing",
+  "/proof",
+  "/invite",
+];
 
 /**
  * Refreshes the Supabase session on every request and gates protected routes.
@@ -17,6 +36,18 @@ const PUBLIC_PATHS = ["/login", "/auth/callback", "/landing"];
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+
+  // Rate-limit the abuse-prone public surfaces (login, auth callback, proof
+  // links) before any other work (issue #42). No-op until Upstash is configured,
+  // and checkRateLimit fails open, so this can never 500 the site.
+  const bucket = bucketForPath(request.nextUrl.pathname);
+  if (bucket) {
+    const { success, reset } = await checkRateLimit(
+      bucket,
+      getClientIp(request.headers),
+    );
+    if (!success) return tooManyRequests(reset);
+  }
 
   // Middleware runs on every route, so it must never throw — a throw here is a
   // site-wide 500 (MIDDLEWARE_INVOCATION_FAILED). If Supabase isn't configured,
@@ -60,13 +91,14 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     const path = request.nextUrl.pathname;
-    const isPublic = PUBLIC_PATHS.some(
-      (p) => path === p || path.startsWith(p + "/"),
-    );
+    const isPublic =
+      PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/")) ||
+      // Dev-only demo sign-in route (404s in production via its own guard).
+      (process.env.NODE_ENV !== "production" && path.startsWith("/dev/"));
 
     if (!user && !isPublic) {
       const url = request.nextUrl.clone();
-      // Root is the authed cockpit; a logged-out visitor there is marketing
+      // Root is the authed dashboard; a logged-out visitor there is marketing
       // traffic, so send them to the public landing page instead of a login
       // wall. Deeper app paths keep redirecting to /login.
       url.pathname = path === "/" ? "/landing" : "/login";

@@ -6,27 +6,68 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Seal } from "@/components/Seal";
 import { Icon } from "@/components/Icon";
+import { resolveRole, type MemberRole } from "@/lib/role";
 
-const NAV = [
-  { href: "/", label: "Cockpit" },
-  { href: "/landing", label: "Landing" },
-  { href: "/insights", label: "Insights" },
-  { href: "/add-property", label: "Add property" },
-];
+type NavItem = { href: string; label: string };
+
+// Nav by role (issue #97). Operator = full host nav; staff = capture-only
+// home (no nav); owner = read-only dashboard.
+const NAV_BY_ROLE: Record<MemberRole, NavItem[]> = {
+  operator: [
+    { href: "/", label: "Dashboard" },
+    { href: "/team", label: "Team" },
+    { href: "/insights", label: "Insights" },
+    { href: "/add-property", label: "Add property" },
+  ],
+  staff: [],
+  owner: [{ href: "/", label: "Dashboard" }],
+};
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
   const [email, setEmail] = useState<string | null>(null);
+  const [role, setRole] = useState<MemberRole | null>(null);
 
+  // Resolve role/email client-side so the root layout stays static (a cookie
+  // read there would force every route, including /landing, to be dynamic).
+  // Server-side guards remain the real authority; this only drives the nav.
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth
-      .getUser()
-      .then(({ data }) => setEmail(data.user?.email ?? null));
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      setEmail(user.email ?? null);
+      const { data: memberships } = await supabase
+        .from("membership")
+        .select("org_id, role")
+        .eq("user_id", user.id);
+      if (!memberships || memberships.length === 0) return;
+      const operatorOrgs = memberships
+        .filter((m) => m.role === "operator")
+        .map((m) => m.org_id);
+      let withProps: string[] = [];
+      if (operatorOrgs.length > 0) {
+        const { data: props } = await supabase
+          .from("property")
+          .select("org_id")
+          .in("org_id", operatorOrgs);
+        withProps = [...new Set((props ?? []).map((p) => p.org_id))];
+      }
+      setRole(resolveRole(memberships, withProps)?.role ?? null);
+    })();
   }, []);
 
-  if (pathname.startsWith("/proof") || pathname.startsWith("/landing"))
+  // Capability-link / unauthenticated surfaces render without the app chrome.
+  if (
+    pathname.startsWith("/proof") ||
+    pathname.startsWith("/landing") ||
+    pathname.startsWith("/invite")
+  )
     return <>{children}</>;
+
+  const nav = role ? NAV_BY_ROLE[role] : [];
 
   return (
     <>
@@ -41,7 +82,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
           <nav className="navlinks">
-            {NAV.map((n) => (
+            {nav.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}

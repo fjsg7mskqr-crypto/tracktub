@@ -90,7 +90,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           created_at: string
-          email: string
+          email: string | null
           expires_at: string
           id: string
           invited_by: string
@@ -102,7 +102,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           created_at?: string
-          email: string
+          email?: string | null
           expires_at?: string
           id?: string
           invited_by: string
@@ -114,7 +114,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           created_at?: string
-          email?: string
+          email?: string | null
           expires_at?: string
           id?: string
           invited_by?: string
@@ -252,6 +252,7 @@ export type Database = {
           confirmed_tags: string[]
           created_at: string
           id: string
+          phase: Database["public"]["Enums"]["capture_phase"]
           slot: Database["public"]["Enums"]["photo_slot"]
           storage_path: string | null
           turnover_id: string
@@ -262,6 +263,7 @@ export type Database = {
           confirmed_tags?: string[]
           created_at?: string
           id?: string
+          phase?: Database["public"]["Enums"]["capture_phase"]
           slot: Database["public"]["Enums"]["photo_slot"]
           storage_path?: string | null
           turnover_id: string
@@ -272,6 +274,7 @@ export type Database = {
           confirmed_tags?: string[]
           created_at?: string
           id?: string
+          phase?: Database["public"]["Enums"]["capture_phase"]
           slot?: Database["public"]["Enums"]["photo_slot"]
           storage_path?: string | null
           turnover_id?: string
@@ -565,11 +568,60 @@ export type Database = {
         }
         Relationships: []
       }
+      water_reading: {
+        Row: {
+          created_at: string
+          id: string
+          ph: number | null
+          property_id: string
+          recorded_at: string
+          sanitizer_ppm: number | null
+          temp_f: number | null
+          turnover_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ph?: number | null
+          property_id: string
+          recorded_at?: string
+          sanitizer_ppm?: number | null
+          temp_f?: number | null
+          turnover_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ph?: number | null
+          property_id?: string
+          recorded_at?: string
+          sanitizer_ppm?: number | null
+          temp_f?: number | null
+          turnover_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "water_reading_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "water_reading_turnover_id_fkey"
+            columns: ["turnover_id"]
+            isOneToOne: true
+            referencedRelation: "turnover"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      accept_invite: { Args: { p_token: string }; Returns: string }
       app_can_capture_property: {
         Args: { p_property: string }
         Returns: boolean
@@ -583,10 +635,13 @@ export type Database = {
         Returns: boolean
       }
       app_is_member: { Args: { p_org: string }; Returns: boolean }
+      app_shares_org: { Args: { p_user: string }; Returns: boolean }
       founder_metrics: { Args: never; Returns: Json }
+      get_invite_preview: { Args: { p_token: string }; Returns: Json }
       record_proof_open: { Args: { p_share_token: string }; Returns: undefined }
     }
     Enums: {
+      capture_phase: "before" | "after"
       member_role: "operator" | "staff" | "owner"
       photo_slot: "wide" | "waterline" | "panel" | "cover"
       turnover_status: "draft" | "submitted_locked"
@@ -720,6 +775,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      capture_phase: ["before", "after"],
       member_role: ["operator", "staff", "owner"],
       photo_slot: ["wide", "waterline", "panel", "cover"],
       turnover_status: ["draft", "submitted_locked"],
