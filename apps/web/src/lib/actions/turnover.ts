@@ -133,13 +133,39 @@ export async function submitTurnoverAction(
   const ph = num("ph");
   const sanitizerPpm = num("sanitizer_ppm");
   const tempF = num("temp_f");
-  if (ph !== null || sanitizerPpm !== null || tempF !== null) {
+  // What the tech added (as-found reading + treatments — the pro-standard record).
+  let treatments: string[] = [];
+  const treatmentsRaw = formData.get("treatments") as string | null;
+  if (treatmentsRaw) {
+    try {
+      const parsed = JSON.parse(treatmentsRaw);
+      if (Array.isArray(parsed))
+        treatments = parsed.filter((t): t is string => typeof t === "string");
+    } catch {
+      // Malformed treatments payload; proceed without them.
+    }
+  }
+  const treatmentNote =
+    ((formData.get("treatment_note") as string) ?? "").trim() || null;
+  const balanced = formData.get("balanced") === "true";
+
+  if (
+    ph !== null ||
+    sanitizerPpm !== null ||
+    tempF !== null ||
+    treatments.length > 0 ||
+    treatmentNote !== null ||
+    balanced
+  ) {
     const { error: readingErr } = await supabase.from("water_reading").insert({
       turnover_id: turnover.id,
       property_id: propertyId,
       ph,
       sanitizer_ppm: sanitizerPpm,
       temp_f: tempF,
+      treatments,
+      treatment_note: treatmentNote,
+      balanced,
     });
     if (readingErr)
       throw new Error(`Failed to save water reading: ${readingErr.message}`);

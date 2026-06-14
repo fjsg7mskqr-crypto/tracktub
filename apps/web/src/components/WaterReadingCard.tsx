@@ -5,6 +5,7 @@ import {
   phOutOfRange,
   sanitizerOutOfRange,
   tempOutOfRange,
+  treatmentLabel,
   type WaterReadingValues,
 } from "@/lib/chemistry";
 
@@ -54,7 +55,7 @@ function Field({
  *  flagged. Used on the turnover detail and the public proof page. */
 export function WaterReadingCard({
   reading,
-  heading = "Water check",
+  heading = "Water — as found",
 }: {
   reading: WaterReadingValues;
   heading?: string;
@@ -92,6 +93,35 @@ export function WaterReadingCard({
           hint={`Target ≤ ${CHEM_THRESHOLDS.tempF.max}°F`}
         />
       </div>
+
+      {((reading.treatments?.length ?? 0) > 0 ||
+        reading.treatment_note ||
+        reading.balanced) && (
+        <div className="stack" style={{ gap: 8 }}>
+          {(reading.treatments?.length ?? 0) > 0 && (
+            <div>
+              <div className="label" style={{ marginBottom: 4 }}>
+                Added
+              </div>
+              <div className="row wrap" style={{ gap: 6 }}>
+                {reading.treatments!.map((c) => (
+                  <span key={c} className="badge">
+                    {treatmentLabel(c)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {reading.treatment_note && (
+            <div className="tiny dim">{reading.treatment_note}</div>
+          )}
+          {reading.balanced && (
+            <span className="badge ok" style={{ alignSelf: "flex-start" }}>
+              <Icon name="check" size={12} /> Left balanced &amp; guest-ready
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
