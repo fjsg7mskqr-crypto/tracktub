@@ -1089,4 +1089,86 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(after?.message).toBe(mine!.message);
     });
   });
+
+  describe("maintenance_task / maintenance_log", () => {
+    it("operator can create a schedule on their property", async () => {
+      const { data, error } = await operatorA.client
+        .from("maintenance_task")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          title: "Filter clean",
+          recurrence_kind: "turnover",
+          recurrence_value: 3,
+        })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+      expect(data?.id).toBeTruthy();
+    });
+
+    it("assigned staff/tech can create a schedule", async () => {
+      const { error } = await staffA.client.from("maintenance_task").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        title: "Drain & refill",
+        recurrence_kind: "time",
+        recurrence_value: 90,
+        recurrence_unit: "day",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("operator of another org cannot create on this property", async () => {
+      const { error } = await operatorB.client.from("maintenance_task").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        title: "Sneaky",
+        recurrence_kind: "turnover",
+        recurrence_value: 1,
+      });
+      expect(error).not.toBeNull(); // RLS denies
+    });
+
+    it("capturer can log a completion against a matching task", async () => {
+      const { data: task } = await operatorA.client
+        .from("maintenance_task")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          title: "Cover inspection",
+          recurrence_kind: "time",
+          recurrence_value: 30,
+          recurrence_unit: "day",
+        })
+        .select("id")
+        .single();
+      const { error } = await operatorA.client.from("maintenance_log").insert({
+        task_id: task!.id,
+        property_id: propAssigned,
+        note: "done",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("cannot log a completion onto a different property", async () => {
+      const { data: task } = await operatorA.client
+        .from("maintenance_task")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          title: "X",
+          recurrence_kind: "turnover",
+          recurrence_value: 2,
+        })
+        .select("id")
+        .single();
+      const { error } = await operatorB.client.from("maintenance_log").insert({
+        task_id: task!.id,
+        property_id: propB, // mismatched property
+        note: "injection",
+      });
+      expect(error).not.toBeNull();
+    });
+  });
 });

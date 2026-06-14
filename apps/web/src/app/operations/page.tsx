@@ -11,6 +11,7 @@ import {
   clarityFlag,
   type TurnoverChem,
 } from "@/lib/chemistry-rules";
+import { maintenanceStatus, type MaintenanceInput } from "@/lib/maintenance";
 
 export default async function OperationsPage() {
   const membership = await getCurrentMembership();
@@ -29,6 +30,9 @@ export default async function OperationsPage() {
          id, submitted_at_server, status, urgent,
          issue_tag(tag, confirmed_at),
          water_reading(ph, sanitizer_ppm, temp_f, recorded_at)
+       ),
+       maintenance_task(
+         id, recurrence_kind, recurrence_value, recurrence_unit, last_done_at, archived_at
        )`
     )
     .order("created_at");
@@ -66,9 +70,26 @@ export default async function OperationsPage() {
           : null;
       })
       .filter((r): r is TrendReading => r !== null);
-    const attention = batherLoad || chemFlag != null;
+    const lockedAts = locked
+      .map((t) => t.submitted_at_server)
+      .filter((s): s is string => !!s);
+    const overdueMaintenance = (p.maintenance_task ?? [])
+      .filter((t) => !t.archived_at)
+      .filter((t) => {
+        const input: MaintenanceInput = {
+          recurrenceKind: t.recurrence_kind,
+          recurrenceValue: t.recurrence_value,
+          recurrenceUnit: t.recurrence_unit,
+          lastDoneAt: t.last_done_at,
+          turnoversSinceDone: t.last_done_at
+            ? lockedAts.filter((at) => at > (t.last_done_at as string)).length
+            : lockedAts.length,
+        };
+        return maintenanceStatus(input, now).state === "overdue";
+      }).length;
+    const attention = batherLoad || chemFlag != null || overdueMaintenance > 0;
 
-    return { ...p, batherLoad, chemFlag, flags, readings, attention };
+    return { ...p, batherLoad, chemFlag, flags, readings, attention, overdueMaintenance };
   });
 
   // Demo story: tubs needing attention float to the top, then alphabetical.
@@ -158,6 +179,11 @@ export default async function OperationsPage() {
                     )}
                     {p.chemFlag?.reason === "cloudy" && (
                       <span className="spill warn">Cloudy</span>
+                    )}
+                    {p.overdueMaintenance > 0 && (
+                      <span className="spill warn">
+                        Maintenance: {p.overdueMaintenance} overdue
+                      </span>
                     )}
                     {!p.attention &&
                       (p.readings.length > 0 ? (
