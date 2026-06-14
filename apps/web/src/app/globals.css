@@ -946,6 +946,16 @@ select.input {
 .creadout .k { color: var(--text-dim); }
 .creadout .bad, .creadout .bad b { color: var(--pending); }
 
+/* insights — per-property volume bars (console readout) */
+.pbars { display: flex; flex-direction: column; }
+.pbar-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 200px) auto; align-items: center; gap: 16px; padding: 11px 2px; border-top: 1px solid var(--border); }
+.pbar-row:first-child { border-top: 0; }
+.pbar-name { font-size: 13.5px; font-weight: 500; color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pbar-track { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.pbar-fill { height: 100%; border-radius: 999px; background: var(--brand-blue); min-width: 2px; }
+.pbar-num { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-lo); white-space: nowrap; }
+.pbar-num b { color: var(--text-hi); font-weight: 600; }
+
 @media (max-width: 760px) {
   .appshell { grid-template-columns: 1fr; }
   .appside { position: static; height: auto; flex-direction: row; align-items: center; gap: 10px; overflow-x: auto; padding: 12px 14px; }
@@ -956,6 +966,8 @@ select.input {
   .appmain-inner { padding: 20px 18px 60px; }
   .drow2 { grid-template-columns: 1fr auto; }
   .drow2 .when { display: none; }
+  .pbar-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .pbar-track { display: none; }
 }
 
 /* turnover log — prominent before/after photo gallery */
