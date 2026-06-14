@@ -43,6 +43,12 @@ export const metadata: Metadata = {
     description:
       "The dispute-grade evidence layer for short-term-rental hot-tub turnovers.",
   },
+  // Google Search Console domain verification. No-op until the env var is set in
+  // Vercel (then redeploy — NEXT_PUBLIC_* is inlined at build time). Lets the
+  // founder verify ownership and submit the sitemap.
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+    : undefined,
 };
 
 export const viewport: Viewport = {
