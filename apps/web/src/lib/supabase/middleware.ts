@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnvSafe } from "@/lib/env";
+import { appAccessDecision, isAdminEmail } from "@/lib/admin";
 import {
   bucketForPath,
   checkRateLimit,
@@ -9,15 +10,19 @@ import {
   tooManyRequests,
 } from "@/lib/ratelimit";
 
-/** Paths reachable without a session: the login form, the auth callback, the
- *  marketing landing page, shared proof links, and the invite-accept page.
- *  Everything else requires a signed-in user.
+/** Paths reachable without a session: the marketing surface (landing + blog),
+ *  the login form, the auth callback, shared proof links, and the invite-accept
+ *  page. Everything else requires a signed-in user — and, in production, a user
+ *  on the `ADMIN_EMAILS` allowlist (the pre-launch lockdown; see `@/lib/admin`).
+ *  `/landing` + `/blog` are the only browsable public pages pre-launch.
  *  `/proof/*` is public by design — a recipient opens a shared turnover's proof
  *  link with no account ("No login required to view"). The page reads through
  *  the anonymous `share_token` RLS policies (`turnover_public_proof` /
  *  `photo_public_proof`, migration `20260610120000`) and records the open via
  *  `record_proof_open`. Gating it here redirected recipients to /login and made
  *  the PRD wedge metric (shared links opened by recipients) unmeasurable (#104).
+ *  It stays public through the lockdown: it is a capability link (an unguessable
+ *  token), not a stumble-able surface, and no valid public tokens exist yet.
  *  `/invite/*` is the same capability-link shape — a signed-out invitee MUST
  *  reach the accept screen to start the sign-in round-trip (issue #97/#98); it
  *  reads only a SECURITY-DEFINER preview, so gating it would break the flow
@@ -26,6 +31,7 @@ const PUBLIC_PATHS = [
   "/login",
   "/auth/callback",
   "/landing",
+  "/blog",
   "/proof",
   "/invite",
 ];
@@ -96,12 +102,24 @@ export async function updateSession(request: NextRequest) {
       // Dev-only demo sign-in route (404s in production via its own guard).
       (process.env.NODE_ENV !== "production" && path.startsWith("/dev/"));
 
-    if (!user && !isPublic) {
+    // Pre-launch lockdown: protected routes require a signed-in user, and in
+    // production also an ADMIN_EMAILS-allowlisted one. The admin requirement is
+    // off outside production so the seeded localhost demo / `/dev` bypass keep
+    // working. Decision logic lives in `@/lib/admin` (pure + unit-tested).
+    const decision = appAccessDecision({
+      path,
+      isPublic,
+      hasUser: Boolean(user),
+      isAdmin: isAdminEmail(user?.email),
+      enforceAdmin: process.env.NODE_ENV === "production",
+    });
+
+    if (decision !== "allow") {
       const url = request.nextUrl.clone();
-      // Root is the authed dashboard; a logged-out visitor there is marketing
-      // traffic, so send them to the public landing page instead of a login
-      // wall. Deeper app paths keep redirecting to /login.
-      url.pathname = path === "/" ? "/landing" : "/login";
+      // "landing" — logged-out marketing traffic on the root, or a non-admin who
+      // signed in but isn't permitted past the public surface. "login" — a
+      // logged-out visitor on a deeper app path, so the founder can sign in.
+      url.pathname = decision === "landing" ? "/landing" : "/login";
       // Carry any cookies refreshed above onto the redirect, matching the
       // canonical Supabase middleware (harmless today, correct if logic changes).
       const redirect = NextResponse.redirect(url);

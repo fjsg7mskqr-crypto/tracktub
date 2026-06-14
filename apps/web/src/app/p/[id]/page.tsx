@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { photoPublicUrl } from "@/lib/supabase/storage";
 import { timeAgo } from "@/lib/format";
 import { ChemistryAlerts } from "@/components/ChemistryAlerts";
 import { ChemistryTrend, type TrendReading } from "@/components/ChemistryTrend";
@@ -40,7 +39,6 @@ export default async function PropertyPage({
     .select(
       `id, submitted_at_server, urgent, notes, share_token,
        submitter:profile(full_name, email),
-       photos:photo(slot, storage_path, confirmed_tags),
        issues:issue_tag(tag, source, confirmed_at),
        water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at)`
     )
@@ -163,23 +161,6 @@ export default async function PropertyPage({
                       </span>
                     )}
                   </div>
-                </div>
-                <div className="photos">
-                  {(t.photos ?? [])
-                    .filter((ph) => ph.storage_path)
-                    .map((ph) => (
-                      <img
-                        key={ph.slot}
-                        src={photoPublicUrl(ph.storage_path!)}
-                        alt={ph.slot}
-                        style={{
-                          width: 80,
-                          height: 80,
-                          objectFit: "cover",
-                          borderRadius: 8,
-                        }}
-                      />
-                    ))}
                 </div>
               </Link>
             );

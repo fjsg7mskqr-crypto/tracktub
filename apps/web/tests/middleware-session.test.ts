@@ -24,6 +24,81 @@ async function anonRequest(url: string) {
   return freshUpdateSession(new NextRequest(url));
 }
 
+// Drive the gate with a stubbed signed-in user (given email) so we can exercise
+// the pre-launch admin lockdown without a live backend.
+function stubUserSupabase(email: string) {
+  vi.doMock("@supabase/ssr", () => ({
+    createServerClient: () => ({
+      auth: { getUser: async () => ({ data: { user: { email } } }) },
+    }),
+  }));
+}
+
+async function userRequest(
+  url: string,
+  email: string,
+  opts: { nodeEnv?: string; adminEmails?: string } = {},
+) {
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://stub.supabase.co");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "stub-anon-key");
+  vi.stubEnv("NODE_ENV", opts.nodeEnv ?? "production");
+  vi.stubEnv("ADMIN_EMAILS", opts.adminEmails ?? "ethan@nhs-llc.com");
+  stubUserSupabase(email);
+  vi.resetModules();
+  const { updateSession: freshUpdateSession } = await import(
+    "@/lib/supabase/middleware"
+  );
+  return freshUpdateSession(new NextRequest(url));
+}
+
+// Pre-launch lockdown (epic #133): in production the app is reachable only by an
+// ADMIN_EMAILS-allowlisted user; everyone else lands on /landing. The marketing
+// surface (/landing, /blog) stays public. Local dev keeps the gate off.
+describe("updateSession pre-launch admin lockdown", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock("@supabase/ssr");
+    vi.resetModules();
+  });
+
+  it("bounces a signed-in NON-admin off a protected route to /landing (prod)", async () => {
+    const response = await userRequest(
+      "https://tracktub.vercel.app/team",
+      "stranger@gmail.com",
+    );
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/landing");
+  });
+
+  it("lets a signed-in admin through to a protected route (prod)", async () => {
+    const response = await userRequest(
+      "https://tracktub.vercel.app/team",
+      "ethan@nhs-llc.com",
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("does NOT enforce the admin gate outside production (dev demo stays open)", async () => {
+    const response = await userRequest(
+      "https://localhost:3000/team",
+      "stranger@gmail.com",
+      { nodeEnv: "development" },
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("keeps the marketing surface (/blog) public even for a non-admin", async () => {
+    const response = await userRequest(
+      "https://tracktub.vercel.app/blog",
+      "stranger@gmail.com",
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+});
+
 // Regression guard for #104: a shared /proof/<token> link must be openable by an
 // anonymous recipient (no login). The proof page reads via anon `share_token`
 // RLS policies and records the open — but middleware was gating it, redirecting
