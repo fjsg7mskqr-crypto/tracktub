@@ -5,11 +5,7 @@ import { Icon } from "@/components/Icon";
 import { timeAgo } from "@/lib/format";
 import { getCurrentMembership } from "@/lib/auth";
 import { CleanerHome } from "./CleanerHome";
-import {
-  phOutOfRange,
-  sanitizerOutOfRange,
-  tempOutOfRange,
-} from "@/lib/chemistry";
+import { ChemReadout } from "@/components/ChemReadout";
 import {
   batherLoadActive,
   clarityFlag,
@@ -17,34 +13,6 @@ import {
 } from "@/lib/chemistry-rules";
 
 type Tone = "ready" | "warn" | "urgent" | "neutral";
-
-function Chem({
-  reading,
-}: {
-  reading: {
-    ph: number | null;
-    sanitizer_ppm: number | null;
-    temp_f: number | null;
-  } | null;
-}) {
-  if (
-    !reading ||
-    (reading.ph == null && reading.sanitizer_ppm == null && reading.temp_f == null)
-  )
-    return null;
-  const cell = (k: string, v: number | null, bad: boolean, suffix = "") => (
-    <span className={bad ? "bad" : ""}>
-      <span className="k">{k}</span> <b>{v != null ? `${v}${suffix}` : "—"}</b>
-    </span>
-  );
-  return (
-    <div className="creadout">
-      {cell("pH", reading.ph, phOutOfRange(reading.ph))}
-      {cell("San", reading.sanitizer_ppm, sanitizerOutOfRange(reading.sanitizer_ppm))}
-      {cell("Temp", reading.temp_f, tempOutOfRange(reading.temp_f), "°")}
-    </div>
-  );
-}
 
 export default async function Home() {
   const membership = await getCurrentMembership();
@@ -235,7 +203,7 @@ export default async function Home() {
                   <>
                     {timeAgo(r.last.submitted_at_server)}{" "}
                     <span className="who">· {r.submitter}</span>
-                    <Chem reading={r.reading} />
+                    <ChemReadout reading={r.reading} />
                   </>
                 ) : (
                   <span className="who">No turnovers yet</span>

@@ -6,51 +6,12 @@ import { Mono } from "@/components/ui";
 import { timeAgo } from "@/lib/format";
 import { ChemistryAlerts } from "@/components/ChemistryAlerts";
 import { ChemistryTrend, type TrendReading } from "@/components/ChemistryTrend";
-import {
-  phOutOfRange,
-  sanitizerOutOfRange,
-  tempOutOfRange,
-} from "@/lib/chemistry";
+import { ChemReadout } from "@/components/ChemReadout";
 import {
   batherLoadActive,
   clarityFlag,
   type TurnoverChem,
 } from "@/lib/chemistry-rules";
-
-/** Compact mono chemistry readout for a history row — mirrors the dashboard. */
-function Chem({
-  reading,
-}: {
-  reading: {
-    ph: number | null;
-    sanitizer_ppm: number | null;
-    temp_f: number | null;
-  } | null;
-}) {
-  if (
-    !reading ||
-    (reading.ph == null &&
-      reading.sanitizer_ppm == null &&
-      reading.temp_f == null)
-  )
-    return null;
-  const cell = (k: string, v: number | null, bad: boolean, suffix = "") => (
-    <span className={bad ? "bad" : ""}>
-      <span className="k">{k}</span> <b>{v != null ? `${v}${suffix}` : "—"}</b>
-    </span>
-  );
-  return (
-    <div className="creadout">
-      {cell("pH", reading.ph, phOutOfRange(reading.ph))}
-      {cell(
-        "San",
-        reading.sanitizer_ppm,
-        sanitizerOutOfRange(reading.sanitizer_ppm)
-      )}
-      {cell("Temp", reading.temp_f, tempOutOfRange(reading.temp_f), "°")}
-    </div>
-  );
-}
 
 export default async function PropertyPage({
   params,
@@ -187,7 +148,7 @@ export default async function PropertyPage({
                   </div>
                 </div>
                 <div className="when">
-                  <Chem reading={readingOf(t)} />
+                  <ChemReadout reading={readingOf(t)} />
                 </div>
                 <div className="badges">
                   {t.urgent && <span className="spill urgent">Urgent</span>}
