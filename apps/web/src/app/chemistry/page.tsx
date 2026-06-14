@@ -83,7 +83,7 @@ export default async function ChemistryPage() {
     <div className="stack">
       <div className="dashhead">
         <div className="spread">
-          <h1>Chemistry</h1>
+          <h1>Operations</h1>
         </div>
         {cards.length > 0 && (
           <div className="row">
