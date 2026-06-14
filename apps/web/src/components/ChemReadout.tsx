@@ -4,8 +4,9 @@ import {
   tempOutOfRange,
 } from "@/lib/chemistry";
 
-/** Compact mono pH/San/Temp readout (`.creadout` atom) shared by the dashboard
- *  rows and the cross-property /chemistry overview, so both read identically.
+/** Compact mono pH/San/Temp readout (`.creadout` atom) with out-of-range
+ *  values flagged. Shared by the dashboard rows, the property history list,
+ *  and the cross-property /chemistry overview so all read identically.
  *  Renders nothing when there's no reading to show. */
 export function ChemReadout({
   reading,
