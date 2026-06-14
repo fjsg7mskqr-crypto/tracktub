@@ -19,6 +19,7 @@ export default function robots(): MetadataRoute.Robots {
           "/add-property",
           "/team",
           "/insights",
+          "/operations",
           "/chemistry",
           "/login",
           "/auth/",

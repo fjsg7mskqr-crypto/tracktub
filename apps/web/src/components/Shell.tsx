@@ -44,7 +44,7 @@ const G = {
 
 const OPERATOR_NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: G.grid },
-  { href: "/chemistry", label: "Operations", icon: G.drop },
+  { href: "/operations", label: "Operations", icon: G.drop, match: ["/operations", "/chemistry"] },
   {
     href: "/team",
     label: "Team & Insights",
@@ -54,7 +54,7 @@ const OPERATOR_NAV: NavItem[] = [
 ];
 const OWNER_NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: G.grid },
-  { href: "/chemistry", label: "Operations", icon: G.drop },
+  { href: "/operations", label: "Operations", icon: G.drop, match: ["/operations", "/chemistry"] },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
