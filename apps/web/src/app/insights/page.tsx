@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { isAdminEmail } from "@/lib/admin";
 
 function Gate({
   label,
@@ -98,12 +99,8 @@ export default async function Insights() {
 
   // Founder section: env allowlist gates rendering; the SECURITY DEFINER
   // founder_metrics() RPC re-checks the email server-side regardless.
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
   let founder: Record<string, number> | null = null;
-  if (user.email && adminEmails.includes(user.email.toLowerCase())) {
+  if (isAdminEmail(user.email)) {
     const { data } = await supabase.rpc("founder_metrics");
     founder = (data as Record<string, number>) ?? null;
   }
