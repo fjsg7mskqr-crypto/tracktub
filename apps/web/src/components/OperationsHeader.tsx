@@ -11,7 +11,7 @@ type Module = { key: string; label: string; href?: string };
 
 // Order is the founder's: Maintenance, Water & chemistry, Supplies, Equipment.
 const MODULES: Module[] = [
-  { key: "maintenance", label: "Maintenance Schedule" },
+  { key: "maintenance", label: "Maintenance Schedule", href: "/operations/maintenance" },
   { key: "chemistry", label: "Water & Chemistry", href: "/operations" },
   { key: "supplies", label: "Supplies & Inventory" },
   { key: "equipment", label: "Equipment" },
