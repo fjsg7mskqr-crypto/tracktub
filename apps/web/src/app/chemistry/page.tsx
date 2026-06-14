@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Icon } from "@/components/Icon";
 import { getCurrentMembership } from "@/lib/auth";
 import { ChemistryAlerts } from "@/components/ChemistryAlerts";
 import { ChemistryTrend, type TrendReading } from "@/components/ChemistryTrend";
+import { ChemReadout } from "@/components/ChemReadout";
 import {
   batherLoadActive,
   clarityFlag,
@@ -77,17 +77,27 @@ export default async function ChemistryPage() {
   });
 
   const attentionCount = cards.filter((c) => c.attention).length;
+  const readyCount = cards.length - attentionCount;
 
   return (
     <div className="stack">
-      <div className="spread pagehead">
-        <h1>Chemistry</h1>
+      <div className="dashhead">
+        <div className="spread">
+          <h1>Chemistry</h1>
+        </div>
         {cards.length > 0 && (
-          <span className={attentionCount > 0 ? "badge warn" : "badge ok"}>
-            {attentionCount > 0
-              ? `${attentionCount} need${attentionCount === 1 ? "s" : ""} attention`
-              : "All guest-ready"}
-          </span>
+          <div className="row">
+            <span className="sub">
+              <b>{readyCount}</b> guest-ready
+              {attentionCount > 0 && (
+                <>
+                  {" · "}
+                  <b className="t-warn">{attentionCount}</b> need
+                  {attentionCount === 1 ? "s" : ""} attention
+                </>
+              )}
+            </span>
+          </div>
         )}
       </div>
 
@@ -104,53 +114,85 @@ export default async function ChemistryPage() {
         </div>
       ) : (
         <div className="stack">
-          {cards.map((p) => (
-            <Link
-              key={p.id}
-              href={`/p/${p.id}`}
-              className="card card-link pad stack"
-            >
-              <div className="spread">
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 16 }}>{p.name}</div>
-                  {p.address && (
-                    <div className="small dim" style={{ marginTop: 2 }}>
-                      {p.address}
+          {cards.map((p) => {
+            const tone = p.attention
+              ? "warn"
+              : p.readings.length > 0
+                ? "ready"
+                : "neutral";
+            return (
+              <Link
+                key={p.id}
+                href={`/p/${p.id}`}
+                className="card card-link pad stack"
+              >
+                <div className="spread">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      minWidth: 0,
+                    }}
+                  >
+                    <span className={`sdot t-${tone}`} />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14.5 }}>
+                        {p.name}
+                      </div>
+                      {p.address && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--text-dim)",
+                            marginTop: 1,
+                          }}
+                        >
+                          {p.address}
+                        </div>
+                      )}
+                      <ChemReadout reading={p.readings[0] ?? null} />
                     </div>
-                  )}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      justifyContent: "flex-end",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {p.batherLoad && (
+                      <span className="spill warn">Shock due</span>
+                    )}
+                    {p.chemFlag?.reason === "low_sanitizer" && (
+                      <span className="spill warn">Low sanitizer</span>
+                    )}
+                    {p.chemFlag?.reason === "cloudy" && (
+                      <span className="spill warn">Cloudy</span>
+                    )}
+                    {!p.attention &&
+                      (p.readings.length > 0 ? (
+                        <span className="spill ready">Guest-ready</span>
+                      ) : (
+                        <span className="spill">No readings yet</span>
+                      ))}
+                  </div>
                 </div>
-                <div className="row wrap" style={{ justifyContent: "flex-end" }}>
-                  {p.batherLoad && (
-                    <span className="badge warn">
-                      <Icon name="droplet" size={11} /> Shock due
-                    </span>
-                  )}
-                  {p.chemFlag?.reason === "low_sanitizer" && (
-                    <span className="badge warn">Low sanitizer</span>
-                  )}
-                  {p.chemFlag?.reason === "cloudy" && (
-                    <span className="badge warn">Cloudy</span>
-                  )}
-                  {!p.attention &&
-                    (p.readings.length > 0 ? (
-                      <span className="badge ok">● Guest-ready</span>
-                    ) : (
-                      <span className="badge">No readings yet</span>
-                    ))}
-                </div>
-              </div>
 
-              <ChemistryAlerts batherLoad={p.batherLoad} flags={p.flags} />
+                <ChemistryAlerts batherLoad={p.batherLoad} flags={p.flags} />
 
-              {p.readings.length > 0 ? (
-                <ChemistryTrend readings={p.readings} compact />
-              ) : (
-                <p className="small dim" style={{ margin: 0 }}>
-                  No water readings yet.
-                </p>
-              )}
-            </Link>
-          ))}
+                {p.readings.length > 0 ? (
+                  <ChemistryTrend readings={p.readings} compact />
+                ) : (
+                  <p className="small dim" style={{ margin: 0 }}>
+                    No water readings yet.
+                  </p>
+                )}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
