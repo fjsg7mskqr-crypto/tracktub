@@ -8,6 +8,14 @@ import { formatDateTime } from "@/lib/format";
 import { WaterReadingCard } from "@/components/WaterReadingCard";
 import { readingHasValues } from "@/lib/chemistry";
 import ProofActions from "./ProofActions";
+import TurnoverGallery, { type Shot } from "./TurnoverGallery";
+
+const SLOT_LABEL: Record<string, string> = {
+  wide: "Wide shot",
+  waterline: "Waterline",
+  panel: "Control panel",
+  cover: "Cover & filter",
+};
 
 export default async function TurnoverPage({
   params,
@@ -42,11 +50,18 @@ export default async function TurnoverPage({
   const reading = Array.isArray(t.water) ? t.water[0] : t.water;
 
   const allPhotos = (t.photos ?? []).filter((ph) => ph.storage_path);
-  const beforePhotos = allPhotos.filter((ph) => ph.phase === "before");
-  const afterPhotos = allPhotos.filter((ph) => ph.phase !== "before");
+  const beforeShots: Shot[] = allPhotos
+    .filter((ph) => ph.phase === "before")
+    .map((ph) => ({ url: photoPublicUrl(ph.storage_path!), label: "As found" }));
+  const afterShots: Shot[] = allPhotos
+    .filter((ph) => ph.phase !== "before")
+    .map((ph) => ({
+      url: photoPublicUrl(ph.storage_path!),
+      label: SLOT_LABEL[ph.slot] ?? ph.slot,
+    }));
 
   return (
-    <div className="stack" style={{ maxWidth: 720 }}>
+    <div className="stack" style={{ maxWidth: 880 }}>
       <div className="crumb">
         <Link href="/">Dashboard</Link> /{" "}
         <Link href={`/p/${property?.id}`}>{property?.name}</Link> / Turnover
@@ -74,47 +89,12 @@ export default async function TurnoverPage({
         </div>
       </div>
 
+      {reading && readingHasValues(reading) && (
+        <WaterReadingCard reading={reading} />
+      )}
+
       <div className="card pad stack">
-        {beforePhotos.length > 0 && (
-          <div>
-            <div className="label">How it was found</div>
-            <div className="photos">
-              {beforePhotos.map((ph) => (
-                <img
-                  key={`before-${ph.slot}`}
-                  src={photoPublicUrl(ph.storage_path!)}
-                  alt={`Before — ${ph.slot}`}
-                  style={{
-                    width: 80,
-                    height: 80,
-                    objectFit: "cover",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-        <div>
-          {beforePhotos.length > 0 && <div className="label">Guest-ready</div>}
-          <div className="photos">
-            {afterPhotos.map((ph) => (
-              <img
-                key={`after-${ph.slot}`}
-                src={photoPublicUrl(ph.storage_path!)}
-                alt={ph.slot}
-                style={{
-                  width: 80,
-                  height: 80,
-                  objectFit: "cover",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                }}
-              />
-            ))}
-          </div>
-        </div>
+        <TurnoverGallery before={beforeShots} after={afterShots} />
         {t.notes && (
           <div>
             <div className="label">Notes</div>
@@ -124,10 +104,6 @@ export default async function TurnoverPage({
           </div>
         )}
       </div>
-
-      {reading && readingHasValues(reading) && (
-        <WaterReadingCard reading={reading} />
-      )}
 
       {/* Proof — the differentiator */}
       <div className="card pad stack">
