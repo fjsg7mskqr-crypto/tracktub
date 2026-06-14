@@ -4,51 +4,12 @@ import Link from "next/link";
 import { getCurrentMembership } from "@/lib/auth";
 import { ChemistryAlerts } from "@/components/ChemistryAlerts";
 import { ChemistryTrend, type TrendReading } from "@/components/ChemistryTrend";
-import {
-  phOutOfRange,
-  sanitizerOutOfRange,
-  tempOutOfRange,
-} from "@/lib/chemistry";
+import { ChemReadout } from "@/components/ChemReadout";
 import {
   batherLoadActive,
   clarityFlag,
   type TurnoverChem,
 } from "@/lib/chemistry-rules";
-
-// Mono pH/San/Temp readout — same atom the dashboard rows use.
-function Chem({
-  reading,
-}: {
-  reading: {
-    ph: number | null;
-    sanitizer_ppm: number | null;
-    temp_f: number | null;
-  } | null;
-}) {
-  if (
-    !reading ||
-    (reading.ph == null &&
-      reading.sanitizer_ppm == null &&
-      reading.temp_f == null)
-  )
-    return null;
-  const cell = (k: string, v: number | null, bad: boolean, suffix = "") => (
-    <span className={bad ? "bad" : ""}>
-      <span className="k">{k}</span> <b>{v != null ? `${v}${suffix}` : "—"}</b>
-    </span>
-  );
-  return (
-    <div className="creadout">
-      {cell("pH", reading.ph, phOutOfRange(reading.ph))}
-      {cell(
-        "San",
-        reading.sanitizer_ppm,
-        sanitizerOutOfRange(reading.sanitizer_ppm)
-      )}
-      {cell("Temp", reading.temp_f, tempOutOfRange(reading.temp_f), "°")}
-    </div>
-  );
-}
 
 export default async function ChemistryPage() {
   const membership = await getCurrentMembership();
@@ -190,7 +151,7 @@ export default async function ChemistryPage() {
                           {p.address}
                         </div>
                       )}
-                      <Chem reading={p.readings[0] ?? null} />
+                      <ChemReadout reading={p.readings[0] ?? null} />
                     </div>
                   </div>
                   <div
