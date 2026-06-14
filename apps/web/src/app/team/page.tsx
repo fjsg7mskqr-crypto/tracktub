@@ -6,6 +6,7 @@ import {
   Card,
   EmptyState,
   MemberRow,
+  Mono,
   SectionHead,
   Tile,
   Tiles,
@@ -115,22 +116,37 @@ export default async function TeamPage() {
     ).length;
     const lastAt = mine[0]?.submitted_at_server ?? null;
     const propsList = assignedNames(m.user_id);
-    const bits = [
-      `${thisWeek} turnover${thisWeek === 1 ? "" : "s"} this week`,
-      lastAt ? `last ${timeAgo(lastAt)}` : "none yet",
-      propsList.length ? propsList.join(", ") : "no tubs assigned",
-    ];
+    const active = thisWeek > 0;
     return (
       <MemberRow
         key={m.user_id}
         name={nameOf.get(m.user_id) ?? "A teammate"}
-        subtitle={bits.join(" · ")}
+        subtitle={
+          <>
+            {propsList.length ? propsList.join(", ") : "No tubs assigned"}
+            <span className="dim"> · </span>
+            <Mono>{thisWeek}</Mono> this week
+            <span className="dim"> · </span>
+            {lastAt ? (
+              <>
+                last <Mono>{timeAgo(lastAt)}</Mono>
+              </>
+            ) : (
+              "none yet"
+            )}
+          </>
+        }
         badge={
-          m.role === "staff" ? (
-            <Badge variant="brand">Cleaner</Badge>
-          ) : (
-            <Badge>Viewer</Badge>
-          )
+          <div className="row" style={{ gap: 6 }}>
+            {m.role === "staff" ? (
+              <Badge variant="brand">Cleaner</Badge>
+            ) : (
+              <Badge>Viewer</Badge>
+            )}
+            <span className={`spill ${active ? "ready" : ""}`}>
+              {active ? "Active" : "Quiet"}
+            </span>
+          </div>
         }
       />
     );
@@ -196,7 +212,7 @@ export default async function TeamPage() {
       <Tiles>
         <Tile
           label="Coverage this week"
-          value={`${coveredCount} / ${props.length}`}
+          value={<Mono>{`${coveredCount} / ${props.length}`}</Mono>}
           sub={
             allCovered ? (
               <span style={{ color: "var(--verified)" }}>● All captured</span>
@@ -207,12 +223,12 @@ export default async function TeamPage() {
         />
         <Tile
           label="Turnovers this week"
-          value={turnoversThisWeek}
+          value={<Mono>{turnoversThisWeek}</Mono>}
           sub={`${byCleaners} by your cleaner${byCleaners === 1 ? "" : "s"}`}
         />
         <Tile
           label="Needs your eyes"
-          value={needsEyes}
+          value={<Mono>{needsEyes}</Mono>}
           sub={
             needsEyes > 0 ? (
               <span style={{ color: "var(--pending)" }}>
@@ -271,7 +287,9 @@ export default async function TeamPage() {
                     <Avatar name={e.text} size="sm" />
                     <div style={{ minWidth: 0 }}>
                       <div className="small">{e.text}</div>
-                      <div className="tiny dim">{timeAgo(e.at)}</div>
+                      <div className="tiny dim">
+                        <Mono>{timeAgo(e.at)}</Mono>
+                      </div>
                     </div>
                   </div>
                 ))}
