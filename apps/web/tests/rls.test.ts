@@ -888,4 +888,205 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(data ?? []).toHaveLength(0);
     });
   });
+
+  // ── Host "turnover ready" notifications (issue #117) ───────────────────────
+  describe("Turnover-ready notifications", () => {
+    let ownerA: AuthedUser;
+
+    beforeAll(async () => {
+      // An org-A owner — should receive ready notifications alongside operators.
+      ownerA = await makeUser("owner-a");
+      const { error } = await admin
+        .from("membership")
+        .insert({ user_id: ownerA.id, org_id: orgA, role: "owner" });
+      if (error) throw error;
+    });
+
+    it("notify_turnover_ready fans out to operators+owners, excluding the submitter and other orgs", async () => {
+      // Staff A submits and locks a turnover on an org-A property.
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "submitted_locked",
+          share_token: randomUUID(),
+        })
+        .select("id")
+        .single();
+
+      // The submit action calls the RPC as the (authenticated) submitter.
+      const { data: recipients, error } = await staffA.client.rpc(
+        "notify_turnover_ready",
+        { p_turnover_id: to!.id },
+      );
+      expect(error).toBeNull();
+      // Fan-out reaches the org's operators+owners (>= operatorA and ownerA;
+      // earlier invite-accept tests may have added more org-A members). The
+      // per-recipient assertions below carry the isolation + exclusion proof.
+      expect((recipients ?? []).length).toBeGreaterThanOrEqual(2);
+
+      // operatorA sees ONLY their own notification for this turnover...
+      const { data: opRows } = await operatorA.client
+        .from("notification")
+        .select("id, user_id, message")
+        .eq("turnover_id", to!.id);
+      expect(opRows).toHaveLength(1);
+      expect(opRows![0].user_id).toBe(operatorA.id);
+      expect(opRows![0].message).toContain("guest-ready");
+
+      // ...ownerA likewise sees only their own...
+      const { data: ownerRows } = await ownerA.client
+        .from("notification")
+        .select("id, user_id")
+        .eq("turnover_id", to!.id);
+      expect(ownerRows).toHaveLength(1);
+      expect(ownerRows![0].user_id).toBe(ownerA.id);
+
+      // ...the submitter (staffA) was excluded entirely...
+      const { data: staffRows } = await staffA.client
+        .from("notification")
+        .select("id")
+        .eq("turnover_id", to!.id);
+      expect(staffRows ?? []).toHaveLength(0);
+
+      // ...and a member of another org sees nothing.
+      const { data: otherRows } = await operatorB.client
+        .from("notification")
+        .select("id")
+        .eq("turnover_id", to!.id);
+      expect(otherRows ?? []).toHaveLength(0);
+    });
+
+    it("a recipient can mark their own notification read but not someone else's", async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "submitted_locked",
+          share_token: randomUUID(),
+        })
+        .select("id")
+        .single();
+      await staffA.client.rpc("notify_turnover_ready", {
+        p_turnover_id: to!.id,
+      });
+
+      const { data: mine } = await operatorA.client
+        .from("notification")
+        .select("id")
+        .eq("turnover_id", to!.id)
+        .single();
+
+      // operatorA marks their own row read — succeeds.
+      const { error: okErr } = await operatorA.client
+        .from("notification")
+        .update({ read_at: new Date().toISOString() })
+        .eq("id", mine!.id);
+      expect(okErr).toBeNull();
+
+      const { data: ownerRow } = await ownerA.client
+        .from("notification")
+        .select("id")
+        .eq("turnover_id", to!.id)
+        .single();
+
+      // operatorA tries to mark ownerA's row read — USING denies → 0 rows, stays unread.
+      await operatorA.client
+        .from("notification")
+        .update({ read_at: new Date().toISOString() })
+        .eq("id", ownerRow!.id);
+      const { data: afterRow } = await admin
+        .from("notification")
+        .select("read_at")
+        .eq("id", ownerRow!.id)
+        .single();
+      expect(afterRow?.read_at).toBeNull();
+    });
+
+    it("an outside-org caller cannot fan out notifications for another org's turnover", async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "submitted_locked",
+          share_token: randomUUID(),
+        })
+        .select("id")
+        .single();
+
+      // operatorB (org B only) invokes the definer RPC for an org-A turnover —
+      // app_can_capture_property gates it, so no notifications are authored.
+      const { data: recipients, error } = await operatorB.client.rpc(
+        "notify_turnover_ready",
+        { p_turnover_id: to!.id },
+      );
+      expect(error).toBeNull();
+      expect(recipients ?? []).toHaveLength(0);
+      const { count } = await admin
+        .from("notification")
+        .select("id", { count: "exact", head: true })
+        .eq("turnover_id", to!.id);
+      expect(count).toBe(0);
+    });
+
+    it("the fan-out is idempotent — a repeat call creates no duplicate rows", async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "submitted_locked",
+          share_token: randomUUID(),
+        })
+        .select("id")
+        .single();
+
+      await staffA.client.rpc("notify_turnover_ready", { p_turnover_id: to!.id });
+      await staffA.client.rpc("notify_turnover_ready", { p_turnover_id: to!.id });
+
+      // operatorA still has exactly one notification for this turnover.
+      const { data: rows } = await operatorA.client
+        .from("notification")
+        .select("id")
+        .eq("turnover_id", to!.id);
+      expect(rows).toHaveLength(1);
+    });
+
+    it("a recipient cannot rewrite a non-read_at column on their own row", async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "submitted_locked",
+          share_token: randomUUID(),
+        })
+        .select("id")
+        .single();
+      await staffA.client.rpc("notify_turnover_ready", { p_turnover_id: to!.id });
+
+      const { data: mine } = await operatorA.client
+        .from("notification")
+        .select("id, message")
+        .eq("turnover_id", to!.id)
+        .single();
+
+      // Column-level privileges restrict UPDATE to read_at; rewriting `message`
+      // is rejected (no privilege), so the original message survives.
+      const { error: colErr } = await operatorA.client
+        .from("notification")
+        .update({ message: "tampered" })
+        .eq("id", mine!.id);
+      expect(colErr).not.toBeNull();
+      const { data: after } = await admin
+        .from("notification")
+        .select("message")
+        .eq("id", mine!.id)
+        .single();
+      expect(after?.message).toBe(mine!.message);
+    });
+  });
 });

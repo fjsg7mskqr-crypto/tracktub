@@ -1,6 +1,30 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/admin";
+
+/**
+ * Pre-launch lockdown: after a session is established, reject anyone who isn't
+ * on the `ADMIN_EMAILS` allowlist — sign them out and send them to the public
+ * landing page, so a non-admin can never hold a session or use an
+ * auto-provisioned workspace. Enforced in production only (local dev / demo stay
+ * open). Returns a redirect to short-circuit the flow, or null to continue.
+ */
+async function rejectNonAdmin(
+  supabase: SupabaseClient,
+  origin: string,
+): Promise<NextResponse | null> {
+  if (process.env.NODE_ENV !== "production") return null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user && !isAdminEmail(user.email)) {
+    await supabase.auth.signOut();
+    return NextResponse.redirect(`${origin}/landing`);
+  }
+  return null;
+}
 
 /**
  * Magic-link landing route. Handles both flows so it works regardless of how the
@@ -28,13 +52,23 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) {
+      return (
+        (await rejectNonAdmin(supabase, origin)) ??
+        NextResponse.redirect(`${origin}${next}`)
+      );
+    }
   } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({
       type,
       token_hash: tokenHash,
     });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) {
+      return (
+        (await rejectNonAdmin(supabase, origin)) ??
+        NextResponse.redirect(`${origin}${next}`)
+      );
+    }
   }
 
   return NextResponse.redirect(`${origin}/login?error=auth`);

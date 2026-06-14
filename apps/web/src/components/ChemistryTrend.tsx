@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Icon } from "@/components/Icon";
 import { Mono } from "@/components/ui";
 import { Sparkline, type SparkPoint } from "@/components/Sparkline";
@@ -77,8 +78,16 @@ function Cell({ value, flagged }: { value: number | null; flagged: boolean }) {
 }
 
 /** Per-property chemistry trend (issue #100): sparklines + a recent-readings
- *  table, with out-of-range points/values flagged. `readings` is newest-first. */
-export function ChemistryTrend({ readings }: { readings: TrendReading[] }) {
+ *  table, with out-of-range points/values flagged. `readings` is newest-first.
+ *  `compact` renders only the 3-metric sparkline grid (no card/header/table) —
+ *  used by the cross-property /chemistry screen, which supplies its own card. */
+export function ChemistryTrend({
+  readings,
+  compact = false,
+}: {
+  readings: TrendReading[];
+  compact?: boolean;
+}) {
   if (readings.length === 0) return null;
   const chrono = [...readings].reverse();
 
@@ -89,7 +98,96 @@ export function ChemistryTrend({ readings }: { readings: TrendReading[] }) {
     sanitizerOutOfRange
   );
   const tempPts = points(chrono, (r) => r.temp_f, tempOutOfRange);
+
+  const metrics = (
+    <div
+      className="grid"
+      style={{
+        gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+        gap: 16,
+      }}
+    >
+      <Metric
+        label="pH"
+        pts={phPts}
+        band={{ min: CHEM_THRESHOLDS.ph.min, max: CHEM_THRESHOLDS.ph.max }}
+      />
+      <Metric
+        label="Sanitizer"
+        unit="ppm"
+        pts={sanitizerPts}
+        band={{
+          min: CHEM_THRESHOLDS.sanitizerPpm.min,
+          max: CHEM_THRESHOLDS.sanitizerPpm.max,
+        }}
+      />
+      <Metric label="Temp" unit="°F" pts={tempPts} />
+    </div>
+  );
+
   const recent = readings.slice(0, 8);
+
+  const thLabel: CSSProperties = {
+    fontFamily: "var(--mono)",
+    fontSize: 11,
+    fontWeight: 400,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: "var(--text-dim)",
+  };
+  const table = (
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr>
+          <th style={{ ...thLabel, textAlign: "left", padding: "6px 0" }}>
+            When
+          </th>
+          <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
+            pH
+          </th>
+          <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
+            Sanitizer
+          </th>
+          <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
+            Temp
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {recent.map((r, i) => (
+          <tr key={i} style={{ borderTop: "1px solid var(--border)" }}>
+            <td className="small dim" style={{ padding: "8px 0" }}>
+              {formatDateTime(r.recorded_at)}
+            </td>
+            <td style={{ textAlign: "right", padding: "8px 0" }}>
+              <Cell value={r.ph} flagged={phOutOfRange(r.ph)} />
+            </td>
+            <td style={{ textAlign: "right", padding: "8px 0" }}>
+              <Cell
+                value={r.sanitizer_ppm}
+                flagged={sanitizerOutOfRange(r.sanitizer_ppm)}
+              />
+            </td>
+            <td style={{ textAlign: "right", padding: "8px 0" }}>
+              <Cell value={r.temp_f} flagged={tempOutOfRange(r.temp_f)} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  // Compact (cross-property /chemistry screen): sparklines + the titled
+  // readings table, but no outer card/header — the caller supplies the card.
+  if (compact) {
+    return (
+      <>
+        {metrics}
+        <hr className="divider" />
+        {table}
+      </>
+    );
+  }
 
   return (
     <div className="card pad stack">
@@ -100,63 +198,11 @@ export function ChemistryTrend({ readings }: { readings: TrendReading[] }) {
         </span>
       </div>
 
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-          gap: 16,
-        }}
-      >
-        <Metric
-          label="pH"
-          pts={phPts}
-          band={{ min: CHEM_THRESHOLDS.ph.min, max: CHEM_THRESHOLDS.ph.max }}
-        />
-        <Metric
-          label="Sanitizer"
-          unit="ppm"
-          pts={sanitizerPts}
-          band={{
-            min: CHEM_THRESHOLDS.sanitizerPpm.min,
-            max: CHEM_THRESHOLDS.sanitizerPpm.max,
-          }}
-        />
-        <Metric label="Temp" unit="°F" pts={tempPts} />
-      </div>
+      {metrics}
 
       <hr className="divider" />
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr className="label">
-            <th style={{ textAlign: "left", padding: "6px 0" }}>When</th>
-            <th style={{ textAlign: "right", padding: "6px 0" }}>pH</th>
-            <th style={{ textAlign: "right", padding: "6px 0" }}>Sanitizer</th>
-            <th style={{ textAlign: "right", padding: "6px 0" }}>Temp</th>
-          </tr>
-        </thead>
-        <tbody>
-          {recent.map((r, i) => (
-            <tr key={i} style={{ borderTop: "1px solid var(--border)" }}>
-              <td className="small dim" style={{ padding: "8px 0" }}>
-                {formatDateTime(r.recorded_at)}
-              </td>
-              <td style={{ textAlign: "right", padding: "8px 0" }}>
-                <Cell value={r.ph} flagged={phOutOfRange(r.ph)} />
-              </td>
-              <td style={{ textAlign: "right", padding: "8px 0" }}>
-                <Cell
-                  value={r.sanitizer_ppm}
-                  flagged={sanitizerOutOfRange(r.sanitizer_ppm)}
-                />
-              </td>
-              <td style={{ textAlign: "right", padding: "8px 0" }}>
-                <Cell value={r.temp_f} flagged={tempOutOfRange(r.temp_f)} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {table}
     </div>
   );
 }
