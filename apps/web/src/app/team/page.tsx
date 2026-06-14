@@ -12,6 +12,7 @@ import {
   Tiles,
 } from "@/components/ui";
 import { timeAgo } from "@/lib/format";
+import { TeamInsightsHeader } from "@/components/TeamInsightsHeader";
 import { InviteModal, type PropertyOption } from "./InviteModal";
 import { InviteRowActions } from "./InviteRowActions";
 
@@ -199,15 +200,10 @@ export default async function TeamPage() {
 
   return (
     <div className="stack">
-      <div className="spread pagehead">
-        <div>
-          <h1>Team</h1>
-          <p className="muted small">
-            Who&apos;s keeping your tubs guest-ready — and proof they are.
-          </p>
-        </div>
-        <InviteModal properties={propertyOptions} />
-      </div>
+      <TeamInsightsHeader
+        active="team"
+        actions={<InviteModal properties={propertyOptions} />}
+      />
 
       <Tiles>
         <Tile

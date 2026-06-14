@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isAdminEmail } from "@/lib/admin";
 import { Mono, SectionHead } from "@/components/ui";
+import { TeamInsightsHeader } from "@/components/TeamInsightsHeader";
 
 function Gate({
   label,
@@ -126,13 +127,12 @@ export default async function Insights() {
 
   return (
     <div className="stack">
-      <div className="pagehead">
-        <h1>Insights</h1>
-        <p className="muted small" style={{ marginTop: 4 }}>
-          Your workspace over the last {WEEKS} weeks — live from your turnover
-          records.
-        </p>
-      </div>
+      <TeamInsightsHeader active="insights" />
+
+      <p className="muted small" style={{ marginTop: -2 }}>
+        Your workspace over the last {WEEKS} weeks — live from your turnover
+        records.
+      </p>
 
       <SectionHead>Workspace metrics</SectionHead>
       <div className="tiles">
