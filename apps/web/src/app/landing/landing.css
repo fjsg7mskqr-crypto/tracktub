@@ -29,11 +29,24 @@
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
-  background: linear-gradient(180deg, #0b0d11, var(--base) 40%);
+  background: var(--base);
   scroll-behavior: smooth;
 }
 .tt-landing * {
   box-sizing: border-box;
+}
+/* single brand-blue light source — restrained, asymmetric (top-right).
+   Replaces the old centered grey wash; gives the pure near-black base depth
+   without a generic hue gradient. Sits above the base, below content (z-index 1). */
+.tt-landing::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(820px 560px at 88% -6%, rgba(59, 130, 246, 0.1), transparent 64%),
+    radial-gradient(520px 420px at 97% 3%, rgba(96, 165, 250, 0.06), transparent 58%);
 }
 /* film grain — monochrome, no hue */
 .tt-landing::after {
