@@ -628,6 +628,7 @@ export type Database = {
       }
       water_reading: {
         Row: {
+          balanced: boolean
           created_at: string
           id: string
           ph: number | null
@@ -635,9 +636,12 @@ export type Database = {
           recorded_at: string
           sanitizer_ppm: number | null
           temp_f: number | null
+          treatment_note: string | null
+          treatments: string[]
           turnover_id: string
         }
         Insert: {
+          balanced?: boolean
           created_at?: string
           id?: string
           ph?: number | null
@@ -645,9 +649,12 @@ export type Database = {
           recorded_at?: string
           sanitizer_ppm?: number | null
           temp_f?: number | null
+          treatment_note?: string | null
+          treatments?: string[]
           turnover_id: string
         }
         Update: {
+          balanced?: boolean
           created_at?: string
           id?: string
           ph?: number | null
@@ -655,6 +662,8 @@ export type Database = {
           recorded_at?: string
           sanitizer_ppm?: number | null
           temp_f?: number | null
+          treatment_note?: string | null
+          treatments?: string[]
           turnover_id?: string
         }
         Relationships: [

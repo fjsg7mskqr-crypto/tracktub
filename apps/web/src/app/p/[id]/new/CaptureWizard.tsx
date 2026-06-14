@@ -13,6 +13,7 @@ import { track } from "@/lib/analytics";
 import { Input, Label } from "@/components/ui";
 import {
   CHEM_THRESHOLDS,
+  WATER_TREATMENTS,
   phOutOfRange,
   sanitizerOutOfRange,
   tempOutOfRange,
@@ -65,6 +66,9 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
   const [ph, setPh] = useState("");
   const [sanitizer, setSanitizer] = useState("");
   const [temp, setTemp] = useState("");
+  const [treatments, setTreatments] = useState<string[]>([]);
+  const [treatmentNote, setTreatmentNote] = useState("");
+  const [balanced, setBalanced] = useState(false);
 
   useEffect(() => {
     track("turnover_started", { property_id: propertyId });
@@ -152,6 +156,9 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
     formData.append("ph", ph);
     formData.append("sanitizer_ppm", sanitizer);
     formData.append("temp_f", temp);
+    formData.append("treatments", JSON.stringify(treatments));
+    formData.append("treatment_note", treatmentNote);
+    formData.append("balanced", String(balanced));
     if (beforePhoto) {
       formData.append("photo_before", beforePhoto.file);
       formData.append("capturedAt_before", beforePhoto.capturedAt);
@@ -351,12 +358,12 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
       {onWater && (
         <div className="card pad stack">
           <div className="spread">
-            <h2 style={{ fontSize: 18 }}>Water check</h2>
+            <h2 style={{ fontSize: 18 }}>Water — as found</h2>
             <span className="badge">Optional</span>
           </div>
           <p className="muted small" style={{ marginTop: -6 }}>
-            A quick reading makes this turnover dispute-grade and tracks the
-            water over time. Skip any you didn&apos;t measure.
+            Test the water as you found it, then log what you added. Skip any you
+            didn&apos;t measure.
           </p>
 
           <div className="stack" style={{ gap: 14 }}>
@@ -424,6 +431,59 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
               )}
             </div>
           </div>
+
+          <div>
+            <Label htmlFor="treatments">What you added</Label>
+            <div className="row wrap" style={{ gap: 8, marginTop: 4 }}>
+              {WATER_TREATMENTS.map((t) => {
+                const on = treatments.includes(t.code);
+                return (
+                  <button
+                    key={t.code}
+                    type="button"
+                    className="btn ghost sm"
+                    aria-pressed={on}
+                    onClick={() =>
+                      setTreatments((arr) =>
+                        on ? arr.filter((c) => c !== t.code) : [...arr, t.code]
+                      )
+                    }
+                    style={{
+                      borderColor: on
+                        ? "var(--brand-blue-line)"
+                        : "var(--border)",
+                      background: on ? "var(--brand-blue-dim)" : "transparent",
+                      color: on ? "var(--text-hi)" : "var(--text-lo)",
+                    }}
+                  >
+                    {on ? "✓ " : ""}
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="treatment_note">Other / amounts (optional)</Label>
+            <Input
+              id="treatment_note"
+              placeholder="e.g. 2 oz dichlor, added antifoam"
+              value={treatmentNote}
+              onChange={(e) => setTreatmentNote(e.target.value)}
+            />
+          </div>
+
+          <label className="row small" style={{ gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={balanced}
+              onChange={(e) => setBalanced(e.target.checked)}
+            />
+            <span>
+              Left <strong>balanced &amp; guest-ready</strong>
+            </span>
+          </label>
 
           <div className="spread">
             <button className="btn ghost" onClick={() => setStep(STEP_BEFORE)}>

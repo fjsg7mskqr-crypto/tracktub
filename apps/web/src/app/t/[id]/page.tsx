@@ -6,7 +6,7 @@ import { Seal } from "@/components/Seal";
 import { photoPublicUrl } from "@/lib/supabase/storage";
 import { formatDateTime } from "@/lib/format";
 import { WaterReadingCard } from "@/components/WaterReadingCard";
-import { readingHasValues } from "@/lib/chemistry";
+import { readingHasContent } from "@/lib/chemistry";
 import ProofActions from "./ProofActions";
 import TurnoverGallery, { type Shot } from "./TurnoverGallery";
 
@@ -37,7 +37,7 @@ export default async function TurnoverPage({
        submitter:profile(full_name, email),
        photos:photo(slot, storage_path, confirmed_tags, phase),
        issues:issue_tag(tag, source, confirmed_at),
-       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at)`
+       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at, treatments, treatment_note, balanced)`
     )
     .eq("id", turnoverIdParam)
     .single();
@@ -89,7 +89,7 @@ export default async function TurnoverPage({
         </div>
       </div>
 
-      {reading && readingHasValues(reading) && (
+      {reading && readingHasContent(reading) && (
         <WaterReadingCard reading={reading} />
       )}
 
