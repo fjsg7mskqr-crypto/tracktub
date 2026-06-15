@@ -1171,4 +1171,243 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(error).not.toBeNull();
     });
   });
+
+  describe("scheduled_item", () => {
+    it("operator can create a scheduled item on their property", async () => {
+      const { data, error } = await operatorA.client
+        .from("scheduled_item")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          kind: "custom",
+          title: "Order chlorine",
+          scheduled_for: "2026-06-20",
+        })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+      expect(data?.id).toBeTruthy();
+    });
+
+    it("assigned staff can create a scheduled item", async () => {
+      const { error } = await staffA.client.from("scheduled_item").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        kind: "turnover",
+        title: "Turnover",
+        scheduled_for: "2026-06-21",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("operator of another org cannot create on this property", async () => {
+      const { error } = await operatorB.client.from("scheduled_item").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        kind: "custom",
+        title: "Sneaky",
+        scheduled_for: "2026-06-22",
+      });
+      expect(error).not.toBeNull(); // RLS denies
+    });
+
+    it("cannot spoof org_id onto a mismatched property", async () => {
+      const { error } = await operatorA.client.from("scheduled_item").insert({
+        property_id: propAssigned,
+        org_id: orgB, // wrong org for this property
+        kind: "custom",
+        title: "Spoof",
+        scheduled_for: "2026-06-23",
+      });
+      expect(error).not.toBeNull(); // with-check denies
+    });
+
+    it("another org cannot read this org's scheduled items", async () => {
+      const { data: created } = await operatorA.client
+        .from("scheduled_item")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          kind: "custom",
+          title: "Private",
+          scheduled_for: "2026-06-24",
+        })
+        .select("id")
+        .single();
+      const { data: seen } = await operatorB.client
+        .from("scheduled_item")
+        .select("id")
+        .eq("id", created!.id);
+      expect(seen ?? []).toHaveLength(0);
+    });
+  });
+
+  describe("fulfill_scheduled_turnover", () => {
+    async function lockedTurnoverToday() {
+      const { data } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "submitted_locked",
+        })
+        .select("id, submitted_at_server")
+        .single();
+      return data!;
+    }
+
+    it("auto-fulfills the nearest matching scheduled turnover", async () => {
+      const t = await lockedTurnoverToday();
+      const captureDate = t.submitted_at_server.slice(0, 10); // YYYY-MM-DD
+      const { data: si } = await operatorA.client
+        .from("scheduled_item")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          kind: "turnover",
+          title: "Planned turnover",
+          scheduled_for: captureDate,
+        })
+        .select("id")
+        .single();
+
+      const { data: fulfilledId, error } = await staffA.client.rpc(
+        "fulfill_scheduled_turnover",
+        { p_turnover_id: t.id },
+      );
+      expect(error).toBeNull();
+      expect(fulfilledId).toBe(si!.id);
+
+      const { data: row } = await operatorA.client
+        .from("scheduled_item")
+        .select("status, turnover_id")
+        .eq("id", si!.id)
+        .single();
+      expect(row?.status).toBe("done");
+      expect(row?.turnover_id).toBe(t.id);
+    });
+
+    it("no-ops when no scheduled turnover is within the window", async () => {
+      const t = await lockedTurnoverToday();
+      await operatorA.client.from("scheduled_item").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        kind: "turnover",
+        title: "Far future",
+        scheduled_for: "2099-01-01",
+      });
+      const { data: fulfilledId, error } = await staffA.client.rpc(
+        "fulfill_scheduled_turnover",
+        { p_turnover_id: t.id },
+      );
+      expect(error).toBeNull();
+      expect(fulfilledId).toBeNull();
+    });
+
+    it("an outside-org caller cannot fulfill against this property's turnover", async () => {
+      const t = await lockedTurnoverToday();
+      const captureDate = t.submitted_at_server.slice(0, 10);
+      const { data: si } = await operatorA.client
+        .from("scheduled_item")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          kind: "turnover",
+          title: "Planned",
+          scheduled_for: captureDate,
+        })
+        .select("id")
+        .single();
+
+      const { data: fulfilledId } = await operatorB.client.rpc(
+        "fulfill_scheduled_turnover",
+        { p_turnover_id: t.id },
+      );
+      expect(fulfilledId).toBeNull(); // app_can_capture_property gate
+
+      const { data: row } = await operatorA.client
+        .from("scheduled_item")
+        .select("status")
+        .eq("id", si!.id)
+        .single();
+      expect(row?.status).toBe("scheduled"); // untouched
+    });
+  });
+
+  describe("notify_scheduled_assignment", () => {
+    it("authors an 'assigned' notification for the assignee", async () => {
+      const { data: si } = await operatorA.client
+        .from("scheduled_item")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          kind: "turnover",
+          title: "Turnover",
+          scheduled_for: "2026-07-01",
+          assignee_user_id: staffA.id,
+        })
+        .select("id")
+        .single();
+
+      const { error } = await operatorA.client.rpc("notify_scheduled_assignment", {
+        p_scheduled_item_id: si!.id,
+      });
+      expect(error).toBeNull();
+
+      const { data: mine } = await staffA.client
+        .from("notification")
+        .select("type, scheduled_item_id")
+        .eq("scheduled_item_id", si!.id);
+      expect(mine ?? []).toHaveLength(1);
+      expect(mine?.[0]?.type).toBe("assigned");
+    });
+
+    it("does not notify on self-assignment", async () => {
+      const { data: si } = await operatorA.client
+        .from("scheduled_item")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          kind: "custom",
+          title: "Self task",
+          scheduled_for: "2026-07-02",
+          assignee_user_id: operatorA.id,
+        })
+        .select("id")
+        .single();
+
+      await operatorA.client.rpc("notify_scheduled_assignment", {
+        p_scheduled_item_id: si!.id,
+      });
+      const { data: mine } = await operatorA.client
+        .from("notification")
+        .select("id")
+        .eq("scheduled_item_id", si!.id);
+      expect(mine ?? []).toHaveLength(0);
+    });
+
+    it("an outside-org caller cannot author an assignment notification", async () => {
+      const { data: si } = await operatorA.client
+        .from("scheduled_item")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          kind: "turnover",
+          title: "Turnover",
+          scheduled_for: "2026-07-03",
+          assignee_user_id: staffA.id,
+        })
+        .select("id")
+        .single();
+
+      await operatorB.client.rpc("notify_scheduled_assignment", {
+        p_scheduled_item_id: si!.id,
+      });
+      const { data: mine } = await staffA.client
+        .from("notification")
+        .select("id")
+        .eq("scheduled_item_id", si!.id);
+      expect(mine ?? []).toHaveLength(0); // gate blocked the write
+    });
+  });
 });
