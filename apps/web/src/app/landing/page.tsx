@@ -77,11 +77,7 @@ export default function Landing() {
             />
           </svg>
           <div>
-            <span className="chip">
-              <span className="dot" />
-              For self-managed hosts with a hot tub
-            </span>
-            <h1 style={{ marginTop: 18 }}>
+            <h1>
               Know your hot <span className="tub">tub</span> was guest-ready — without being there.
             </h1>
             <p className="sub">
