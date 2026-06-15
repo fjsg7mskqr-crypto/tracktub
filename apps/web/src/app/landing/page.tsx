@@ -77,11 +77,7 @@ export default function Landing() {
             />
           </svg>
           <div>
-            <span className="chip">
-              <span className="dot" />
-              For self-managed hosts with a hot tub
-            </span>
-            <h1 style={{ marginTop: 18 }}>
+            <h1>
               Know your hot <span className="tub">tub</span> was guest-ready — without being there.
             </h1>
             <p className="sub">
@@ -192,53 +188,72 @@ export default function Landing() {
               next check-in.
             </p>
           </div>
-          <div className="dashwrap">
-            <div className="glass dash">
-              <div className="dashhead">
-                <span className="dashtitle">Your tubs</span>
-                <span className="dashstat">
-                  <span className="mdot" />
-                  3 of 4 guest-ready
+          <div className="appstage reveal">
+            <div className="appglow" aria-hidden="true" />
+            <div className="appframe float">
+              <div className="appbar">
+                <span className="appdots">
+                  <i />
+                  <i />
+                  <i />
                 </span>
+                <span className="appurl">app.tracktub.com</span>
               </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Lakeside Cottage</b>
-                  <span className="dsub">Captured 2:22 PM · by you</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Ridgeline A-Frame</b>
-                  <span className="dsub">Captured 11:05 AM · by Maria</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Big Bear Cabin 4</b>
-                  <span className="dsub">Captured 9:40 AM · by you</span>
-                </div>
-                <span className="dstatus warn">Check water</span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Pinecrest Chalet</b>
-                  <span className="dsub">Captured yesterday</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
+              <div className="appview">
+                <img
+                  src="/landing/app-dashboard.jpg"
+                  alt="TrackTub dashboard — every hot tub's guest-ready status at a glance"
+                  loading="lazy"
+                />
               </div>
             </div>
+          </div>
+
+          <div className="showrow">
+            <figure className="appframe living reveal">
+              <div className="appbar">
+                <span className="appdots">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="appurl">Turnover · verified</span>
+              </div>
+              <div className="appview tall">
+                <img
+                  className="panimg"
+                  src="/landing/app-proof.jpg"
+                  alt="A verified turnover record — guided photos, water chemistry, locked and timestamped"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption>
+                <span className="livedot" />
+                Proof record — photos, chemistry, locked
+              </figcaption>
+            </figure>
+            <figure className="appframe living reveal">
+              <div className="appbar">
+                <span className="appdots">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="appurl">Operations · water</span>
+              </div>
+              <div className="appview tall">
+                <img
+                  className="panimg slow"
+                  src="/landing/app-chem.jpg"
+                  alt="Water chemistry trends for every property over time"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption>
+                <span className="livedot" />
+                Water trends across every property
+              </figcaption>
+            </figure>
           </div>
         </div>
 
