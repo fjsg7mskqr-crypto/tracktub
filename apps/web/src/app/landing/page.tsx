@@ -178,66 +178,6 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* COCKPIT */}
-        <div className="section" id="cockpit">
-          <span className="eyebrow">Your cockpit</span>
-          <div className="sechead">
-            <h2>Every tub, one glance.</h2>
-            <p>
-              Open the app and see which tubs are guest-ready right now — and which one needs five minutes before the
-              next check-in.
-            </p>
-          </div>
-          <div className="dashwrap">
-            <div className="glass dash">
-              <div className="dashhead">
-                <span className="dashtitle">Your tubs</span>
-                <span className="dashstat">
-                  <span className="mdot" />
-                  3 of 4 guest-ready
-                </span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Lakeside Cottage</b>
-                  <span className="dsub">Captured 2:22 PM · by you</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Ridgeline A-Frame</b>
-                  <span className="dsub">Captured 11:05 AM · by Maria</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Big Bear Cabin 4</b>
-                  <span className="dsub">Captured 9:40 AM · by you</span>
-                </div>
-                <span className="dstatus warn">Check water</span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Pinecrest Chalet</b>
-                  <span className="dsub">Captured yesterday</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* HOW IT WORKS */}
         <div className="section" id="how">
           <span className="eyebrow">How it works</span>
