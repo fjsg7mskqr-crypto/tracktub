@@ -2,9 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
+import { Mono } from "@/components/ui";
 import { timeAgo } from "@/lib/format";
 import { ChemistryAlerts } from "@/components/ChemistryAlerts";
 import { ChemistryTrend, type TrendReading } from "@/components/ChemistryTrend";
+import { ChemReadout } from "@/components/ChemReadout";
 import {
   batherLoadActive,
   clarityFlag,
@@ -82,9 +84,9 @@ export default async function PropertyPage({
 
       <div className="spread pagehead">
         <div>
-          <h1>{property.name}</h1>
+          <h1 style={{ fontSize: 21 }}>{property.name}</h1>
           {property.address && (
-            <div className="small dim" style={{ marginTop: 4 }}>
+            <div className="small muted" style={{ marginTop: 3 }}>
               {property.address}
             </div>
           )}
@@ -112,61 +114,63 @@ export default async function PropertyPage({
       <h3 style={{ fontSize: 16, marginTop: 6 }}>
         Turnover history{" "}
         <span className="dim small" style={{ fontWeight: 500 }}>
-          ({(turnovers ?? []).length})
+          ({list.length})
         </span>
       </h3>
 
-      <div className="stack">
-        {(turnovers ?? []).length === 0 ? (
-          <div className="empty">No turnovers yet.</div>
-        ) : (
-          (turnovers ?? []).map((t) => {
+      {list.length === 0 ? (
+        <div className="empty">No turnovers yet.</div>
+      ) : (
+        <div className="dlist">
+          {list.map((t) => {
             const openIssues = (t.issues ?? []).filter((i) => !i.confirmed_at);
             const submitter = Array.isArray(t.submitter)
               ? t.submitter[0]
               : t.submitter;
             const submitterName =
               submitter?.full_name ?? submitter?.email ?? "Unknown";
+            const tone = t.urgent
+              ? "urgent"
+              : openIssues.length > 0
+                ? "warn"
+                : "ready";
             return (
               <Link
                 key={t.id}
                 href={`/t/${t.id}`}
-                className="card card-link pad"
+                className={`drow2 t-${tone}`}
               >
-                <div className="spread" style={{ marginBottom: 8 }}>
-                  <div className="row">
-                    <strong>{timeAgo(t.submitted_at_server)}</strong>
-                    <span className="small dim">· {submitterName}</span>
-                    <Icon
-                      name="lock"
-                      size={13}
-                      style={{ color: "var(--ink-3)" }}
-                    />
+                <div className="nmwrap">
+                  <span className={`sdot t-${tone}`} />
+                  <div>
+                    <Mono className="nm">{timeAgo(t.submitted_at_server)}</Mono>
+                    <div className="ad">{submitterName}</div>
                   </div>
-                  <div
-                    className="row wrap"
-                    style={{ justifyContent: "flex-end" }}
-                  >
-                    {t.urgent && <span className="badge danger">Urgent</span>}
-                    {openIssues.length > 0 ? (
-                      <span className="badge warn">
-                        {openIssues.map((i) => i.tag).join(", ")}
-                      </span>
-                    ) : (
-                      <span className="badge ok">Clean</span>
-                    )}
-                    {t.share_token && (
-                      <span className="badge brand">
-                        <Icon name="share" size={11} /> Proof link
-                      </span>
-                    )}
-                  </div>
+                </div>
+                <div className="when">
+                  <ChemReadout reading={readingOf(t)} />
+                </div>
+                <div className="badges">
+                  {t.urgent && <span className="spill urgent">Urgent</span>}
+                  {openIssues.length > 0 ? (
+                    <span className="spill warn">
+                      {openIssues.length} issue
+                      {openIssues.length > 1 ? "s" : ""}
+                    </span>
+                  ) : (
+                    <span className="spill ready">Clean</span>
+                  )}
+                  {t.share_token && (
+                    <span className="spill">
+                      <Icon name="share" size={11} /> Proof link
+                    </span>
+                  )}
                 </div>
               </Link>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }

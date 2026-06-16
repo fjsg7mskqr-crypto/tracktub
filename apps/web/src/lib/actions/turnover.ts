@@ -192,5 +192,16 @@ export async function submitTurnoverAction(
     // Swallow: the evidence is captured and locked regardless of notification.
   }
 
+  // Auto-fulfill a matching scheduled turnover (issue #157): link this capture
+  // to the nearest planned turnover and flip it to done. Best-effort — the
+  // turnover is already locked, so a no-match or hiccup must never fail submit.
+  try {
+    await supabase.rpc("fulfill_scheduled_turnover", {
+      p_turnover_id: turnover.id,
+    });
+  } catch {
+    // Swallow: an unfulfilled plan is fine; the evidence is captured regardless.
+  }
+
   return { id: turnover.id, shareToken };
 }
