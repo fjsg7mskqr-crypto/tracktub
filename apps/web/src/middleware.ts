@@ -8,7 +8,7 @@ import { buildCsp, getCspReportUri } from "@/lib/csp";
  */
 function generateNonce(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return btoa(Array.from(bytes, (b) => String.fromCharCode(b)).join(""));
+  return btoa(Array.from(bytes, (b) => String.fromCodePoint(b)).join(""));
 }
 
 export async function middleware(request: NextRequest) {

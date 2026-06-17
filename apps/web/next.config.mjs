@@ -1,6 +1,12 @@
 import path from "node:path";
 import { withSentryConfig } from "@sentry/nextjs";
 
+// NOTE: cleanEnv and sentryCspReportUri below intentionally duplicate logic
+// from src/lib/csp.ts (getCspReportUri / cleanEnv). next.config.mjs is
+// executed by Node.js at build time before TypeScript transpilation, so it
+// cannot import from src/. If the DSN fallback or parsing logic ever changes,
+// update BOTH this file AND src/lib/csp.ts to keep them in sync.
+
 /** Whitespace-stripped env read (same repair as src/lib/env.ts — a pasted
  *  value can arrive line-wrapped and the stray bytes would corrupt the DSN). */
 function cleanEnv(name) {
