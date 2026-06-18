@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isAdminEmail } from "@/lib/admin";
+import { Mono, SectionHead } from "@/components/ui";
+import { TeamInsightsHeader } from "@/components/TeamInsightsHeader";
 
 function Gate({
   label,
@@ -29,9 +31,16 @@ function Gate({
         className="row"
         style={{ alignItems: "baseline", gap: 8, marginTop: 6 }}
       >
-        <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: "-0.03em" }}>
+        <Mono
+          style={{
+            fontSize: 28,
+            fontWeight: 600,
+            letterSpacing: "-0.02em",
+            color: "var(--text-hi)",
+          }}
+        >
           {value}
-        </div>
+        </Mono>
         <div className="small dim">target {target}</div>
       </div>
       <div className="small muted" style={{ marginTop: 4 }}>
@@ -96,6 +105,7 @@ export default async function Insights() {
     const count = locked.filter((t) => t.property_id === p.id).length;
     return { id: p.id, name: p.name, perWeek: (count / WEEKS).toFixed(1), count };
   });
+  const maxPerProperty = Math.max(1, ...perProperty.map((p) => p.count));
 
   // Founder section: env allowlist gates rendering; the SECURITY DEFINER
   // founder_metrics() RPC re-checks the email server-side regardless.
@@ -117,33 +127,41 @@ export default async function Insights() {
 
   return (
     <div className="stack">
-      <div className="pagehead">
-        <h1>Insights</h1>
-        <p className="muted small" style={{ marginTop: 4 }}>
-          Your workspace over the last {WEEKS} weeks — live from your turnover
-          records.
-        </p>
-      </div>
+      <TeamInsightsHeader active="insights" />
 
+      <p className="muted small" style={{ marginTop: -2 }}>
+        Your workspace over the last {WEEKS} weeks — live from your turnover
+        records.
+      </p>
+
+      <SectionHead>Workspace metrics</SectionHead>
       <div className="tiles">
         <div className="tile">
           <div className="k">Turnovers logged</div>
-          <div className="v">{locked.length}</div>
+          <div className="v">
+            <Mono>{locked.length}</Mono>
+          </div>
           <div className="sub">guest-ready proofs on file</div>
         </div>
         <div className="tile">
           <div className="k">Complete 4-photo rate</div>
-          <div className="v">{locked.length ? `${completePct}%` : "—"}</div>
+          <div className="v">
+            <Mono>{locked.length ? `${completePct}%` : "—"}</Mono>
+          </div>
           <div className="sub">full evidence sets</div>
         </div>
         <div className="tile">
           <div className="k">Proof links shared</div>
-          <div className="v">{locked.length ? `${sharePct}%` : "—"}</div>
+          <div className="v">
+            <Mono>{locked.length ? `${sharePct}%` : "—"}</Mono>
+          </div>
           <div className="sub">of turnovers, link copied or opened</div>
         </div>
         <div className="tile">
           <div className="k">Recipient opens</div>
-          <div className="v">{opens}</div>
+          <div className="v">
+            <Mono>{opens}</Mono>
+          </div>
           <div className="sub">someone viewed a proof link</div>
         </div>
         <div className="tile">
@@ -152,30 +170,34 @@ export default async function Insights() {
             className="v"
             style={{ color: openIssues ? "var(--warn)" : undefined }}
           >
-            {openIssues}
+            <Mono>{openIssues}</Mono>
           </div>
           <div className="sub">unconfirmed flags on recent visits</div>
         </div>
       </div>
 
-      <div className="card pad stack">
-        <div className="label" style={{ marginBottom: 0 }}>
-          Turnovers per property
-        </div>
+      <SectionHead>Turnovers per property</SectionHead>
+      <div className="card pad">
         {perProperty.length === 0 ? (
           <p className="small muted" style={{ margin: 0 }}>
             No properties yet.
           </p>
         ) : (
-          <div className="stack" style={{ gap: 6 }}>
+          <div className="pbars">
             {perProperty.map((p) => (
-              <div key={p.id} className="spread small">
-                <span>
-                  <strong>{p.name}</strong>
-                </span>
-                <span className="dim">
-                  {p.count} in {WEEKS} wks ({p.perWeek}/wk)
-                </span>
+              <div key={p.id} className="pbar-row">
+                <div className="pbar-name">{p.name}</div>
+                <div className="pbar-track">
+                  <div
+                    className="pbar-fill"
+                    style={{
+                      width: `${Math.round((p.count / maxPerProperty) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <div className="pbar-num">
+                  <b>{p.count}</b> in {WEEKS}w · {p.perWeek}/wk
+                </div>
               </div>
             ))}
           </div>
@@ -184,9 +206,9 @@ export default async function Insights() {
 
       {founder && (
         <>
-          <h3 style={{ fontSize: 16, marginTop: 6 }}>
+          <SectionHead as="h3">
             Founder view — validation gates (PRD §12 / §16)
-          </h3>
+          </SectionHead>
           <div
             className="grid"
             style={{

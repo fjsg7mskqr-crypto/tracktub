@@ -77,11 +77,7 @@ export default function Landing() {
             />
           </svg>
           <div>
-            <span className="chip">
-              <span className="dot" />
-              For self-managed hosts with a hot tub
-            </span>
-            <h1 style={{ marginTop: 18 }}>
+            <h1>
               Know your hot <span className="tub">tub</span> was guest-ready — without being there.
             </h1>
             <p className="sub">
@@ -178,66 +174,6 @@ export default function Landing() {
               </div>
               <h3>Prove it if anyone asks</h3>
               <p>A timestamped, locked record and a share link — for the owner, the guest, or an Airbnb claim.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* COCKPIT */}
-        <div className="section" id="cockpit">
-          <span className="eyebrow">Your cockpit</span>
-          <div className="sechead">
-            <h2>Every tub, one glance.</h2>
-            <p>
-              Open the app and see which tubs are guest-ready right now — and which one needs five minutes before the
-              next check-in.
-            </p>
-          </div>
-          <div className="dashwrap">
-            <div className="glass dash">
-              <div className="dashhead">
-                <span className="dashtitle">Your tubs</span>
-                <span className="dashstat">
-                  <span className="mdot" />
-                  3 of 4 guest-ready
-                </span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Lakeside Cottage</b>
-                  <span className="dsub">Captured 2:22 PM · by you</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Ridgeline A-Frame</b>
-                  <span className="dsub">Captured 11:05 AM · by Maria</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Big Bear Cabin 4</b>
-                  <span className="dsub">Captured 9:40 AM · by you</span>
-                </div>
-                <span className="dstatus warn">Check water</span>
-              </div>
-              <div className="drow">
-                <div className="dprop">
-                  <b>Pinecrest Chalet</b>
-                  <span className="dsub">Captured yesterday</span>
-                </div>
-                <span className="dstatus ok">
-                  <Check size={12} color="#34D399" w={3} />
-                  Guest-ready
-                </span>
-              </div>
             </div>
           </div>
         </div>

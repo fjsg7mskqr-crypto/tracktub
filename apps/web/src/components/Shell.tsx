@@ -8,7 +8,14 @@ import { Seal } from "@/components/Seal";
 import { Icon } from "@/components/Icon";
 import { resolveRole, type MemberRole } from "@/lib/role";
 
-type NavItem = { href: string; label: string; icon: React.ReactNode };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  // Extra path prefixes that should mark this item active (for entries that
+  // front more than one route, e.g. Team & Insights → /team and /insights).
+  match?: string[];
+};
 
 // Inline nav glyphs (kept local to the shell).
 const G = {
@@ -37,13 +44,17 @@ const G = {
 
 const OPERATOR_NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: G.grid },
-  { href: "/chemistry", label: "Chemistry", icon: G.drop },
-  { href: "/team", label: "Team", icon: G.team },
-  { href: "/insights", label: "Insights", icon: G.chart },
+  { href: "/operations", label: "Operations", icon: G.drop, match: ["/operations", "/chemistry"] },
+  {
+    href: "/team",
+    label: "Team & Insights",
+    icon: G.team,
+    match: ["/team", "/insights"],
+  },
 ];
 const OWNER_NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: G.grid },
-  { href: "/chemistry", label: "Chemistry", icon: G.drop },
+  { href: "/operations", label: "Operations", icon: G.drop, match: ["/operations", "/chemistry"] },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -138,7 +149,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </Link>
         <nav className="appnav">
           {nav.map((n) => {
-            const active = n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
+            const prefixes = n.match ?? [n.href];
+            const active =
+              n.href === "/"
+                ? pathname === "/"
+                : prefixes.some((p) => pathname.startsWith(p));
             return (
               <Link key={n.href} href={n.href} className={active ? "active" : ""}>
                 {n.icon}

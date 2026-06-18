@@ -22,6 +22,8 @@ so this directory matches the cloud's applied history one-to-one:
 | `20260608022607_hardening_billing_and_profile.sql` | `hardening_billing_and_profile` | block client writes to `org.plan`/`billing_ref`; coalesce null email on signup |
 | `20260608023717_lock_trigger_function_execute.sql` | `lock_trigger_function_execute` | revoke `anon`/`authenticated` EXECUTE on trigger-only functions (clears advisors 0028/0029 for them) |
 | `20260608193153_workspace_on_signup.sql` | `workspace_on_signup` | extend `handle_new_user` to also create an `org` + `operator` membership (self-serve signup); backfill existing users; re-lock EXECUTE |
+| `20260614140000_scheduled_item.sql` | `scheduled_item` | Operations Schedule backend (#157): scheduled-work table + RLS (capturer-write) + audit-trigger extension + `fulfill_scheduled_turnover` RPC |
+| `20260614140100_scheduled_assignment_notifications.sql` | `scheduled_assignment_notifications` | #157: `notification_type 'assigned'` + `notification.scheduled_item_id` + `notify_scheduled_assignment` writer |
 
 To re-apply to a *fresh* project, run them in version order.
 

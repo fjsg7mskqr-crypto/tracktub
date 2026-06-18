@@ -68,6 +68,22 @@ separate test/prod database yet.** A dedicated staging database is a planned
 future step (at launch / on the Supabase Pro plan). Local development uses the
 Supabase CLI (`supabase start`) for a fully isolated local stack.
 
+**Schema-change rule (shared DB — read before any migration):** because all
+tiers share one database, `main` and `prod` are the **same DB** — any schema a
+`main` feature needs *is* a change to the live database. Therefore:
+1. **Validate first** on the local stack **and** the CI `rls` replay before
+   anything touches the shared DB.
+2. **Additive** changes (new tables/columns, defaulted; new RLS policies on new
+   tables) may be applied to the shared DB via the Supabase MCP — low risk,
+   current practice.
+3. **Changes to SHARED objects** — existing functions, triggers, RLS policies on
+   existing tables, or any `drop`/`alter` of existing schema — **must be flagged
+   to the founder for sign-off BEFORE being applied to the shared/prod DB.**
+   They can change live behavior (e.g. a redefined audit trigger runs on every
+   write). See `docs/incidents/2026-06-14-prod-schema-via-mcp.md`.
+4. The structural cure is a **separate staging/prod database — issue #45**
+   (launch-blocker). Until then, the above is the mitigation.
+
 **Env vars (caution):** `NEXT_PUBLIC_SUPABASE_URL` and
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` must be set in Vercel for the **Production** (and
 **Preview**) environments. They are inlined at **build** time, so a **redeploy is
