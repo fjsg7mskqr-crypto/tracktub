@@ -29,7 +29,7 @@ export default async function OperationsPage() {
        turnover(
          id, submitted_at_server, status, urgent,
          issue_tag(tag, confirmed_at),
-         water_reading(ph, sanitizer_ppm, temp_f, recorded_at)
+         water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm, recorded_at)
        ),
        maintenance_task(
          id, recurrence_kind, recurrence_value, recurrence_unit, last_done_at, archived_at
@@ -63,9 +63,10 @@ export default async function OperationsPage() {
         return r
           ? {
               recorded_at: r.recorded_at,
+              total_alkalinity: r.total_alkalinity,
               ph: r.ph,
+              calcium_hardness: r.calcium_hardness,
               sanitizer_ppm: r.sanitizer_ppm,
-              temp_f: r.temp_f,
             }
           : null;
       })

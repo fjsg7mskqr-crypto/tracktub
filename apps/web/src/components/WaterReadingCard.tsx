@@ -2,9 +2,10 @@ import { Icon } from "@/components/Icon";
 import { Mono } from "@/components/ui";
 import {
   CHEM_THRESHOLDS,
+  alkalinityOutOfRange,
+  calciumHardnessOutOfRange,
   phOutOfRange,
   sanitizerOutOfRange,
-  tempOutOfRange,
   treatmentLabel,
   type WaterReadingValues,
 } from "@/lib/chemistry";
@@ -51,8 +52,9 @@ function Field({
   );
 }
 
-/** Renders a water reading (pH / sanitizer / temp) with out-of-range fields
- *  flagged. Used on the turnover detail and the public proof page. */
+/** Renders a water reading (alkalinity / pH / hardness / sanitizer, in
+ *  buffer-correct order) with out-of-range fields flagged. Used on the turnover
+ *  detail and the public proof page. */
 export function WaterReadingCard({
   reading,
   heading = "Water — as found",
@@ -70,8 +72,18 @@ export function WaterReadingCard({
       </div>
       <div
         className="grid"
-        style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}
+        style={{
+          gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+          gap: 16,
+        }}
       >
+        <Field
+          label="Total Alkalinity"
+          value={reading.total_alkalinity}
+          unit="ppm"
+          flagged={alkalinityOutOfRange(reading.total_alkalinity)}
+          hint={`Target ${CHEM_THRESHOLDS.alkalinity.min}–${CHEM_THRESHOLDS.alkalinity.max} ppm`}
+        />
         <Field
           label="pH"
           value={reading.ph}
@@ -79,18 +91,18 @@ export function WaterReadingCard({
           hint={`Target ${CHEM_THRESHOLDS.ph.min}–${CHEM_THRESHOLDS.ph.max}`}
         />
         <Field
+          label="Calcium Hardness"
+          value={reading.calcium_hardness}
+          unit="ppm"
+          flagged={calciumHardnessOutOfRange(reading.calcium_hardness)}
+          hint={`Target ${CHEM_THRESHOLDS.calciumHardness.min}–${CHEM_THRESHOLDS.calciumHardness.max} ppm`}
+        />
+        <Field
           label="Sanitizer"
           value={reading.sanitizer_ppm}
           unit="ppm"
           flagged={sanitizerOutOfRange(reading.sanitizer_ppm)}
           hint={`Target ${CHEM_THRESHOLDS.sanitizerPpm.min}–${CHEM_THRESHOLDS.sanitizerPpm.max} ppm`}
-        />
-        <Field
-          label="Temp"
-          value={reading.temp_f}
-          unit="°F"
-          flagged={tempOutOfRange(reading.temp_f)}
-          hint={`Target ≤ ${CHEM_THRESHOLDS.tempF.max}°F`}
         />
       </div>
 

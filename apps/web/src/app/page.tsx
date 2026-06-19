@@ -35,7 +35,7 @@ export default async function Home() {
          id, submitted_at_server, status, urgent, submitter_id,
          photo(slot, storage_path, phase),
          issue_tag(tag, confirmed_at),
-         water_reading(ph, sanitizer_ppm, temp_f)
+         water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm)
        )`
     )
     .order("created_at");

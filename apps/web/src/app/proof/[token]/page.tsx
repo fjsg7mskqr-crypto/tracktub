@@ -24,7 +24,7 @@ export default async function ProofPage({
        submitter:profile(full_name, email),
        photos:photo(slot, storage_path),
        issues:issue_tag(tag, source, confirmed_at),
-       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at, treatments, treatment_note, balanced)`
+       water:water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm, recorded_at, treatments, treatment_note, balanced)`
     )
     .eq("share_token", token)
     .eq("status", "submitted_locked")

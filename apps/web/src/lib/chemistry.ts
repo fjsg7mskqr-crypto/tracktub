@@ -1,18 +1,22 @@
 // Water-chemistry thresholds (PRD §8.8). SINGLE SOURCE OF TRUTH — the capture
 // hints, the proof/turnover display flags, and the #100 chemistry-aware layer
-// all read from here. Defaults: pH 7.2–7.8 · chlorine 3–5 ppm (bromine 4–6) ·
-// temp ≤ 104°F. Out-of-range renders as a `warn`.
+// all read from here. The spa test set, in buffer-correct order (#170): Total
+// Alkalinity 80–120 ppm (tested first — buffers pH) · pH 7.2–7.8 · Calcium
+// Hardness 150–250 ppm · Sanitizer (chlorine 3–5 ppm; bromine 4–6). Out-of-range
+// renders as a `warn`. (temp_f remains in the schema but is no longer captured.)
 
 export const CHEM_THRESHOLDS = {
+  alkalinity: { min: 80, max: 120 },
   ph: { min: 7.2, max: 7.8 },
+  calciumHardness: { min: 150, max: 250 },
   sanitizerPpm: { min: 3, max: 5 }, // chlorine; bromine runs 4–6
-  tempF: { max: 104 },
 } as const;
 
 export interface WaterReadingValues {
+  total_alkalinity: number | null;
   ph: number | null;
+  calcium_hardness: number | null;
   sanitizer_ppm: number | null;
-  temp_f: number | null;
   /** Chemicals added at the turnover (codes — see WATER_TREATMENTS). */
   treatments?: string[] | null;
   /** Free-text amounts / custom treatments. */
@@ -38,9 +42,27 @@ export function treatmentLabel(code: string): string {
   return WATER_TREATMENTS.find((t) => t.code === code)?.label ?? code;
 }
 
+export function alkalinityOutOfRange(alk: number | null | undefined): boolean {
+  return (
+    alk != null &&
+    (alk < CHEM_THRESHOLDS.alkalinity.min ||
+      alk > CHEM_THRESHOLDS.alkalinity.max)
+  );
+}
+
 export function phOutOfRange(ph: number | null | undefined): boolean {
   return (
     ph != null && (ph < CHEM_THRESHOLDS.ph.min || ph > CHEM_THRESHOLDS.ph.max)
+  );
+}
+
+export function calciumHardnessOutOfRange(
+  ch: number | null | undefined
+): boolean {
+  return (
+    ch != null &&
+    (ch < CHEM_THRESHOLDS.calciumHardness.min ||
+      ch > CHEM_THRESHOLDS.calciumHardness.max)
   );
 }
 
@@ -57,22 +79,24 @@ export function sanitizerOutOfRange(ppm: number | null | undefined): boolean {
   );
 }
 
-export function tempOutOfRange(tempF: number | null | undefined): boolean {
-  return tempF != null && tempF > CHEM_THRESHOLDS.tempF.max;
-}
-
 /** True if any provided field is out of range (used to flag a whole reading). */
 export function readingHasFlag(r: WaterReadingValues): boolean {
   return (
+    alkalinityOutOfRange(r.total_alkalinity) ||
     phOutOfRange(r.ph) ||
-    sanitizerOutOfRange(r.sanitizer_ppm) ||
-    tempOutOfRange(r.temp_f)
+    calciumHardnessOutOfRange(r.calcium_hardness) ||
+    sanitizerOutOfRange(r.sanitizer_ppm)
   );
 }
 
 /** True only when at least one numeric field was recorded. */
 export function readingHasValues(r: WaterReadingValues): boolean {
-  return r.ph != null || r.sanitizer_ppm != null || r.temp_f != null;
+  return (
+    r.total_alkalinity != null ||
+    r.ph != null ||
+    r.calcium_hardness != null ||
+    r.sanitizer_ppm != null
+  );
 }
 
 /** True when the reading carries anything worth showing — a number, a

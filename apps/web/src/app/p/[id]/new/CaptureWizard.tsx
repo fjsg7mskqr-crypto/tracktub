@@ -14,9 +14,10 @@ import { Input, Label } from "@/components/ui";
 import {
   CHEM_THRESHOLDS,
   WATER_TREATMENTS,
+  alkalinityOutOfRange,
+  calciumHardnessOutOfRange,
   phOutOfRange,
   sanitizerOutOfRange,
-  tempOutOfRange,
 } from "@/lib/chemistry";
 
 const numOrNull = (v: string): number | null => {
@@ -63,9 +64,10 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [urgent, setUrgent] = useState(false);
+  const [alkalinity, setAlkalinity] = useState("");
   const [ph, setPh] = useState("");
+  const [calciumHardness, setCalciumHardness] = useState("");
   const [sanitizer, setSanitizer] = useState("");
-  const [temp, setTemp] = useState("");
   const [treatments, setTreatments] = useState<string[]>([]);
   const [treatmentNote, setTreatmentNote] = useState("");
   const [balanced, setBalanced] = useState(false);
@@ -153,9 +155,10 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
     formData.append("propertyId", propertyId);
     formData.append("notes", notes);
     formData.append("urgent", String(urgent));
+    formData.append("total_alkalinity", alkalinity);
     formData.append("ph", ph);
+    formData.append("calcium_hardness", calciumHardness);
     formData.append("sanitizer_ppm", sanitizer);
-    formData.append("temp_f", temp);
     formData.append("treatments", JSON.stringify(treatments));
     formData.append("treatment_note", treatmentNote);
     formData.append("balanced", String(balanced));
@@ -362,11 +365,37 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
             <span className="badge">Optional</span>
           </div>
           <p className="muted small" style={{ marginTop: -6 }}>
-            Test the water as you found it, then log what you added. Skip any you
-            didn&apos;t measure.
+            Test the water as you found it, then log what you added. Skip any
+            you didn&apos;t measure.
+          </p>
+
+          <p className="tiny dim" style={{ marginTop: -4 }}>
+            Test in this order — alkalinity buffers pH, so it&apos;s balanced
+            first.
           </p>
 
           <div className="stack" style={{ gap: 14 }}>
+            <div>
+              <Label htmlFor="alkalinity">Total Alkalinity (ppm)</Label>
+              <Input
+                id="alkalinity"
+                type="number"
+                inputMode="decimal"
+                step="1"
+                placeholder={`${CHEM_THRESHOLDS.alkalinity.min}–${CHEM_THRESHOLDS.alkalinity.max} ppm`}
+                value={alkalinity}
+                onChange={(e) => setAlkalinity(e.target.value)}
+              />
+              {alkalinityOutOfRange(numOrNull(alkalinity)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Outside {CHEM_THRESHOLDS.alkalinity.min}–
+                  {CHEM_THRESHOLDS.alkalinity.max} ppm — adjust before pH.
+                </p>
+              )}
+            </div>
             <div>
               <Label htmlFor="ph">pH</Label>
               <Input
@@ -389,13 +418,36 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
               )}
             </div>
             <div>
-              <Label htmlFor="sanitizer">Sanitizer (ppm)</Label>
+              <Label htmlFor="calcium_hardness">Calcium Hardness (ppm)</Label>
+              <Input
+                id="calcium_hardness"
+                type="number"
+                inputMode="decimal"
+                step="1"
+                placeholder={`${CHEM_THRESHOLDS.calciumHardness.min}–${CHEM_THRESHOLDS.calciumHardness.max} ppm`}
+                value={calciumHardness}
+                onChange={(e) => setCalciumHardness(e.target.value)}
+              />
+              {calciumHardnessOutOfRange(numOrNull(calciumHardness)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Outside {CHEM_THRESHOLDS.calciumHardness.min}–
+                  {CHEM_THRESHOLDS.calciumHardness.max} ppm.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="sanitizer">
+                Sanitizer — Chlorine/Bromine (ppm)
+              </Label>
               <Input
                 id="sanitizer"
                 type="number"
                 inputMode="decimal"
                 step="0.1"
-                placeholder={`${CHEM_THRESHOLDS.sanitizerPpm.min}–${CHEM_THRESHOLDS.sanitizerPpm.max} ppm chlorine`}
+                placeholder={`${CHEM_THRESHOLDS.sanitizerPpm.min}–${CHEM_THRESHOLDS.sanitizerPpm.max} ppm`}
                 value={sanitizer}
                 onChange={(e) => setSanitizer(e.target.value)}
               />
@@ -406,27 +458,6 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
                 >
                   Outside {CHEM_THRESHOLDS.sanitizerPpm.min}–
                   {CHEM_THRESHOLDS.sanitizerPpm.max} ppm — re-shock and retest.
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="temp">Temperature (°F)</Label>
-              <Input
-                id="temp"
-                type="number"
-                inputMode="decimal"
-                step="1"
-                placeholder={`≤ ${CHEM_THRESHOLDS.tempF.max}°F`}
-                value={temp}
-                onChange={(e) => setTemp(e.target.value)}
-              />
-              {tempOutOfRange(numOrNull(temp)) && (
-                <p
-                  className="tiny"
-                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
-                >
-                  Above {CHEM_THRESHOLDS.tempF.max}°F — let it cool before
-                  guests use it.
                 </p>
               )}
             </div>
