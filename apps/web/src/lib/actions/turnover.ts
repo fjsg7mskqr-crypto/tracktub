@@ -130,9 +130,10 @@ export async function submitTurnoverAction(
     const parsed = Number(raw);
     return Number.isFinite(parsed) ? parsed : null;
   };
+  const totalAlkalinity = num("total_alkalinity");
   const ph = num("ph");
+  const calciumHardness = num("calcium_hardness");
   const sanitizerPpm = num("sanitizer_ppm");
-  const tempF = num("temp_f");
   // What the tech added (as-found reading + treatments — the pro-standard record).
   let treatments: string[] = [];
   const treatmentsRaw = formData.get("treatments") as string | null;
@@ -150,9 +151,10 @@ export async function submitTurnoverAction(
   const balanced = formData.get("balanced") === "true";
 
   if (
+    totalAlkalinity !== null ||
     ph !== null ||
+    calciumHardness !== null ||
     sanitizerPpm !== null ||
-    tempF !== null ||
     treatments.length > 0 ||
     treatmentNote !== null ||
     balanced
@@ -160,9 +162,10 @@ export async function submitTurnoverAction(
     const { error: readingErr } = await supabase.from("water_reading").insert({
       turnover_id: turnover.id,
       property_id: propertyId,
+      total_alkalinity: totalAlkalinity,
       ph,
+      calcium_hardness: calciumHardness,
       sanitizer_ppm: sanitizerPpm,
-      temp_f: tempF,
       treatments,
       treatment_note: treatmentNote,
       balanced,
