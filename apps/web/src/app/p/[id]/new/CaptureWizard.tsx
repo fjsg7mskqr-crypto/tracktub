@@ -1,16 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { submitTurnoverAction } from "@/lib/actions/turnover";
-import { PHOTO_SLOTS, BEFORE_SHOT } from "@/lib/types";
-import type { PhotoSlot } from "@/lib/types";
+import {
+  addIssuePhotoAction,
+  ensureDraftTurnoverAction,
+  lockTurnoverAction,
+  removeIssuePhotoAction,
+  saveDraftReadingAction,
+  saveGuidedPhotoAction,
+  updateIssueCaptionAction,
+  type DraftPhoto,
+  type DraftSnapshot,
+} from "@/lib/actions/turnover";
+import {
+  CAPTURE_V2_AFTER_SLOTS,
+  CAPTURE_V2_BEFORE_SHOT,
+  CLEANING_STEPS,
+  type CapturePhase,
+  type CleaningStepCode,
+  type PhotoSlot,
+} from "@/lib/types";
+import { photoKey, REQUIRED_LOCK_PHOTOS, computeInitialStep, CAPTURE_STEP_BEFORE, CAPTURE_STEP_WATER, CAPTURE_STEP_AFTER_START, CAPTURE_STEP_SUBMIT } from "@/lib/capture-v2";
 import { slotTint } from "@/lib/format";
 import { Icon } from "@/components/Icon";
 import { track } from "@/lib/analytics";
 import { Input, Label } from "@/components/ui";
+import { photoPublicUrl } from "@/lib/supabase/storage";
 import {
   CHEM_THRESHOLDS,
   WATER_TREATMENTS,
@@ -18,6 +36,7 @@ import {
   calciumHardnessOutOfRange,
   phOutOfRange,
   sanitizerOutOfRange,
+  tempHigh,
 } from "@/lib/chemistry";
 
 const numOrNull = (v: string): number | null => {
@@ -27,161 +46,448 @@ const numOrNull = (v: string): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-interface CapturedPhoto {
-  slot: PhotoSlot;
-  file: File;
-  previewUrl: string;
-  capturedAt: string;
-}
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 interface Props {
   propertyId: string;
   propertyName: string;
+  initialDraft?: DraftSnapshot | null;
+  resumeTurnoverId?: string | null;
 }
 
-// Step flow (founder's intended order):
-//   0          = BEFORE — one "as found" shot
-//   1          = chemistry / water check
-//   2..2+N-1   = AFTER — the guided N-slot guest-ready set
-//   2+N        = review & submit
-const AFTER_COUNT = PHOTO_SLOTS.length;
-const STEP_BEFORE = 0;
-const STEP_WATER = 1;
-const STEP_AFTER_START = 2;
-const STEP_REVIEW = STEP_AFTER_START + AFTER_COUNT;
+const AFTER_COUNT = CAPTURE_V2_AFTER_SLOTS.length;
+const STEP_BEFORE = CAPTURE_STEP_BEFORE;
+const STEP_WATER = CAPTURE_STEP_WATER;
+const STEP_AFTER_START = CAPTURE_STEP_AFTER_START;
+const STEP_SUBMIT = CAPTURE_STEP_SUBMIT;
 
-export default function CaptureWizard({ propertyId, propertyName }: Props) {
+function defaultCleaningSteps(steps: CleaningStepCode[] | undefined): CleaningStepCode[] {
+  if (steps && steps.length > 0) return steps;
+  return CLEANING_STEPS.map((s) => s.code);
+}
+
+function guidedPhotoFromDraft(
+  photos: DraftPhoto[],
+  slot: PhotoSlot,
+  phase: CapturePhase
+): DraftPhoto | undefined {
+  return photos.find((p) => p.slot === slot && p.phase === phase);
+}
+
+function issuePhotosFromDraft(photos: DraftPhoto[]): DraftPhoto[] {
+  return photos.filter((p) => p.slot === "issue" && p.phase === "before");
+}
+
+function previewForPhoto(p: DraftPhoto | undefined): string | null {
+  if (!p?.storagePath) return null;
+  return photoPublicUrl(p.storagePath);
+}
+
+function hasRequiredPhotos(photos: DraftPhoto[]): boolean {
+  const keys = new Set(
+    photos.filter((p) => p.storagePath).map((p) => photoKey(p.slot, p.phase))
+  );
+  return REQUIRED_LOCK_PHOTOS.every(({ slot, phase }) =>
+    keys.has(photoKey(slot, phase))
+  );
+}
+
+function SaveIndicator({ status }: { status: SaveStatus }) {
+  if (status === "idle") return null;
+  if (status === "saving") {
+    return <span className="badge dim small">Saving…</span>;
+  }
+  if (status === "saved") {
+    return (
+      <span className="badge ok small">
+        <Icon name="check" size={12} /> Saved
+      </span>
+    );
+  }
+  return (
+    <span className="badge warn small">
+      <Icon name="alert" size={12} /> Save failed
+    </span>
+  );
+}
+
+export default function CaptureWizard({
+  propertyId,
+  propertyName,
+  initialDraft,
+  resumeTurnoverId,
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  const [step, setStep] = useState(STEP_BEFORE);
-  const [beforePhoto, setBeforePhoto] = useState<CapturedPhoto | null>(null);
-  const [afterPhotos, setAfterPhotos] = useState<(CapturedPhoto | null)[]>(() =>
-    PHOTO_SLOTS.map(() => null)
+  const guidedFileRef = useRef<HTMLInputElement | null>(null);
+  const issueFileRef = useRef<HTMLInputElement | null>(null);
+
+  const [draftLoading, setDraftLoading] = useState(!initialDraft);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DraftSnapshot | null>(initialDraft ?? null);
+
+  const [step, setStep] = useState(() =>
+    initialDraft ? computeInitialStep(initialDraft) : STEP_BEFORE
   );
   const [processing, setProcessing] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
-  const [urgent, setUrgent] = useState(false);
-  const [alkalinity, setAlkalinity] = useState("");
-  const [ph, setPh] = useState("");
-  const [calciumHardness, setCalciumHardness] = useState("");
-  const [sanitizer, setSanitizer] = useState("");
-  const [treatments, setTreatments] = useState<string[]>([]);
-  const [treatmentNote, setTreatmentNote] = useState("");
-  const [balanced, setBalanced] = useState(false);
+  const [photoSaveStatus, setPhotoSaveStatus] = useState<SaveStatus>("idle");
+  const [readingSaveStatus, setReadingSaveStatus] = useState<SaveStatus>("idle");
+
+  const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
+
+  const [notes, setNotes] = useState(initialDraft?.notes ?? "");
+  const [urgent, setUrgent] = useState(initialDraft?.urgent ?? false);
+  const [cleaningSteps, setCleaningSteps] = useState<CleaningStepCode[]>(() =>
+    defaultCleaningSteps(initialDraft?.cleaningSteps)
+  );
+
+  const [alkalinity, setAlkalinity] = useState(
+    initialDraft?.reading?.total_alkalinity?.toString() ?? ""
+  );
+  const [ph, setPh] = useState(initialDraft?.reading?.ph?.toString() ?? "");
+  const [calciumHardness, setCalciumHardness] = useState(
+    initialDraft?.reading?.calcium_hardness?.toString() ?? ""
+  );
+  const [sanitizer, setSanitizer] = useState(
+    initialDraft?.reading?.sanitizer_ppm?.toString() ?? ""
+  );
+  const [tempF, setTempF] = useState(
+    initialDraft?.reading?.temp_f?.toString() ?? ""
+  );
+  const [treatments, setTreatments] = useState<string[]>(
+    initialDraft?.reading?.treatments ?? []
+  );
+  const [treatmentNote, setTreatmentNote] = useState(
+    initialDraft?.reading?.treatment_note ?? ""
+  );
+  const [balanced, setBalanced] = useState(
+    initialDraft?.reading?.balanced ?? false
+  );
+
+  const turnoverId = draft?.turnoverId ?? null;
+
+  const applyDraft = useCallback((snapshot: DraftSnapshot) => {
+    setDraft(snapshot);
+    setNotes(snapshot.notes);
+    setUrgent(snapshot.urgent);
+    setCleaningSteps(defaultCleaningSteps(snapshot.cleaningSteps));
+    if (snapshot.reading) {
+      setAlkalinity(snapshot.reading.total_alkalinity?.toString() ?? "");
+      setPh(snapshot.reading.ph?.toString() ?? "");
+      setCalciumHardness(snapshot.reading.calcium_hardness?.toString() ?? "");
+      setSanitizer(snapshot.reading.sanitizer_ppm?.toString() ?? "");
+      setTempF(snapshot.reading.temp_f?.toString() ?? "");
+      setTreatments(snapshot.reading.treatments ?? []);
+      setTreatmentNote(snapshot.reading.treatment_note ?? "");
+      setBalanced(snapshot.reading.balanced ?? false);
+    }
+  }, []);
 
   useEffect(() => {
     track("turnover_started", { property_id: propertyId });
   }, [propertyId]);
 
+  useEffect(() => {
+    if (initialDraft) {
+      applyDraft(initialDraft);
+      setDraftLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setDraftLoading(true);
+      setDraftError(null);
+      try {
+        const snapshot = await ensureDraftTurnoverAction(
+          propertyId,
+          resumeTurnoverId ?? null
+        );
+        if (!cancelled) {
+          applyDraft(snapshot);
+          setStep(computeInitialStep(snapshot));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setDraftError(
+            err instanceof Error ? err.message : "Could not start turnover draft."
+          );
+        }
+      } finally {
+        if (!cancelled) setDraftLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [propertyId, initialDraft, resumeTurnoverId, applyDraft]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(localPreviews).forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [localPreviews]);
+
   const onBefore = step === STEP_BEFORE;
   const onWater = step === STEP_WATER;
-  const onReview = step === STEP_REVIEW;
+  const onSubmit = step === STEP_SUBMIT;
   const afterIndex =
-    step >= STEP_AFTER_START && step < STEP_REVIEW
+    step >= STEP_AFTER_START && step < STEP_SUBMIT
       ? step - STEP_AFTER_START
       : -1;
   const onAfter = afterIndex >= 0;
 
-  // The capture tile is shared by the before shot and each after slot.
+  const beforeGuided = draft
+    ? guidedPhotoFromDraft(
+        draft.photos,
+        CAPTURE_V2_BEFORE_SHOT.slot,
+        "before"
+      )
+    : undefined;
+  const issuePhotos = draft ? issuePhotosFromDraft(draft.photos) : [];
+
   const activeSlot = onBefore
-    ? BEFORE_SHOT
+    ? CAPTURE_V2_BEFORE_SHOT
     : onAfter
-      ? PHOTO_SLOTS[afterIndex]
+      ? CAPTURE_V2_AFTER_SLOTS[afterIndex]
       : null;
-  const activeCaptured = onBefore
-    ? beforePhoto
-    : onAfter
-      ? afterPhotos[afterIndex]
-      : null;
+  const activePhase: CapturePhase | null = onBefore || onAfter ? (onBefore ? "before" : "after") : null;
 
-  const beforeDone = beforePhoto != null;
-  const afterDone = afterPhotos.every((x) => x != null);
-  const allCaptured = beforeDone && afterDone;
+  const activeGuidedKey =
+    activeSlot && activePhase ? photoKey(activeSlot.slot, activePhase) : null;
+  const activeGuidedDraft =
+    activeSlot && activePhase
+      ? guidedPhotoFromDraft(draft?.photos ?? [], activeSlot.slot, activePhase)
+      : undefined;
+  const activeGuidedPreview =
+    (activeGuidedKey && localPreviews[activeGuidedKey]) ||
+    previewForPhoto(activeGuidedDraft);
 
-  function openPicker() {
-    setCaptureError(null);
-    fileRef.current?.click();
+  const beforeDone = !!(
+    beforeGuided?.storagePath ||
+    localPreviews[photoKey(CAPTURE_V2_BEFORE_SHOT.slot, "before")]
+  );
+  const requiredPhotosDone = draft ? hasRequiredPhotos(draft.photos) : false;
+
+  function setLocalPreview(key: string, blobUrl: string) {
+    setLocalPreviews((prev) => {
+      const old = prev[key];
+      if (old) URL.revokeObjectURL(old);
+      return { ...prev, [key]: blobUrl };
+    });
   }
 
-  async function onFile(e: ChangeEvent<HTMLInputElement>) {
+  function clearLocalPreview(key: string) {
+    setLocalPreviews((prev) => {
+      const old = prev[key];
+      if (old) URL.revokeObjectURL(old);
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function openGuidedPicker() {
+    setCaptureError(null);
+    guidedFileRef.current?.click();
+  }
+
+  function openIssuePicker() {
+    setCaptureError(null);
+    issueFileRef.current?.click();
+  }
+
+  async function persistGuidedPhoto(
+    file: File,
+    slot: PhotoSlot,
+    phase: CapturePhase,
+    capturedAt: string
+  ) {
+    if (!turnoverId) throw new Error("Draft not ready");
+
+    const key = photoKey(slot, phase);
+    setPhotoSaveStatus("saving");
+    setCaptureError(null);
+
+    const fd = new FormData();
+    fd.append("propertyId", propertyId);
+    fd.append("turnoverId", turnoverId);
+    fd.append("slot", slot);
+    fd.append("phase", phase);
+    fd.append("file", file);
+    fd.append("capturedAt", capturedAt);
+
+    try {
+      const snapshot = await saveGuidedPhotoAction(fd);
+      applyDraft(snapshot);
+      clearLocalPreview(key);
+      setPhotoSaveStatus("saved");
+    } catch (err) {
+      setPhotoSaveStatus("error");
+      throw err;
+    }
+  }
+
+  async function onGuidedFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file || !activeSlot) return;
+    if (!file || !activeSlot || !activePhase || !turnoverId) return;
+
     setProcessing(true);
     setCaptureError(null);
+    const capturedAt = new Date().toISOString();
+    const key = photoKey(activeSlot.slot, activePhase);
+
     try {
-      const captured: CapturedPhoto = {
-        slot: activeSlot.slot,
-        file,
-        previewUrl: URL.createObjectURL(file),
-        capturedAt: new Date().toISOString(),
-      };
-      if (onBefore) {
-        if (beforePhoto) URL.revokeObjectURL(beforePhoto.previewUrl);
-        setBeforePhoto(captured);
-      } else if (onAfter) {
-        const idx = afterIndex;
-        const prev = afterPhotos[idx];
-        if (prev) URL.revokeObjectURL(prev.previewUrl);
-        setAfterPhotos((arr) => arr.map((x, i) => (i === idx ? captured : x)));
-      }
-    } catch {
-      setCaptureError("Could not load that photo — try another.");
+      const blobUrl = URL.createObjectURL(file);
+      setLocalPreview(key, blobUrl);
+      await persistGuidedPhoto(file, activeSlot.slot, activePhase, capturedAt);
+    } catch (err) {
+      setCaptureError(
+        err instanceof Error ? err.message : "Could not save that photo — try again."
+      );
     } finally {
       setProcessing(false);
     }
   }
 
-  function retake() {
-    if (onBefore) {
-      if (beforePhoto) URL.revokeObjectURL(beforePhoto.previewUrl);
-      setBeforePhoto(null);
-    } else if (onAfter) {
-      const idx = afterIndex;
-      const prev = afterPhotos[idx];
-      if (prev) URL.revokeObjectURL(prev.previewUrl);
-      setAfterPhotos((arr) => arr.map((x, i) => (i === idx ? null : x)));
-    }
+  async function onIssueFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !turnoverId) return;
+
+    setProcessing(true);
     setCaptureError(null);
-    openPicker();
+    setPhotoSaveStatus("saving");
+
+    const fd = new FormData();
+    fd.append("propertyId", propertyId);
+    fd.append("turnoverId", turnoverId);
+    fd.append("file", file);
+    fd.append("capturedAt", new Date().toISOString());
+
+    try {
+      const snapshot = await addIssuePhotoAction(fd);
+      applyDraft(snapshot);
+      setPhotoSaveStatus("saved");
+    } catch (err) {
+      setPhotoSaveStatus("error");
+      setCaptureError(
+        err instanceof Error ? err.message : "Could not add issue photo."
+      );
+    } finally {
+      setProcessing(false);
+    }
   }
 
-  function handleSubmit() {
-    if (!allCaptured) return;
-    const formData = new FormData();
-    formData.append("propertyId", propertyId);
+  async function handleRemoveIssue(photoId: string) {
+    if (!turnoverId) return;
+    setPhotoSaveStatus("saving");
+    setCaptureError(null);
+    try {
+      const snapshot = await removeIssuePhotoAction(
+        photoId,
+        turnoverId,
+        propertyId
+      );
+      applyDraft(snapshot);
+      setPhotoSaveStatus("saved");
+    } catch (err) {
+      setPhotoSaveStatus("error");
+      setCaptureError(
+        err instanceof Error ? err.message : "Could not remove photo."
+      );
+    }
+  }
+
+  async function handleIssueCaptionBlur(photoId: string, caption: string) {
+    if (!turnoverId) return;
+    const existing = issuePhotos.find((p) => p.id === photoId);
+    if (!existing || (existing.caption ?? "") === caption.trim()) return;
+
+    setPhotoSaveStatus("saving");
+    try {
+      const snapshot = await updateIssueCaptionAction(
+        photoId,
+        turnoverId,
+        propertyId,
+        caption
+      );
+      applyDraft(snapshot);
+      setPhotoSaveStatus("saved");
+    } catch {
+      setPhotoSaveStatus("error");
+    }
+  }
+
+  function buildReadingFormData(): FormData {
+    const fd = new FormData();
+    fd.append("propertyId", propertyId);
+    fd.append("turnoverId", turnoverId ?? "");
+    fd.append("total_alkalinity", alkalinity);
+    fd.append("ph", ph);
+    fd.append("calcium_hardness", calciumHardness);
+    fd.append("sanitizer_ppm", sanitizer);
+    fd.append("temp_f", tempF);
+    fd.append("treatments", JSON.stringify(treatments));
+    fd.append("treatment_note", treatmentNote);
+    fd.append("balanced", String(balanced));
+    return fd;
+  }
+
+  async function persistReading() {
+    if (!turnoverId) return;
+    setReadingSaveStatus("saving");
+    try {
+      const snapshot = await saveDraftReadingAction(buildReadingFormData());
+      applyDraft(snapshot);
+      setReadingSaveStatus("saved");
+    } catch (err) {
+      setReadingSaveStatus("error");
+      throw err;
+    }
+  }
+
+  async function leaveWaterStep() {
+    try {
+      await persistReading();
+      setStep(STEP_AFTER_START);
+    } catch (err) {
+      setCaptureError(
+        err instanceof Error ? err.message : "Could not save water reading."
+      );
+    }
+  }
+
+  function retakeGuided() {
+    if (!activeSlot || !activePhase) return;
+    const key = photoKey(activeSlot.slot, activePhase);
+    clearLocalPreview(key);
+    setCaptureError(null);
+    setPhotoSaveStatus("idle");
+    openGuidedPicker();
+  }
+
+  function handleLock() {
+    if (!turnoverId || !requiredPhotosDone) return;
+
+    const formData = buildReadingFormData();
     formData.append("notes", notes);
     formData.append("urgent", String(urgent));
-    formData.append("total_alkalinity", alkalinity);
-    formData.append("ph", ph);
-    formData.append("calcium_hardness", calciumHardness);
-    formData.append("sanitizer_ppm", sanitizer);
-    formData.append("treatments", JSON.stringify(treatments));
-    formData.append("treatment_note", treatmentNote);
-    formData.append("balanced", String(balanced));
-    if (beforePhoto) {
-      formData.append("photo_before", beforePhoto.file);
-      formData.append("capturedAt_before", beforePhoto.capturedAt);
-    }
-    for (const p of afterPhotos) {
-      if (!p) continue;
-      formData.append(`photo_${p.slot}`, p.file);
-      formData.append(`capturedAt_${p.slot}`, p.capturedAt);
-      formData.append(`tags_${p.slot}`, JSON.stringify([]));
-    }
+    formData.append("cleaning_steps", JSON.stringify(cleaningSteps));
+
     setSubmitError(null);
     startTransition(async () => {
       try {
-        const result = await submitTurnoverAction(formData);
+        const result = await lockTurnoverAction(formData);
         track("turnover_submitted", {
           property_id: propertyId,
           turnover_id: result.id,
         });
-        if (beforePhoto) URL.revokeObjectURL(beforePhoto.previewUrl);
-        afterPhotos.forEach((p) => p && URL.revokeObjectURL(p.previewUrl));
+        Object.values(localPreviews).forEach((url) => URL.revokeObjectURL(url));
         router.push(`/t/${result.id}`);
       } catch (err) {
         setSubmitError(
@@ -191,28 +497,72 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
     });
   }
 
+  function toggleCleaningStep(code: CleaningStepCode) {
+    setCleaningSteps((arr) =>
+      arr.includes(code) ? arr.filter((c) => c !== code) : [...arr, code]
+    );
+  }
+
   const segBg = (filled: boolean, active: boolean) =>
     filled ? "var(--brand)" : active ? "var(--brand-soft)" : "var(--line)";
+
+  if (draftLoading) {
+    return (
+      <div className="stack" style={{ maxWidth: 480, margin: "0 auto" }}>
+        <div className="crumb">
+          <Link href={`/p/${propertyId}`}>{propertyName}</Link> / New turnover
+        </div>
+        <div className="card pad stack" style={{ textAlign: "center" }}>
+          <p className="muted">Starting turnover draft…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (draftError || !draft) {
+    return (
+      <div className="stack" style={{ maxWidth: 480, margin: "0 auto" }}>
+        <div className="crumb">
+          <Link href={`/p/${propertyId}`}>{propertyName}</Link> / New turnover
+        </div>
+        <div className="card pad stack">
+          <p style={{ color: "var(--urgent)", margin: 0 }}>
+            {draftError ?? "Could not load turnover draft."}
+          </p>
+          <Link href={`/p/${propertyId}`} className="btn ghost">
+            ← Back to property
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="stack" style={{ maxWidth: 480, margin: "0 auto" }}>
       <input
-        ref={fileRef}
+        ref={guidedFileRef}
         type="file"
         accept="image/*"
         capture="environment"
         hidden
-        onChange={onFile}
+        onChange={onGuidedFile}
+      />
+      <input
+        ref={issueFileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={onIssueFile}
       />
 
       <div className="crumb">
         <Link href={`/p/${propertyId}`}>{propertyName}</Link> / New turnover
       </div>
 
-      {/* progress: 1 before · 1 water · N after · review */}
       <div className="row" style={{ gap: 6 }}>
         <div
-          title={BEFORE_SHOT.label}
+          title={CAPTURE_V2_BEFORE_SHOT.label}
           style={{
             flex: 1,
             height: 5,
@@ -229,7 +579,7 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
             background: segBg(step > STEP_WATER, onWater),
           }}
         />
-        {PHOTO_SLOTS.map((s, i) => (
+        {CAPTURE_V2_AFTER_SLOTS.map((s, i) => (
           <div
             key={s.slot}
             title={`After — ${s.label}`}
@@ -238,34 +588,189 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
               height: 5,
               borderRadius: 999,
               background: segBg(
-                afterPhotos[i] != null || step > STEP_AFTER_START + i,
+                !!guidedPhotoFromDraft(draft.photos, s.slot, "after")
+                  ?.storagePath ||
+                  !!localPreviews[photoKey(s.slot, "after")] ||
+                  step > STEP_AFTER_START + i,
                 step === STEP_AFTER_START + i
               ),
             }}
           />
         ))}
         <div
-          title="Review"
+          title="Submit"
           style={{
             flex: 1,
             height: 5,
             borderRadius: 999,
-            background: onReview ? "var(--brand)" : "var(--line)",
+            background: onSubmit ? "var(--brand)" : "var(--line)",
           }}
         />
       </div>
 
-      {(onBefore || onAfter) && activeSlot && (
+      {onBefore && (
+        <div className="card pad stack">
+          <div className="spread">
+            <h2 style={{ fontSize: 18 }}>{CAPTURE_V2_BEFORE_SHOT.label}</h2>
+            <span className="badge">
+              <Icon name="camera" size={12} /> Required
+            </span>
+          </div>
+          <p className="muted small" style={{ marginTop: -6 }}>
+            {CAPTURE_V2_BEFORE_SHOT.hint}
+          </p>
+
+          {activeGuidedPreview ? (
+            <div style={{ maxWidth: 360, margin: "0 auto", width: "100%" }}>
+              <img
+                src={activeGuidedPreview}
+                alt={CAPTURE_V2_BEFORE_SHOT.label}
+                style={{
+                  width: "100%",
+                  borderRadius: 14,
+                  objectFit: "cover",
+                  aspectRatio: "4/3",
+                }}
+              />
+              <div
+                className="row"
+                style={{ justifyContent: "center", marginTop: 10, gap: 8 }}
+              >
+                <span className="badge ok">✓ Captured</span>
+                <SaveIndicator status={photoSaveStatus} />
+                <button type="button" className="btn ghost sm" onClick={retakeGuided}>
+                  Retake
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={openGuidedPicker}
+              disabled={processing}
+              aria-label="Capture the before full-frame shot"
+              style={{
+                appearance: "none",
+                font: "inherit",
+                border: "none",
+                aspectRatio: "4 / 3",
+                maxWidth: 360,
+                margin: "0 auto",
+                width: "100%",
+                borderRadius: 14,
+                display: "grid",
+                placeItems: "center",
+                color: "#fff",
+                cursor: processing ? "default" : "pointer",
+                background: `radial-gradient(120% 85% at 28% 18%, rgba(255,255,255,.25), rgba(255,255,255,0) 55%), linear-gradient(150deg, ${slotTint(CAPTURE_V2_BEFORE_SHOT.slot)[0]}, ${slotTint(CAPTURE_V2_BEFORE_SHOT.slot)[1]})`,
+              }}
+            >
+              <div style={{ textAlign: "center", opacity: 0.92 }}>
+                <Icon name="camera" size={36} stroke={1.3} />
+                <div className="small" style={{ marginTop: 4 }}>
+                  {processing
+                    ? "Processing…"
+                    : "Tap to capture how you found it"}
+                </div>
+              </div>
+            </button>
+          )}
+
+          <div className="stack" style={{ gap: 10, marginTop: 8 }}>
+            <div className="spread">
+              <div>
+                <div className="label">Issue photos</div>
+                <p className="tiny dim" style={{ margin: "2px 0 0" }}>
+                  Optional — document problems you found
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn ghost sm"
+                onClick={openIssuePicker}
+                disabled={processing || !beforeDone}
+              >
+                <Icon name="plus" size={14} /> Add
+              </button>
+            </div>
+
+            {issuePhotos.length > 0 && (
+              <div className="stack" style={{ gap: 12 }}>
+                {issuePhotos.map((p) => {
+                  const preview = previewForPhoto(p);
+                  return (
+                    <div key={p.id} className="card pad stack" style={{ gap: 8 }}>
+                      <div className="row" style={{ gap: 10, alignItems: "flex-start" }}>
+                        {preview && (
+                          <img
+                            src={preview}
+                            alt="Issue"
+                            style={{
+                              width: 72,
+                              height: 72,
+                              objectFit: "cover",
+                              borderRadius: 8,
+                              flex: "none",
+                            }}
+                          />
+                        )}
+                        <div className="stack" style={{ flex: 1, gap: 6 }}>
+                          <Input
+                            placeholder="What's wrong? (optional caption)"
+                            defaultValue={p.caption ?? ""}
+                            onBlur={(e) =>
+                              handleIssueCaptionBlur(p.id, e.target.value)
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="btn ghost sm"
+                            onClick={() => handleRemoveIssue(p.id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {captureError && (
+            <p
+              className="small"
+              style={{ color: "var(--urgent)", margin: 0, textAlign: "center" }}
+            >
+              {captureError}
+            </p>
+          )}
+
+          <div className="spread">
+            <button className="btn ghost" disabled>
+              ← Back
+            </button>
+            <button
+              className="btn primary"
+              disabled={!beforeDone || photoSaveStatus === "saving"}
+              onClick={() => setStep(STEP_WATER)}
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {onAfter && activeSlot && activePhase && (
         <div className="card pad stack">
           <div className="spread">
             <h2 style={{ fontSize: 18 }}>
               {activeSlot.label}
-              {onAfter && (
-                <span className="dim small" style={{ fontWeight: 500 }}>
-                  {" "}
-                  · After — guest-ready · step {afterIndex + 1} of {AFTER_COUNT}
-                </span>
-              )}
+              <span className="dim small" style={{ fontWeight: 500 }}>
+                {" "}
+                · After — guest-ready · step {afterIndex + 1} of {AFTER_COUNT}
+              </span>
             </h2>
             <span className="badge">
               <Icon name="camera" size={12} /> Required
@@ -275,10 +780,10 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
             {activeSlot.hint}
           </p>
 
-          {activeCaptured ? (
+          {activeGuidedPreview ? (
             <div style={{ maxWidth: 360, margin: "0 auto", width: "100%" }}>
               <img
-                src={activeCaptured.previewUrl}
+                src={activeGuidedPreview}
                 alt={activeSlot.label}
                 style={{
                   width: "100%",
@@ -289,10 +794,11 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
               />
               <div
                 className="row"
-                style={{ justifyContent: "center", marginTop: 10 }}
+                style={{ justifyContent: "center", marginTop: 10, gap: 8 }}
               >
                 <span className="badge ok">✓ Captured</span>
-                <button className="btn ghost sm" onClick={retake}>
+                <SaveIndicator status={photoSaveStatus} />
+                <button type="button" className="btn ghost sm" onClick={retakeGuided}>
                   Retake
                 </button>
               </div>
@@ -300,7 +806,7 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
           ) : (
             <button
               type="button"
-              onClick={openPicker}
+              onClick={openGuidedPicker}
               disabled={processing}
               aria-label={`Capture the ${activeSlot.label.toLowerCase()}`}
               style={{
@@ -342,14 +848,13 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
           <div className="spread">
             <button
               className="btn ghost"
-              disabled={onBefore}
               onClick={() => setStep((s) => Math.max(STEP_BEFORE, s - 1))}
             >
               ← Back
             </button>
             <button
               className="btn primary"
-              disabled={!activeCaptured}
+              disabled={!activeGuidedPreview || photoSaveStatus === "saving"}
               onClick={() => setStep((s) => s + 1)}
             >
               Next →
@@ -461,6 +966,27 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
                 </p>
               )}
             </div>
+            <div>
+              <Label htmlFor="temp_f">Water temperature (°F)</Label>
+              <Input
+                id="temp_f"
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder={`≤ ${CHEM_THRESHOLDS.tempF.max}°F`}
+                value={tempF}
+                onChange={(e) => setTempF(e.target.value)}
+              />
+              {tempHigh(numOrNull(tempF)) && (
+                <p
+                  className="tiny"
+                  style={{ color: "var(--pending)", margin: "6px 0 0" }}
+                >
+                  Above {CHEM_THRESHOLDS.tempF.max}°F — many jurisdictions require
+                  logged temp ≤104°F.
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
@@ -516,13 +1042,18 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
             </span>
           </label>
 
+          <div className="row" style={{ justifyContent: "flex-end" }}>
+            <SaveIndicator status={readingSaveStatus} />
+          </div>
+
           <div className="spread">
             <button className="btn ghost" onClick={() => setStep(STEP_BEFORE)}>
               ← Back
             </button>
             <button
               className="btn primary"
-              onClick={() => setStep(STEP_AFTER_START)}
+              disabled={readingSaveStatus === "saving"}
+              onClick={() => void leaveWaterStep()}
             >
               After set →
             </button>
@@ -530,37 +1061,56 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
         </div>
       )}
 
-      {onReview && (
+      {onSubmit && (
         <div className="card pad stack">
-          <h2 style={{ fontSize: 18 }}>Review &amp; submit</h2>
+          <h2 style={{ fontSize: 18 }}>Review &amp; lock</h2>
 
           <div
-            className={allCaptured ? "note row" : "note warn row"}
+            className={requiredPhotosDone ? "note row" : "note warn row"}
             style={{ gap: 9, alignItems: "flex-start" }}
           >
             <Icon
-              name={allCaptured ? "check" : "alert"}
+              name={requiredPhotosDone ? "check" : "alert"}
               size={16}
               style={{
                 flex: "none",
                 marginTop: 1,
-                color: allCaptured ? "var(--verd)" : "var(--ox)",
+                color: requiredPhotosDone ? "var(--verd)" : "var(--ox)",
               }}
             />
             <span>
-              {allCaptured
-                ? `Before shot + all ${AFTER_COUNT} guest-ready shots captured.`
-                : "Some required shots are missing."}
+              {requiredPhotosDone
+                ? "All four required guided photos captured."
+                : "Required photos missing — before full-frame, after water-level, after full-frame, and cover."}
             </span>
+          </div>
+
+          <div>
+            <div className="label">Cleaning checklist</div>
+            <div className="stack" style={{ gap: 8, marginTop: 6 }}>
+              {CLEANING_STEPS.map((s) => {
+                const checked = cleaningSteps.includes(s.code);
+                return (
+                  <label key={s.code} className="row small" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleCleaningStep(s.code)}
+                    />
+                    <span>{s.label}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           <div>
             <div className="label">How it was found</div>
             <div className="photos">
-              {beforePhoto && (
+              {previewForPhoto(beforeGuided) && (
                 <img
-                  src={beforePhoto.previewUrl}
-                  alt={BEFORE_SHOT.label}
+                  src={previewForPhoto(beforeGuided)!}
+                  alt={CAPTURE_V2_BEFORE_SHOT.label}
                   style={{
                     width: 80,
                     height: 80,
@@ -569,19 +1119,14 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
                   }}
                 />
               )}
-            </div>
-          </div>
-
-          <div>
-            <div className="label">Guest-ready</div>
-            <div className="photos">
-              {afterPhotos.map(
+              {issuePhotos.map(
                 (p) =>
-                  p && (
+                  previewForPhoto(p) && (
                     <img
-                      key={p.slot}
-                      src={p.previewUrl}
-                      alt={p.slot}
+                      key={p.id}
+                      src={previewForPhoto(p)!}
+                      alt="Issue"
+                      title={p.caption ?? undefined}
                       style={{
                         width: 80,
                         height: 80,
@@ -591,6 +1136,31 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
                     />
                   )
               )}
+            </div>
+          </div>
+
+          <div>
+            <div className="label">Guest-ready</div>
+            <div className="photos">
+              {CAPTURE_V2_AFTER_SLOTS.map((s) => {
+                const p = guidedPhotoFromDraft(draft.photos, s.slot, "after");
+                const url = previewForPhoto(p);
+                return (
+                  url && (
+                    <img
+                      key={s.slot}
+                      src={url}
+                      alt={s.label}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                      }}
+                    />
+                  )
+                );
+              })}
             </div>
           </div>
 
@@ -634,27 +1204,27 @@ export default function CaptureWizard({ propertyId, propertyName }: Props) {
           <div className="spread">
             <button
               className="btn ghost"
-              onClick={() => setStep(STEP_REVIEW - 1)}
+              onClick={() => setStep(STEP_SUBMIT - 1)}
             >
               ← Back
             </button>
             <button
               className="btn primary"
-              disabled={!allCaptured || isPending}
-              onClick={handleSubmit}
+              disabled={!requiredPhotosDone || isPending}
+              onClick={handleLock}
             >
               {isPending ? (
-                "Uploading…"
+                "Locking…"
               ) : (
                 <>
-                  <Icon name="lock" size={15} /> Submit &amp; lock turnover
+                  <Icon name="lock" size={15} /> Lock turnover
                 </>
               )}
             </button>
           </div>
           <p className="tiny dim" style={{ textAlign: "center", margin: 0 }}>
-            Submitting locks the record with a server timestamp and creates a
-            shareable proof link.
+            Locking saves your reading and checklist, then creates a shareable
+            proof link with a server timestamp.
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import {
   calciumHardnessOutOfRange,
   phOutOfRange,
   sanitizerOutOfRange,
+  tempHigh,
   treatmentLabel,
   type WaterReadingValues,
 } from "@/lib/chemistry";
@@ -103,6 +104,13 @@ export function WaterReadingCard({
           unit="ppm"
           flagged={sanitizerOutOfRange(reading.sanitizer_ppm)}
           hint={`Target ${CHEM_THRESHOLDS.sanitizerPpm.min}–${CHEM_THRESHOLDS.sanitizerPpm.max} ppm`}
+        />
+        <Field
+          label="Temp"
+          value={reading.temp_f ?? null}
+          unit="°F"
+          flagged={tempHigh(reading.temp_f)}
+          hint={`Max ${CHEM_THRESHOLDS.tempF.max}°F`}
         />
       </div>
 

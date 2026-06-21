@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { timeAgo } from "@/lib/format";
 
@@ -8,21 +9,33 @@ import { timeAgo } from "@/lib/format";
 // scopes `property` to exactly this staff user's assigned tubs.
 export async function CleanerHome({ name }: { name: string | null }) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const { data: properties } = await supabase
     .from("property")
     .select(
       `id, name, address,
-       turnover(id, submitted_at_server, status)`
+       turnover(id, submitted_at_server, status, submitter_id)`
     )
     .order("created_at");
 
   const tubs = (properties ?? []).map((p) => {
-    const last = (p.turnover ?? [])
+    const locked = (p.turnover ?? [])
       .filter((t) => t.status === "submitted_locked")
       .sort((a, b) =>
         (b.submitted_at_server ?? "").localeCompare(a.submitted_at_server ?? "")
-      )[0];
-    return { ...p, lastAt: last?.submitted_at_server ?? null };
+      );
+    const draft = (p.turnover ?? []).find(
+      (t) => t.status === "draft" && t.submitter_id === user.id
+    );
+    return {
+      ...p,
+      lastAt: locked[0]?.submitted_at_server ?? null,
+      draftId: draft?.id ?? null,
+    };
   });
 
   return (
@@ -45,31 +58,49 @@ export async function CleanerHome({ name }: { name: string | null }) {
         </div>
       ) : (
         <div className="stack">
-          {tubs.map((p) => (
-            <Link
-              key={p.id}
-              href={`/p/${p.id}/new`}
-              className="card card-link pad spread"
-              style={{ alignItems: "center" }}
-            >
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 17 }}>{p.name}</div>
-                {p.address && (
-                  <div className="small dim" style={{ marginTop: 2 }}>
-                    {p.address}
-                  </div>
+          {tubs.map((p) => {
+            const captureHref = p.draftId
+              ? `/p/${p.id}/new?turnover=${p.draftId}`
+              : `/p/${p.id}/new`;
+            const captureLabel = p.draftId ? "Resume turnover" : "Capture";
+
+            return (
+              <div key={p.id} className="stack" style={{ gap: 8 }}>
+                {p.draftId && (
+                  <Link
+                    href={captureHref}
+                    className="note"
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    Turnover in progress —{" "}
+                    <strong style={{ color: "var(--text-hi)" }}>resume →</strong>
+                  </Link>
                 )}
-                <div className="small muted" style={{ marginTop: 6 }}>
-                  {p.lastAt
-                    ? `Last captured ${timeAgo(p.lastAt)}`
-                    : "Not captured yet"}
-                </div>
+                <Link
+                  href={captureHref}
+                  className="card card-link pad spread"
+                  style={{ alignItems: "center" }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 17 }}>{p.name}</div>
+                    {p.address && (
+                      <div className="small dim" style={{ marginTop: 2 }}>
+                        {p.address}
+                      </div>
+                    )}
+                    <div className="small muted" style={{ marginTop: 6 }}>
+                      {p.lastAt
+                        ? `Last captured ${timeAgo(p.lastAt)}`
+                        : "Not captured yet"}
+                    </div>
+                  </div>
+                  <span className="btn primary" aria-hidden="true">
+                    <Icon name="camera" size={16} /> {captureLabel}
+                  </span>
+                </Link>
               </div>
-              <span className="btn primary" aria-hidden="true">
-                <Icon name="camera" size={16} /> Capture
-              </span>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

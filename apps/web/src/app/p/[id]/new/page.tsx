@@ -1,13 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
+import { ensureDraftTurnoverAction } from "@/lib/actions/turnover";
 import CaptureWizard from "./CaptureWizard";
 
 export default async function NewTurnoverPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ turnover?: string }>;
 }) {
   const { id: propertyId } = await params;
+  const { turnover: resumeTurnoverId } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -27,10 +31,17 @@ export default async function NewTurnoverPage({
   });
   if (!canCapture) redirect(`/p/${propertyId}`);
 
+  const initialDraft = await ensureDraftTurnoverAction(
+    propertyId,
+    resumeTurnoverId ?? null
+  );
+
   return (
     <CaptureWizard
       propertyId={property.id}
       propertyName={property.name}
+      initialDraft={initialDraft}
+      resumeTurnoverId={resumeTurnoverId ?? null}
     />
   );
 }
