@@ -23,7 +23,7 @@ import {
   type CleaningStepCode,
   type PhotoSlot,
 } from "@/lib/types";
-import { photoKey, REQUIRED_LOCK_PHOTOS } from "@/lib/capture-v2";
+import { photoKey, REQUIRED_LOCK_PHOTOS, computeInitialStep, CAPTURE_STEP_BEFORE, CAPTURE_STEP_WATER, CAPTURE_STEP_AFTER_START, CAPTURE_STEP_SUBMIT } from "@/lib/capture-v2";
 import { slotTint } from "@/lib/format";
 import { Icon } from "@/components/Icon";
 import { track } from "@/lib/analytics";
@@ -56,10 +56,10 @@ interface Props {
 }
 
 const AFTER_COUNT = CAPTURE_V2_AFTER_SLOTS.length;
-const STEP_BEFORE = 0;
-const STEP_WATER = 1;
-const STEP_AFTER_START = 2;
-const STEP_SUBMIT = STEP_AFTER_START + AFTER_COUNT;
+const STEP_BEFORE = CAPTURE_STEP_BEFORE;
+const STEP_WATER = CAPTURE_STEP_WATER;
+const STEP_AFTER_START = CAPTURE_STEP_AFTER_START;
+const STEP_SUBMIT = CAPTURE_STEP_SUBMIT;
 
 function defaultCleaningSteps(steps: CleaningStepCode[] | undefined): CleaningStepCode[] {
   if (steps && steps.length > 0) return steps;
@@ -126,7 +126,9 @@ export default function CaptureWizard({
   const [draftError, setDraftError] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftSnapshot | null>(initialDraft ?? null);
 
-  const [step, setStep] = useState(STEP_BEFORE);
+  const [step, setStep] = useState(() =>
+    initialDraft ? computeInitialStep(initialDraft) : STEP_BEFORE
+  );
   const [processing, setProcessing] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -203,7 +205,10 @@ export default function CaptureWizard({
           propertyId,
           resumeTurnoverId ?? null
         );
-        if (!cancelled) applyDraft(snapshot);
+        if (!cancelled) {
+          applyDraft(snapshot);
+          setStep(computeInitialStep(snapshot));
+        }
       } catch (err) {
         if (!cancelled) {
           setDraftError(
