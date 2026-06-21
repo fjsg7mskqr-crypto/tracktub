@@ -2,14 +2,15 @@
 // hints, the proof/turnover display flags, and the #100 chemistry-aware layer
 // all read from here. The spa test set, in buffer-correct order (#170): Total
 // Alkalinity 80–120 ppm (tested first — buffers pH) · pH 7.2–7.8 · Calcium
-// Hardness 150–250 ppm · Sanitizer (chlorine 3–5 ppm; bromine 4–6). Out-of-range
-// renders as a `warn`. (temp_f remains in the schema but is no longer captured.)
+// Hardness 150–250 ppm · Sanitizer (chlorine 3–5 ppm; bromine 4–6) · Temp ≤104°F
+// (capture v2 — soft compliance flag above 104). Out-of-range renders as `warn`.
 
 export const CHEM_THRESHOLDS = {
   alkalinity: { min: 80, max: 120 },
   ph: { min: 7.2, max: 7.8 },
   calciumHardness: { min: 150, max: 250 },
   sanitizerPpm: { min: 3, max: 5 }, // chlorine; bromine runs 4–6
+  tempF: { max: 104 },
 } as const;
 
 export interface WaterReadingValues {
@@ -17,6 +18,7 @@ export interface WaterReadingValues {
   ph: number | null;
   calcium_hardness: number | null;
   sanitizer_ppm: number | null;
+  temp_f?: number | null;
   /** Chemicals added at the turnover (codes — see WATER_TREATMENTS). */
   treatments?: string[] | null;
   /** Free-text amounts / custom treatments. */
@@ -79,13 +81,19 @@ export function sanitizerOutOfRange(ppm: number | null | undefined): boolean {
   );
 }
 
+/** Soft compliance flag — many jurisdictions require logged temp ≤104°F. */
+export function tempHigh(temp: number | null | undefined): boolean {
+  return temp != null && temp > CHEM_THRESHOLDS.tempF.max;
+}
+
 /** True if any provided field is out of range (used to flag a whole reading). */
 export function readingHasFlag(r: WaterReadingValues): boolean {
   return (
     alkalinityOutOfRange(r.total_alkalinity) ||
     phOutOfRange(r.ph) ||
     calciumHardnessOutOfRange(r.calcium_hardness) ||
-    sanitizerOutOfRange(r.sanitizer_ppm)
+    sanitizerOutOfRange(r.sanitizer_ppm) ||
+    tempHigh(r.temp_f)
   );
 }
 
@@ -95,7 +103,8 @@ export function readingHasValues(r: WaterReadingValues): boolean {
     r.total_alkalinity != null ||
     r.ph != null ||
     r.calcium_hardness != null ||
-    r.sanitizer_ppm != null
+    r.sanitizer_ppm != null ||
+    r.temp_f != null
   );
 }
 
