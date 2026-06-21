@@ -13,6 +13,9 @@ const SLOT_ICON: Record<PhotoSlot, IconName> = {
   waterline: "droplet",
   panel: "gauge",
   cover: "shield",
+  full_frame: "camera",
+  water_level: "droplet",
+  issue: "alert",
 };
 
 export function PhotoThumb({
