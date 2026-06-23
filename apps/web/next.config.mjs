@@ -109,6 +109,13 @@ const nextConfig = {
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
+  experimental: {
+    serverActions: {
+      // Default 1MB is far smaller than a real phone-camera photo (the
+      // capture-v2 wizard uploads guided/issue photos via server actions).
+      bodySizeLimit: "10mb",
+    },
+  },
 };
 
 export default withSentryConfig(nextConfig, {
