@@ -110,10 +110,14 @@ const nextConfig = {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
   experimental: {
+    // Default 1MB is far smaller than a real phone-camera photo (the
+    // capture-v2 wizard uploads guided/issue photos via server actions).
+    // Confirmed via node_modules/next/dist/server/config-schema.js that this
+    // key is nested under `experimental` for the installed Next version —
+    // a top-level `serverActions` key is rejected as unrecognized and the
+    // limit silently falls back to the 1MB default.
     serverActions: {
-      // Default 1MB is far smaller than a real phone-camera photo (the
-      // capture-v2 wizard uploads guided/issue photos via server actions).
-      bodySizeLimit: "10mb",
+      bodySizeLimit: "15mb",
     },
   },
 };
