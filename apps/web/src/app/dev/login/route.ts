@@ -29,6 +29,12 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.signInWithPassword(creds);
 
   const url = request.nextUrl.clone();
+  // `next dev`'s request.nextUrl doesn't always reflect the actual Host header
+  // (e.g. when reached over LAN by IP for phone-camera testing) — it can fall
+  // back to localhost, sending the redirect somewhere the client can't reach.
+  // Rebuild the host explicitly from the incoming request.
+  const hostHeader = request.headers.get("host");
+  if (hostHeader) url.host = hostHeader;
   url.pathname = "/";
   url.search = "";
   if (error) {
