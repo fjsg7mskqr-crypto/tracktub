@@ -12,6 +12,7 @@ import {
   type TurnoverChem,
 } from "@/lib/chemistry-rules";
 import { maintenanceStatus, type MaintenanceInput } from "@/lib/maintenance";
+import { asSanitizerType } from "@/lib/chemistry";
 
 export default async function OperationsPage() {
   const membership = await getCurrentMembership();
@@ -25,7 +26,7 @@ export default async function OperationsPage() {
   const { data: properties } = await supabase
     .from("property")
     .select(
-      `id, name, address,
+      `id, name, address, sanitizer_type,
        turnover(
          id, submitted_at_server, status, urgent,
          issue_tag(tag, confirmed_at),
@@ -54,8 +55,10 @@ export default async function OperationsPage() {
         (i) => i.tag === "water_cloudy" && !i.confirmed_at
       ),
     }));
-    const batherLoad = batherLoadActive(chem, now);
-    const chemFlag = chem.length > 0 ? clarityFlag(chem[0]) : null;
+    const sanitizerType = asSanitizerType(p.sanitizer_type);
+    const batherLoad = batherLoadActive(chem, now, sanitizerType);
+    const chemFlag =
+      chem.length > 0 ? clarityFlag(chem[0], sanitizerType) : null;
     const flags = chemFlag ? [chemFlag] : [];
     const readings: TrendReading[] = locked
       .map((t) => {
@@ -90,7 +93,7 @@ export default async function OperationsPage() {
       }).length;
     const attention = batherLoad || chemFlag != null || overdueMaintenance > 0;
 
-    return { ...p, batherLoad, chemFlag, flags, readings, attention, overdueMaintenance };
+    return { ...p, sanitizerType, batherLoad, chemFlag, flags, readings, attention, overdueMaintenance };
   });
 
   // Demo story: tubs needing attention float to the top, then alphabetical.
@@ -160,7 +163,10 @@ export default async function OperationsPage() {
                           {p.address}
                         </div>
                       )}
-                      <ChemReadout reading={p.readings[0] ?? null} />
+                      <ChemReadout
+                        reading={p.readings[0] ?? null}
+                        sanitizerType={p.sanitizerType}
+                      />
                     </div>
                   </div>
                   <div
@@ -198,7 +204,11 @@ export default async function OperationsPage() {
                 <ChemistryAlerts batherLoad={p.batherLoad} flags={p.flags} />
 
                 {p.readings.length > 0 ? (
-                  <ChemistryTrend readings={p.readings} compact />
+                  <ChemistryTrend
+                    readings={p.readings}
+                    compact
+                    sanitizerType={p.sanitizerType}
+                  />
                 ) : (
                   <p className="small dim" style={{ margin: 0 }}>
                     No water readings yet.

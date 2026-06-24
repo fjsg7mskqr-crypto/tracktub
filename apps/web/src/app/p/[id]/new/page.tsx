@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { ensureDraftTurnoverAction } from "@/lib/actions/turnover";
+import { asSanitizerType } from "@/lib/chemistry";
 import CaptureWizard from "./CaptureWizard";
 
 export default async function NewTurnoverPage({
@@ -21,7 +22,7 @@ export default async function NewTurnoverPage({
 
   const { data: property } = await supabase
     .from("property")
-    .select("id, name")
+    .select("id, name, sanitizer_type")
     .eq("id", propertyId)
     .single();
   if (!property) notFound();
@@ -40,6 +41,7 @@ export default async function NewTurnoverPage({
     <CaptureWizard
       propertyId={property.id}
       propertyName={property.name}
+      sanitizerType={asSanitizerType(property.sanitizer_type)}
       initialDraft={initialDraft}
       resumeTurnoverId={resumeTurnoverId ?? null}
     />

@@ -12,6 +12,8 @@ import {
   clarityFlag,
   type TurnoverChem,
 } from "@/lib/chemistry-rules";
+import { asSanitizerType } from "@/lib/chemistry";
+import { PropertySettings } from "./PropertySettings";
 
 export default async function PropertyPage({
   params,
@@ -27,10 +29,12 @@ export default async function PropertyPage({
 
   const { data: property } = await supabase
     .from("property")
-    .select("id, name, address, tub_notes")
+    .select("id, name, address, tub_notes, sanitizer_type")
     .eq("id", propertyId)
     .single();
   if (!property) notFound();
+
+  const sanitizerType = asSanitizerType(property.sanitizer_type);
 
   const { data: canCapture } = await supabase.rpc("app_can_capture_property", {
     p_property: propertyId,
@@ -71,8 +75,9 @@ export default async function PropertyPage({
       (i) => i.tag === "water_cloudy" && !i.confirmed_at
     ),
   }));
-  const batherLoad = batherLoadActive(chem, Date.now());
-  const latestFlag = chem.length > 0 ? clarityFlag(chem[0]) : null;
+  const batherLoad = batherLoadActive(chem, Date.now(), sanitizerType);
+  const latestFlag =
+    chem.length > 0 ? clarityFlag(chem[0], sanitizerType) : null;
   const flags = latestFlag ? [latestFlag] : [];
   const readings: TrendReading[] = list
     .map((t) => {
@@ -130,7 +135,15 @@ export default async function PropertyPage({
         </div>
       )}
 
-      {readings.length > 0 && <ChemistryTrend readings={readings} />}
+      {readings.length > 0 && (
+        <ChemistryTrend readings={readings} sanitizerType={sanitizerType} />
+      )}
+
+      <PropertySettings
+        propertyId={property.id}
+        sanitizerType={sanitizerType}
+        canManage={!!canCapture}
+      />
 
       <h3 style={{ fontSize: 16, marginTop: 6 }}>
         Turnover history{" "}
@@ -169,7 +182,10 @@ export default async function PropertyPage({
                   </div>
                 </div>
                 <div className="when">
-                  <ChemReadout reading={readingOf(t)} />
+                  <ChemReadout
+                    reading={readingOf(t)}
+                    sanitizerType={sanitizerType}
+                  />
                 </div>
                 <div className="badges">
                   {t.urgent && <span className="spill urgent">Urgent</span>}

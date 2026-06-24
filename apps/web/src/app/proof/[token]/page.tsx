@@ -5,7 +5,7 @@ import { Icon } from "@/components/Icon";
 import { formatDateTime } from "@/lib/format";
 import { WaterReadingCard } from "@/components/WaterReadingCard";
 import { CleaningChecklistCard } from "@/components/CleaningChecklistCard";
-import { readingHasContent } from "@/lib/chemistry";
+import { asSanitizerType, readingHasContent } from "@/lib/chemistry";
 import { buildTurnoverGallery } from "@/lib/turnover-display";
 import TurnoverGallery from "@/app/t/[id]/TurnoverGallery";
 
@@ -22,7 +22,7 @@ export default async function ProofPage({
     .from("turnover")
     .select(
       `id, submitted_at_server, urgent, notes, share_token, cleaning_steps,
-       property:property(name, address),
+       property:property(name, address, sanitizer_type),
        submitter:profile(full_name, email),
        photos:photo(slot, storage_path, phase, caption),
        issues:issue_tag(tag, source, confirmed_at),
@@ -51,6 +51,7 @@ export default async function ProofPage({
   }
 
   const property = Array.isArray(t.property) ? t.property[0] : t.property;
+  const sanitizerType = asSanitizerType(property?.sanitizer_type);
   const submitter = Array.isArray(t.submitter) ? t.submitter[0] : t.submitter;
   const submitterName =
     submitter?.full_name ?? submitter?.email ?? "Staff member";
@@ -165,7 +166,7 @@ export default async function ProofPage({
 
         <div style={{ marginTop: 16 }} className="stack">
           {reading && readingHasContent(reading) && (
-            <WaterReadingCard reading={reading} />
+            <WaterReadingCard reading={reading} sanitizerType={sanitizerType} />
           )}
           <CleaningChecklistCard steps={t.cleaning_steps} />
         </div>
