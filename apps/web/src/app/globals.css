@@ -1028,4 +1028,6 @@ select.input {
 .tgal-shot .cap { position: absolute; left: 8px; bottom: 8px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: rgba(4, 5, 6, .58); backdrop-filter: blur(4px); padding: 3px 7px; border-radius: 6px; }
 .tgal-hero { aspect-ratio: 16 / 9; max-height: 360px; }
 .tgal-hero .cap { font-size: 11px; }
-@media (max-width: 560px) { .tgal-grid { grid-template-columns: repeat(2, 1fr); } }
+.tgal-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.drow2 .dthumb { width: 44px; height: 44px; border-radius: var(--r-xs); object-fit: cover; flex: none; border: 1px solid var(--border); background: var(--surface-2); }
+@media (max-width: 560px) { .tgal-grid { grid-template-columns: repeat(2, 1fr); } .tgal-pair { grid-template-columns: 1fr; } }

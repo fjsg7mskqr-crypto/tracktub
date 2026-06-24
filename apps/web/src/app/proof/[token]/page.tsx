@@ -2,10 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { Seal } from "@/components/Seal";
 import { Icon } from "@/components/Icon";
-import { photoPublicUrl } from "@/lib/supabase/storage";
 import { formatDateTime } from "@/lib/format";
 import { WaterReadingCard } from "@/components/WaterReadingCard";
+import { CleaningChecklistCard } from "@/components/CleaningChecklistCard";
 import { readingHasContent } from "@/lib/chemistry";
+import { buildTurnoverGallery } from "@/lib/turnover-display";
+import TurnoverGallery from "@/app/t/[id]/TurnoverGallery";
 
 export default async function ProofPage({
   params,
@@ -19,12 +21,12 @@ export default async function ProofPage({
   const { data: t } = await supabase
     .from("turnover")
     .select(
-      `id, submitted_at_server, urgent, notes, share_token,
+      `id, submitted_at_server, urgent, notes, share_token, cleaning_steps,
        property:property(name, address),
        submitter:profile(full_name, email),
-       photos:photo(slot, storage_path),
+       photos:photo(slot, storage_path, phase, caption),
        issues:issue_tag(tag, source, confirmed_at),
-       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at, treatments, treatment_note, balanced)`
+       water:water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm, temp_f, recorded_at, treatments, treatment_note, balanced)`
     )
     .eq("share_token", token)
     .eq("status", "submitted_locked")
@@ -33,6 +35,11 @@ export default async function ProofPage({
   if (!t) notFound();
 
   const reading = Array.isArray(t.water) ? t.water[0] : t.water;
+  const gallery = buildTurnoverGallery(t.photos ?? []);
+  const v2 =
+    gallery.moneyPair != null ||
+    gallery.beforeIssue.length > 0 ||
+    gallery.guidedAfter.length > 0;
 
   // Wedge-signal instrumentation (PRD §16): count the recipient open
   // server-side. The RPC validates the token, so anon can't forge events.
@@ -101,23 +108,18 @@ export default async function ProofPage({
             </div>
           </div>
 
-          <div className="photos">
-            {(t.photos ?? [])
-              .filter((ph) => ph.storage_path)
-              .map((ph) => (
-                <img
-                  key={ph.slot}
-                  src={photoPublicUrl(ph.storage_path!)}
-                  alt={ph.slot}
-                  style={{
-                    width: "calc(25% - 6px)",
-                    aspectRatio: "1",
-                    objectFit: "cover",
-                    borderRadius: 8,
-                  }}
-                />
-              ))}
-          </div>
+          {v2 ? (
+            <TurnoverGallery
+              moneyPair={gallery.moneyPair}
+              issuePhotos={gallery.beforeIssue}
+              guidedAfter={gallery.guidedAfter}
+            />
+          ) : (
+            <TurnoverGallery
+              before={gallery.legacyBefore}
+              after={gallery.legacyAfter}
+            />
+          )}
 
           {openIssues.length > 0 ? (
             <div className="note warn">
@@ -161,11 +163,12 @@ export default async function ProofPage({
           )}
         </div>
 
-        {reading && readingHasContent(reading) && (
-          <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 16 }} className="stack">
+          {reading && readingHasContent(reading) && (
             <WaterReadingCard reading={reading} />
-          </div>
-        )}
+          )}
+          <CleaningChecklistCard steps={t.cleaning_steps} />
+        </div>
 
         <p className="tiny dim" style={{ textAlign: "center", marginTop: 16 }}>
           This record was captured through TrackTub and locked at submission.

@@ -36,13 +36,25 @@ export default async function PropertyPage({
     p_property: propertyId,
   });
 
+  const { data: draftTurnover } = await supabase
+    .from("turnover")
+    .select("id")
+    .eq("property_id", propertyId)
+    .eq("status", "draft")
+    .eq("submitter_id", user.id)
+    .maybeSingle();
+
+  const captureHref = draftTurnover
+    ? `/p/${propertyId}/new?turnover=${draftTurnover.id}`
+    : `/p/${propertyId}/new`;
+
   const { data: turnovers } = await supabase
     .from("turnover")
     .select(
       `id, submitted_at_server, urgent, notes, share_token,
        submitter:profile(full_name, email),
        issues:issue_tag(tag, source, confirmed_at),
-       water:water_reading(ph, sanitizer_ppm, temp_f, recorded_at)`
+       water:water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm, recorded_at)`
     )
     .eq("property_id", propertyId)
     .eq("status", "submitted_locked")
@@ -68,9 +80,10 @@ export default async function PropertyPage({
       return r
         ? {
             recorded_at: r.recorded_at,
+            total_alkalinity: r.total_alkalinity,
             ph: r.ph,
+            calcium_hardness: r.calcium_hardness,
             sanitizer_ppm: r.sanitizer_ppm,
-            temp_f: r.temp_f,
           }
         : null;
     })
@@ -92,11 +105,19 @@ export default async function PropertyPage({
           )}
         </div>
         {canCapture && (
-          <Link href={`/p/${propertyId}/new`} className="btn primary">
-            <Icon name="plus" size={15} /> New turnover
+          <Link href={captureHref} className="btn primary">
+            <Icon name={draftTurnover ? "camera" : "plus"} size={15} />{" "}
+            {draftTurnover ? "Resume turnover" : "New turnover"}
           </Link>
         )}
       </div>
+
+      {draftTurnover && canCapture && (
+        <Link href={captureHref} className="note" style={{ textDecoration: "none", color: "inherit" }}>
+          Turnover in progress —{" "}
+          <strong style={{ color: "var(--text-hi)" }}>resume →</strong>
+        </Link>
+      )}
 
       <ChemistryAlerts batherLoad={batherLoad} flags={flags} />
 

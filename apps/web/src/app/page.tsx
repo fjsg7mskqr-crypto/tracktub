@@ -11,6 +11,7 @@ import {
   clarityFlag,
   type TurnoverChem,
 } from "@/lib/chemistry-rules";
+import { pickTurnoverThumbnail } from "@/lib/turnover-display";
 
 type Tone = "ready" | "warn" | "urgent" | "neutral";
 
@@ -35,7 +36,7 @@ export default async function Home() {
          id, submitted_at_server, status, urgent, submitter_id,
          photo(slot, storage_path, phase),
          issue_tag(tag, confirmed_at),
-         water_reading(ph, sanitizer_ppm, temp_f)
+         water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm)
        )`
     )
     .order("created_at");
@@ -131,6 +132,7 @@ export default async function Home() {
       name: p.name,
       address: p.address as string | null,
       last,
+      thumbnail: last ? pickTurnoverThumbnail(last.photo ?? []) : null,
       reading,
       submitter: last ? nameById.get(last.submitter_id) ?? "Unknown" : null,
       tone: tone as Tone,
@@ -192,7 +194,12 @@ export default async function Home() {
           {rows.map((r) => (
             <Link key={r.id} href={`/p/${r.id}`} className={`drow2 t-${r.tone}`}>
               <div className="nmwrap">
-                <span className={`sdot t-${r.tone}`} />
+                {r.thumbnail ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- turnover thumbnail
+                  <img src={r.thumbnail} alt="" className="dthumb" />
+                ) : (
+                  <span className={`sdot t-${r.tone}`} />
+                )}
                 <div>
                   <div className="nm">{r.name}</div>
                   {r.address && <div className="ad">{r.address}</div>}

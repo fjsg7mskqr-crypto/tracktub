@@ -5,16 +5,18 @@ import { Sparkline, type SparkPoint } from "@/components/Sparkline";
 import { formatDateTime } from "@/lib/format";
 import {
   CHEM_THRESHOLDS,
+  alkalinityOutOfRange,
+  calciumHardnessOutOfRange,
   phOutOfRange,
   sanitizerOutOfRange,
-  tempOutOfRange,
 } from "@/lib/chemistry";
 
 export interface TrendReading {
   recorded_at: string;
+  total_alkalinity: number | null;
   ph: number | null;
+  calcium_hardness: number | null;
   sanitizer_ppm: number | null;
-  temp_f: number | null;
 }
 
 function points(
@@ -91,13 +93,22 @@ export function ChemistryTrend({
   if (readings.length === 0) return null;
   const chrono = [...readings].reverse();
 
+  const alkalinityPts = points(
+    chrono,
+    (r) => r.total_alkalinity,
+    alkalinityOutOfRange
+  );
   const phPts = points(chrono, (r) => r.ph, phOutOfRange);
+  const hardnessPts = points(
+    chrono,
+    (r) => r.calcium_hardness,
+    calciumHardnessOutOfRange
+  );
   const sanitizerPts = points(
     chrono,
     (r) => r.sanitizer_ppm,
     sanitizerOutOfRange
   );
-  const tempPts = points(chrono, (r) => r.temp_f, tempOutOfRange);
 
   const metrics = (
     <div
@@ -108,9 +119,27 @@ export function ChemistryTrend({
       }}
     >
       <Metric
+        label="Total Alkalinity"
+        unit="ppm"
+        pts={alkalinityPts}
+        band={{
+          min: CHEM_THRESHOLDS.alkalinity.min,
+          max: CHEM_THRESHOLDS.alkalinity.max,
+        }}
+      />
+      <Metric
         label="pH"
         pts={phPts}
         band={{ min: CHEM_THRESHOLDS.ph.min, max: CHEM_THRESHOLDS.ph.max }}
+      />
+      <Metric
+        label="Calcium Hardness"
+        unit="ppm"
+        pts={hardnessPts}
+        band={{
+          min: CHEM_THRESHOLDS.calciumHardness.min,
+          max: CHEM_THRESHOLDS.calciumHardness.max,
+        }}
       />
       <Metric
         label="Sanitizer"
@@ -121,7 +150,6 @@ export function ChemistryTrend({
           max: CHEM_THRESHOLDS.sanitizerPpm.max,
         }}
       />
-      <Metric label="Temp" unit="°F" pts={tempPts} />
     </div>
   );
 
@@ -143,13 +171,16 @@ export function ChemistryTrend({
             When
           </th>
           <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
+            TA
+          </th>
+          <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
             pH
           </th>
           <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
-            Sanitizer
+            CH
           </th>
           <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
-            Temp
+            Sanitizer
           </th>
         </tr>
       </thead>
@@ -160,16 +191,25 @@ export function ChemistryTrend({
               {formatDateTime(r.recorded_at)}
             </td>
             <td style={{ textAlign: "right", padding: "8px 0" }}>
+              <Cell
+                value={r.total_alkalinity}
+                flagged={alkalinityOutOfRange(r.total_alkalinity)}
+              />
+            </td>
+            <td style={{ textAlign: "right", padding: "8px 0" }}>
               <Cell value={r.ph} flagged={phOutOfRange(r.ph)} />
+            </td>
+            <td style={{ textAlign: "right", padding: "8px 0" }}>
+              <Cell
+                value={r.calcium_hardness}
+                flagged={calciumHardnessOutOfRange(r.calcium_hardness)}
+              />
             </td>
             <td style={{ textAlign: "right", padding: "8px 0" }}>
               <Cell
                 value={r.sanitizer_ppm}
                 flagged={sanitizerOutOfRange(r.sanitizer_ppm)}
               />
-            </td>
-            <td style={{ textAlign: "right", padding: "8px 0" }}>
-              <Cell value={r.temp_f} flagged={tempOutOfRange(r.temp_f)} />
             </td>
           </tr>
         ))}

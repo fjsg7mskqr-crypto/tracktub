@@ -122,9 +122,10 @@ async function makeTurnover(client, { propertyId, orgId, actorId, notes, urgent 
     const { error: wrErr } = await client.from("water_reading").insert({
       turnover_id: t.id,
       property_id: propertyId,
+      total_alkalinity: water.total_alkalinity ?? null,
       ph: water.ph ?? null,
+      calcium_hardness: water.calcium_hardness ?? null,
       sanitizer_ppm: water.sanitizer_ppm ?? null,
-      temp_f: water.temp_f ?? null,
     });
     if (wrErr) throw new Error(`water_reading: ${wrErr.message}`);
   }
@@ -177,9 +178,10 @@ async function histTurnover({ propertyId, submitterId, at, water = null, urgent 
     const { error: wErr } = await admin.from("water_reading").insert({
       turnover_id: t.id,
       property_id: propertyId,
+      total_alkalinity: water.total_alkalinity ?? null,
       ph: water.ph ?? null,
+      calcium_hardness: water.calcium_hardness ?? null,
       sanitizer_ppm: water.sanitizer_ppm ?? null,
-      temp_f: water.temp_f ?? null,
       recorded_at: at,
     });
     if (wErr) throw new Error(`hist water_reading: ${wErr.message}`);
@@ -249,19 +251,19 @@ async function main() {
   await makeTurnover(hc, {
     propertyId: byName["Ridgeline A-Frame"], orgId, actorId: host.id, share: true, opens: 3,
     notes: "Filters rinsed, water clear, cover latched. Guest-ready.",
-    water: { ph: 7.4, sanitizer_ppm: 4, temp_f: 101 },
+    water: { total_alkalinity: 100, ph: 7.4, calcium_hardness: 200, sanitizer_ppm: 4 },
   });
   // Lakeview: back-to-back stays, sanitizer crashed → shock due + low sanitizer.
   await makeTurnover(hc, {
     propertyId: byName["Lakeview Cabin 4"], orgId, actorId: host.id, urgent: true, issue: "water_cloudy",
     notes: "Cloudy after a big group — shocked the tub, will recheck before check-in.",
-    water: { ph: 7.9, sanitizer_ppm: 2, temp_f: 104 },
+    water: { total_alkalinity: 130, ph: 7.9, calcium_hardness: 210, sanitizer_ppm: 2 },
   });
   // Pine Chalet: a single low-sanitizer dip (not back-to-back). Shared + opened.
   await makeTurnover(hc, {
     propertyId: byName["Pine Chalet"], orgId, actorId: host.id, share: true, opens: 2,
     notes: "Routine turnover — sanitizer reading came back low, re-dosing.",
-    water: { ph: 7.3, sanitizer_ppm: 2, temp_f: 100 },
+    water: { total_alkalinity: 90, ph: 7.3, calcium_hardness: 180, sanitizer_ppm: 2 },
   });
 
   // A cleaner-captured turnover on their assigned property (scoped staff capture).
@@ -271,23 +273,23 @@ async function main() {
   await makeTurnover(cc, {
     propertyId: byName["Ridgeline A-Frame"], orgId, actorId: cleaner.id, notify: true,
     notes: "Quick turn between guests — looks good.",
-    water: { ph: 7.5, sanitizer_ppm: 4, temp_f: 100 },
+    water: { total_alkalinity: 105, ph: 7.5, calcium_hardness: 190, sanitizer_ppm: 4 },
   });
 
   // ── Historical readings (admin path, backdated) → real multi-point trends ──
   // Ridgeline: steady, in range.
-  await histTurnover({ propertyId: byName["Ridgeline A-Frame"], submitterId: host.id, at: ago(21 * DAY), water: { ph: 7.4, sanitizer_ppm: 4, temp_f: 101 } });
-  await histTurnover({ propertyId: byName["Ridgeline A-Frame"], submitterId: host.id, at: ago(14 * DAY), water: { ph: 7.5, sanitizer_ppm: 3.5, temp_f: 100 } });
-  await histTurnover({ propertyId: byName["Ridgeline A-Frame"], submitterId: host.id, at: ago(7 * DAY), water: { ph: 7.3, sanitizer_ppm: 4.5, temp_f: 102 } });
+  await histTurnover({ propertyId: byName["Ridgeline A-Frame"], submitterId: host.id, at: ago(21 * DAY), water: { total_alkalinity: 100, ph: 7.4, calcium_hardness: 200, sanitizer_ppm: 4 } });
+  await histTurnover({ propertyId: byName["Ridgeline A-Frame"], submitterId: host.id, at: ago(14 * DAY), water: { total_alkalinity: 110, ph: 7.5, calcium_hardness: 200, sanitizer_ppm: 3.5 } });
+  await histTurnover({ propertyId: byName["Ridgeline A-Frame"], submitterId: host.id, at: ago(7 * DAY), water: { total_alkalinity: 95, ph: 7.3, calcium_hardness: 185, sanitizer_ppm: 4.5 } });
 
   // Lakeview: sanitizer trending down; a 2nd turnover inside 48h drives bather-load.
-  await histTurnover({ propertyId: byName["Lakeview Cabin 4"], submitterId: host.id, at: ago(10 * DAY), water: { ph: 7.6, sanitizer_ppm: 5, temp_f: 102 } });
-  await histTurnover({ propertyId: byName["Lakeview Cabin 4"], submitterId: host.id, at: ago(4 * DAY), water: { ph: 7.7, sanitizer_ppm: 4, temp_f: 103 } });
-  await histTurnover({ propertyId: byName["Lakeview Cabin 4"], submitterId: host.id, at: ago(18 * HOUR), urgent: true, water: { ph: 7.8, sanitizer_ppm: 3, temp_f: 103 } });
+  await histTurnover({ propertyId: byName["Lakeview Cabin 4"], submitterId: host.id, at: ago(10 * DAY), water: { total_alkalinity: 115, ph: 7.6, calcium_hardness: 220, sanitizer_ppm: 5 } });
+  await histTurnover({ propertyId: byName["Lakeview Cabin 4"], submitterId: host.id, at: ago(4 * DAY), water: { total_alkalinity: 120, ph: 7.7, calcium_hardness: 230, sanitizer_ppm: 4 } });
+  await histTurnover({ propertyId: byName["Lakeview Cabin 4"], submitterId: host.id, at: ago(18 * HOUR), urgent: true, water: { total_alkalinity: 125, ph: 7.8, calcium_hardness: 240, sanitizer_ppm: 3 } });
 
   // Pine Chalet: healthy history before today's dip.
-  await histTurnover({ propertyId: byName["Pine Chalet"], submitterId: host.id, at: ago(16 * DAY), water: { ph: 7.5, sanitizer_ppm: 4, temp_f: 101 } });
-  await histTurnover({ propertyId: byName["Pine Chalet"], submitterId: host.id, at: ago(9 * DAY), water: { ph: 7.4, sanitizer_ppm: 3.5, temp_f: 100 } });
+  await histTurnover({ propertyId: byName["Pine Chalet"], submitterId: host.id, at: ago(16 * DAY), water: { total_alkalinity: 108, ph: 7.5, calcium_hardness: 205, sanitizer_ppm: 4 } });
+  await histTurnover({ propertyId: byName["Pine Chalet"], submitterId: host.id, at: ago(9 * DAY), water: { total_alkalinity: 100, ph: 7.4, calcium_hardness: 195, sanitizer_ppm: 3.5 } });
 
   console.log("Seeded demo workspace 'Cascade Stays':");
   console.log(`  host:    ${HOST.email}  /  ${HOST.password}`);
