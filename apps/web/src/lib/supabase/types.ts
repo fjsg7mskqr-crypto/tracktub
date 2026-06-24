@@ -531,6 +531,7 @@ export type Database = {
           lng: number | null
           name: string
           org_id: string
+          sanitizer_type: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes: string | null
         }
         Insert: {
@@ -542,6 +543,7 @@ export type Database = {
           lng?: number | null
           name: string
           org_id: string
+          sanitizer_type?: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes?: string | null
         }
         Update: {
@@ -553,6 +555,7 @@ export type Database = {
           lng?: number | null
           name?: string
           org_id?: string
+          sanitizer_type?: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes?: string | null
         }
         Relationships: [
@@ -948,6 +951,7 @@ export type Database = {
         | "full_frame"
         | "water_level"
         | "issue"
+      sanitizer_type: "chlorine" | "bromine"
       scheduled_item_kind: "turnover" | "maintenance" | "custom"
       scheduled_item_source: "manual" | "auto"
       scheduled_item_status: "scheduled" | "done" | "skipped"

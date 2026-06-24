@@ -6,7 +6,7 @@ import { Seal } from "@/components/Seal";
 import { formatDateTime } from "@/lib/format";
 import { WaterReadingCard } from "@/components/WaterReadingCard";
 import { CleaningChecklistCard } from "@/components/CleaningChecklistCard";
-import { readingHasContent } from "@/lib/chemistry";
+import { asSanitizerType, readingHasContent } from "@/lib/chemistry";
 import { buildTurnoverGallery } from "@/lib/turnover-display";
 import ProofActions from "./ProofActions";
 import TurnoverGallery from "./TurnoverGallery";
@@ -27,7 +27,7 @@ export default async function TurnoverPage({
     .from("turnover")
     .select(
       `id, submitted_at_server, urgent, notes, share_token, status, cleaning_steps,
-       property:property(id, name, address),
+       property:property(id, name, address, sanitizer_type),
        submitter:profile(full_name, email),
        photos:photo(slot, storage_path, confirmed_tags, phase, caption),
        issues:issue_tag(tag, source, confirmed_at),
@@ -38,6 +38,7 @@ export default async function TurnoverPage({
   if (!t) notFound();
 
   const property = Array.isArray(t.property) ? t.property[0] : t.property;
+  const sanitizerType = asSanitizerType(property?.sanitizer_type);
   const submitter = Array.isArray(t.submitter) ? t.submitter[0] : t.submitter;
   const submitterName = submitter?.full_name ?? submitter?.email ?? "Unknown";
   const openIssues = (t.issues ?? []).filter((i) => !i.confirmed_at);
@@ -97,7 +98,7 @@ export default async function TurnoverPage({
       )}
 
       {reading && readingHasContent(reading) && (
-        <WaterReadingCard reading={reading} />
+        <WaterReadingCard reading={reading} sanitizerType={sanitizerType} />
       )}
 
       <CleaningChecklistCard steps={t.cleaning_steps} />

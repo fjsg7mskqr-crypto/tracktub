@@ -5,10 +5,14 @@ import { Sparkline, type SparkPoint } from "@/components/Sparkline";
 import { formatDateTime } from "@/lib/format";
 import {
   CHEM_THRESHOLDS,
+  DEFAULT_SANITIZER_TYPE,
   alkalinityOutOfRange,
   calciumHardnessOutOfRange,
   phOutOfRange,
+  sanitizerBand,
+  sanitizerLabel,
   sanitizerOutOfRange,
+  type SanitizerType,
 } from "@/lib/chemistry";
 
 export interface TrendReading {
@@ -86,12 +90,16 @@ function Cell({ value, flagged }: { value: number | null; flagged: boolean }) {
 export function ChemistryTrend({
   readings,
   compact = false,
+  sanitizerType = DEFAULT_SANITIZER_TYPE,
 }: {
   readings: TrendReading[];
   compact?: boolean;
+  sanitizerType?: SanitizerType;
 }) {
   if (readings.length === 0) return null;
   const chrono = [...readings].reverse();
+  const sanBand = sanitizerBand(sanitizerType);
+  const sanLabel = sanitizerLabel(sanitizerType);
 
   const alkalinityPts = points(
     chrono,
@@ -104,10 +112,8 @@ export function ChemistryTrend({
     (r) => r.calcium_hardness,
     calciumHardnessOutOfRange
   );
-  const sanitizerPts = points(
-    chrono,
-    (r) => r.sanitizer_ppm,
-    sanitizerOutOfRange
+  const sanitizerPts = points(chrono, (r) => r.sanitizer_ppm, (v) =>
+    sanitizerOutOfRange(v, sanitizerType)
   );
 
   const metrics = (
@@ -142,13 +148,10 @@ export function ChemistryTrend({
         }}
       />
       <Metric
-        label="Sanitizer"
+        label={sanLabel}
         unit="ppm"
         pts={sanitizerPts}
-        band={{
-          min: CHEM_THRESHOLDS.sanitizerPpm.min,
-          max: CHEM_THRESHOLDS.sanitizerPpm.max,
-        }}
+        band={{ min: sanBand.min, max: sanBand.max }}
       />
     </div>
   );
@@ -180,7 +183,7 @@ export function ChemistryTrend({
             CH
           </th>
           <th style={{ ...thLabel, textAlign: "right", padding: "6px 0" }}>
-            Sanitizer
+            {sanLabel}
           </th>
         </tr>
       </thead>
@@ -208,7 +211,7 @@ export function ChemistryTrend({
             <td style={{ textAlign: "right", padding: "8px 0" }}>
               <Cell
                 value={r.sanitizer_ppm}
-                flagged={sanitizerOutOfRange(r.sanitizer_ppm)}
+                flagged={sanitizerOutOfRange(r.sanitizer_ppm, sanitizerType)}
               />
             </td>
           </tr>

@@ -11,6 +11,7 @@ import {
   clarityFlag,
   type TurnoverChem,
 } from "@/lib/chemistry-rules";
+import { asSanitizerType } from "@/lib/chemistry";
 import { pickTurnoverThumbnail } from "@/lib/turnover-display";
 
 type Tone = "ready" | "warn" | "urgent" | "neutral";
@@ -31,7 +32,7 @@ export default async function Home() {
   const { data: properties } = await supabase
     .from("property")
     .select(
-      `id, name, address,
+      `id, name, address, sanitizer_type,
        turnover(
          id, submitted_at_server, status, urgent, submitter_id,
          photo(slot, storage_path, phase),
@@ -81,8 +82,9 @@ export default async function Home() {
         (i) => i.tag === "water_cloudy" && !i.confirmed_at
       ),
     }));
-    const batherLoad = batherLoadActive(chem, now);
-    const flag = chem.length ? clarityFlag(chem[0]) : null;
+    const sanitizerType = asSanitizerType(p.sanitizer_type);
+    const batherLoad = batherLoadActive(chem, now, sanitizerType);
+    const flag = chem.length ? clarityFlag(chem[0], sanitizerType) : null;
     const reading = last
       ? Array.isArray(last.water_reading)
         ? last.water_reading[0]
@@ -134,6 +136,7 @@ export default async function Home() {
       last,
       thumbnail: last ? pickTurnoverThumbnail(last.photo ?? []) : null,
       reading,
+      sanitizerType,
       submitter: last ? nameById.get(last.submitter_id) ?? "Unknown" : null,
       tone: tone as Tone,
       badges,
@@ -210,7 +213,10 @@ export default async function Home() {
                   <>
                     {timeAgo(r.last.submitted_at_server)}{" "}
                     <span className="who">· {r.submitter}</span>
-                    <ChemReadout reading={r.reading} />
+                    <ChemReadout
+                      reading={r.reading}
+                      sanitizerType={r.sanitizerType}
+                    />
                   </>
                 ) : (
                   <span className="who">No turnovers yet</span>

@@ -2,14 +2,62 @@
 // hints, the proof/turnover display flags, and the #100 chemistry-aware layer
 // all read from here. The spa test set, in buffer-correct order (#170): Total
 // Alkalinity 80–120 ppm (tested first — buffers pH) · pH 7.2–7.8 · Calcium
-// Hardness 150–250 ppm · Sanitizer (chlorine 3–5 ppm; bromine 4–6) · Temp ≤104°F
-// (capture v2 — soft compliance flag above 104). Out-of-range renders as `warn`.
+// Hardness 150–250 ppm · Sanitizer (type-aware — see SANITIZER_BANDS) · Temp
+// ≤104°F (capture v2 — soft compliance flag above 104). Out-of-range renders as
+// `warn`.
+
+// Per-property sanitizer type (#178). A tub runs either chlorine or bromine;
+// the healthy residual band differs, so the reading is labelled and flagged
+// against the right target band per property.
+export type SanitizerType = "chlorine" | "bromine";
+
+export const SANITIZER_TYPES: readonly SanitizerType[] = [
+  "chlorine",
+  "bromine",
+] as const;
+
+export const DEFAULT_SANITIZER_TYPE: SanitizerType = "chlorine";
+
+// Healthy free-sanitizer residual bands (ppm), per type (#178):
+//   Chlorine 1–3 ppm · Bromine 3–5 ppm.
+export const SANITIZER_BANDS: Record<
+  SanitizerType,
+  { min: number; max: number }
+> = {
+  chlorine: { min: 1, max: 3 },
+  bromine: { min: 3, max: 5 },
+};
+
+const SANITIZER_LABELS: Record<SanitizerType, string> = {
+  chlorine: "Chlorine",
+  bromine: "Bromine",
+};
+
+/** Normalise an untrusted value to a known sanitizer type (default chlorine). */
+export function asSanitizerType(value: unknown): SanitizerType {
+  return value === "bromine" ? "bromine" : DEFAULT_SANITIZER_TYPE;
+}
+
+/** Healthy residual band for a property's sanitizer type. */
+export function sanitizerBand(
+  type: SanitizerType = DEFAULT_SANITIZER_TYPE
+): { min: number; max: number } {
+  return SANITIZER_BANDS[type];
+}
+
+/** Display name for the sanitizer field, per the property's type. */
+export function sanitizerLabel(
+  type: SanitizerType = DEFAULT_SANITIZER_TYPE
+): string {
+  return SANITIZER_LABELS[type];
+}
 
 export const CHEM_THRESHOLDS = {
   alkalinity: { min: 80, max: 120 },
   ph: { min: 7.2, max: 7.8 },
   calciumHardness: { min: 150, max: 250 },
-  sanitizerPpm: { min: 3, max: 5 }, // chlorine; bromine runs 4–6
+  /** @deprecated chlorine band — use `sanitizerBand(type)` for type-awareness (#178). */
+  sanitizerPpm: SANITIZER_BANDS.chlorine,
   tempF: { max: 104 },
 } as const;
 
@@ -68,17 +116,21 @@ export function calciumHardnessOutOfRange(
   );
 }
 
-/** Below the minimum — the actionable case (#100 re-shock prompt). */
-export function sanitizerLow(ppm: number | null | undefined): boolean {
-  return ppm != null && ppm < CHEM_THRESHOLDS.sanitizerPpm.min;
+/** Below the minimum for the property's sanitizer type — the actionable case
+ *  (#100 re-shock prompt). Type defaults to chlorine when unknown (#178). */
+export function sanitizerLow(
+  ppm: number | null | undefined,
+  type: SanitizerType = DEFAULT_SANITIZER_TYPE
+): boolean {
+  return ppm != null && ppm < sanitizerBand(type).min;
 }
 
-export function sanitizerOutOfRange(ppm: number | null | undefined): boolean {
-  return (
-    ppm != null &&
-    (ppm < CHEM_THRESHOLDS.sanitizerPpm.min ||
-      ppm > CHEM_THRESHOLDS.sanitizerPpm.max)
-  );
+export function sanitizerOutOfRange(
+  ppm: number | null | undefined,
+  type: SanitizerType = DEFAULT_SANITIZER_TYPE
+): boolean {
+  const band = sanitizerBand(type);
+  return ppm != null && (ppm < band.min || ppm > band.max);
 }
 
 /** Soft compliance flag — many jurisdictions require logged temp ≤104°F. */
@@ -86,13 +138,17 @@ export function tempHigh(temp: number | null | undefined): boolean {
   return temp != null && temp > CHEM_THRESHOLDS.tempF.max;
 }
 
-/** True if any provided field is out of range (used to flag a whole reading). */
-export function readingHasFlag(r: WaterReadingValues): boolean {
+/** True if any provided field is out of range (used to flag a whole reading).
+ *  Sanitizer is flagged against the property's type band (#178). */
+export function readingHasFlag(
+  r: WaterReadingValues,
+  sanitizerType: SanitizerType = DEFAULT_SANITIZER_TYPE
+): boolean {
   return (
     alkalinityOutOfRange(r.total_alkalinity) ||
     phOutOfRange(r.ph) ||
     calciumHardnessOutOfRange(r.calcium_hardness) ||
-    sanitizerOutOfRange(r.sanitizer_ppm) ||
+    sanitizerOutOfRange(r.sanitizer_ppm, sanitizerType) ||
     tempHigh(r.temp_f)
   );
 }
