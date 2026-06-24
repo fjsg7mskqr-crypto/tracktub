@@ -1,38 +1,24 @@
 import path from "node:path";
 import { withSentryConfig } from "@sentry/nextjs";
 
-const isDev = process.env.NODE_ENV === "development";
+// NOTE: cleanEnv and sentryCspReportUri below intentionally duplicate logic
+// from src/lib/csp.ts (getCspReportUri / cleanEnv). next.config.mjs is
+// executed by Node.js at build time before TypeScript transpilation, so it
+// cannot import from src/. If the DSN fallback or parsing logic ever changes,
+// update BOTH this file AND src/lib/csp.ts to keep them in sync.
 
 /** Whitespace-stripped env read (same repair as src/lib/env.ts — a pasted
- *  value can arrive line-wrapped and the stray bytes would corrupt the CSP). */
+ *  value can arrive line-wrapped and the stray bytes would corrupt the DSN). */
 function cleanEnv(name) {
   const stripped = (process.env[name] ?? "").replace(/\s/g, "");
   return stripped === "" ? undefined : stripped;
 }
 
-/** The only cross-origin traffic today is the Supabase project (auth + data,
- *  https for REST and wss for realtime). Derived from env so the policy follows
- *  the project without a code change; absent locally the app is same-origin only. */
-function connectSrc() {
-  const sources = ["'self'"];
-  const supabaseUrl = cleanEnv("NEXT_PUBLIC_SUPABASE_URL");
-  if (supabaseUrl) {
-    try {
-      const { origin } = new URL(supabaseUrl);
-      sources.push(origin, origin.replace(/^https:/, "wss:"));
-    } catch {
-      // Malformed URL: fall back to same-origin; data clients fail loudly via getEnv().
-    }
-  }
-  // Webpack HMR in `next dev` talks over a websocket to the dev server.
-  if (isDev) sources.push("ws:");
-  return sources.join(" ");
-}
-
 /** Sentry's Security-Header report endpoint, derived from the same DSN the
- *  browser SDK uses (env-overridable, with the baked fallback). This is what
- *  makes the Report-Only burn-in (#38) measurable: violations land in Sentry
- *  instead of only users' consoles. */
+ *  browser SDK uses (env-overridable, with the baked fallback). The CSP itself
+ *  is built per-request by middleware (src/middleware.ts + src/lib/csp.ts),
+ *  which uses the same logic. This function exists here only to supply the
+ *  static Reporting-Endpoints header (Chrome's modern Reporting API). */
 function sentryCspReportUri() {
   const dsn =
     cleanEnv("NEXT_PUBLIC_SENTRY_DSN") ??
@@ -47,44 +33,15 @@ function sentryCspReportUri() {
   }
 }
 
-/** Report-Only while we burn in (issue #38); enforcement is tracked in #41.
- *  Demo photos are data:/blob: URLs and fonts are self-hosted via next/font,
- *  so the allowlist stays tight. `frame-ancestors` only bites once enforced —
- *  X-Frame-Options below covers clickjacking in the meantime. Violations are
- *  reported to Sentry via report-uri (Safari/Firefox) + report-to (Chrome,
- *  paired with the Reporting-Endpoints header below). */
-function contentSecurityPolicy(reportUri) {
-  const directives = [
-    "default-src 'self'",
-    // Next.js injects inline bootstrap scripts; dev additionally needs eval for
-    // react-refresh. Nonce-based script-src lands with enforcement (#41).
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self'",
-    // Sentry session replay records via a worker created from a blob: URL.
-    "worker-src 'self' blob:",
-    `connect-src ${connectSrc()}`,
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-  ];
-  if (reportUri) {
-    directives.push(`report-uri ${reportUri}`, "report-to csp-endpoint");
-  }
-  return directives.join("; ");
-}
-
 const cspReportUri = sentryCspReportUri();
 
+// The enforcing Content-Security-Policy header is generated per-request by
+// middleware (src/middleware.ts) with a unique nonce, so it does NOT appear
+// here. Static security headers that don't require per-request values stay.
 const securityHeaders = [
-  {
-    key: "Content-Security-Policy-Report-Only",
-    value: contentSecurityPolicy(cspReportUri),
-  },
-  // Names the `report-to csp-endpoint` group referenced by the CSP above, for
-  // browsers on the Reporting API (Chrome). report-uri covers the rest.
+  // Names the `report-to csp-endpoint` group referenced by the per-request CSP
+  // in middleware, for browsers on the Reporting API (Chrome). The legacy
+  // report-uri directive in the CSP covers Safari and Firefox.
   ...(cspReportUri
     ? [{ key: "Reporting-Endpoints", value: `csp-endpoint="${cspReportUri}"` }]
     : []),
@@ -108,6 +65,17 @@ const nextConfig = {
   outputFileTracingRoot: path.join(import.meta.dirname),
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
+  },
+  experimental: {
+    // Default 1MB is far smaller than a real phone-camera photo (the
+    // capture-v2 wizard uploads guided/issue photos via server actions).
+    // Confirmed via node_modules/next/dist/server/config-schema.js that this
+    // key is nested under `experimental` for the installed Next version —
+    // a top-level `serverActions` key is rejected as unrecognized and the
+    // limit silently falls back to the 1MB default.
+    serverActions: {
+      bodySizeLimit: "15mb",
+    },
   },
 };
 

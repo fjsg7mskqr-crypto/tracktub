@@ -39,9 +39,27 @@ const PUBLIC_PATHS = [
 /**
  * Refreshes the Supabase session on every request and gates protected routes.
  * Must run before any data access so the cookie-borne session stays fresh.
+ *
+ * `extraRequestHeaders` are merged into the forwarded request headers so that
+ * server components can read them via `headers()`. Used by the outer middleware
+ * to propagate `x-nonce` (for the CSP nonce) to the Next.js render layer,
+ * which applies it automatically to its inline bootstrap scripts.
  */
-export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+export async function updateSession(
+  request: NextRequest,
+  extraRequestHeaders?: Record<string, string>,
+) {
+  // Build the headers that Next.js will forward to server components.
+  // Copying all existing headers preserves cookies/auth state; extra headers
+  // (e.g. x-nonce) are layered on top.
+  const forwardHeaders = new Headers(request.headers);
+  if (extraRequestHeaders) {
+    for (const [k, v] of Object.entries(extraRequestHeaders)) {
+      forwardHeaders.set(k, v);
+    }
+  }
+
+  let response = NextResponse.next({ request: { headers: forwardHeaders } });
 
   // Rate-limit the abuse-prone public surfaces (login, auth callback, proof
   // links) before any other work (issue #42). No-op until Upstash is configured,
@@ -82,7 +100,7 @@ export async function updateSession(request: NextRequest) {
         getAll: () => request.cookies.getAll(),
         setAll: (toSet) => {
           toSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = NextResponse.next({ request: { headers: forwardHeaders } });
           toSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
           );

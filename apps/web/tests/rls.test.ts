@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import type { Database } from "@/lib/supabase/types";
@@ -1181,7 +1181,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
           org_id: orgA,
           kind: "custom",
           title: "Order chlorine",
-          scheduled_for: "2026-06-20",
+          scheduled_for: "2099-06-20",
         })
         .select("id")
         .single();
@@ -1195,7 +1195,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
         org_id: orgA,
         kind: "turnover",
         title: "Turnover",
-        scheduled_for: "2026-06-21",
+        scheduled_for: "2099-06-21",
       });
       expect(error).toBeNull();
     });
@@ -1206,7 +1206,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
         org_id: orgA,
         kind: "custom",
         title: "Sneaky",
-        scheduled_for: "2026-06-22",
+        scheduled_for: "2099-06-22",
       });
       expect(error).not.toBeNull(); // RLS denies
     });
@@ -1217,7 +1217,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
         org_id: orgB, // wrong org for this property
         kind: "custom",
         title: "Spoof",
-        scheduled_for: "2026-06-23",
+        scheduled_for: "2099-06-23",
       });
       expect(error).not.toBeNull(); // with-check denies
     });
@@ -1230,7 +1230,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
           org_id: orgA,
           kind: "custom",
           title: "Private",
-          scheduled_for: "2026-06-24",
+          scheduled_for: "2099-06-24",
         })
         .select("id")
         .single();
@@ -1243,6 +1243,18 @@ describe.skipIf(!ready)("RLS isolation", () => {
   });
 
   describe("fulfill_scheduled_turnover", () => {
+    // Each case seeds its own scheduled_item(s) on propAssigned and asserts
+    // against the RPC's ±2-day capture-date window. Clear leftover rows before
+    // every case so no prior case's row is visible here — otherwise a stray
+    // near-today row could be matched by the "no-op" case (which expects zero
+    // matches), making the suite flake as the real calendar date moves.
+    beforeEach(async () => {
+      await admin
+        .from("scheduled_item")
+        .delete()
+        .eq("property_id", propAssigned);
+    });
+
     async function lockedTurnoverToday() {
       const { data } = await admin
         .from("turnover")

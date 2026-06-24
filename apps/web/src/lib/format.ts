@@ -45,6 +45,9 @@ const SLOT_TINT: Record<PhotoSlot, [string, string]> = {
   waterline: ["#0891b2", "#0e7490"],
   panel: ["#334155", "#1e293b"],
   cover: ["#475569", "#334155"],
+  full_frame: ["#0e7490", "#155e63"],
+  water_level: ["#0891b2", "#0e7490"],
+  issue: ["#7f1d1d", "#450a0a"],
 };
 
 export function slotTint(slot: PhotoSlot): [string, string] {
