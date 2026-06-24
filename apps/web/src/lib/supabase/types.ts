@@ -932,6 +932,10 @@ export type Database = {
           email: string
         }[]
       }
+      nudge_stale_draft_turnovers: {
+        Args: { p_threshold?: unknown }
+        Returns: number
+      }
       record_proof_open: { Args: { p_share_token: string }; Returns: undefined }
     }
     Enums: {
@@ -939,7 +943,7 @@ export type Database = {
       maintenance_recurrence_kind: "time" | "turnover"
       maintenance_recurrence_unit: "day" | "week" | "month"
       member_role: "operator" | "staff" | "owner"
-      notification_type: "turnover_ready" | "assigned"
+      notification_type: "turnover_ready" | "assigned" | "draft_reminder"
       photo_slot:
         | "wide"
         | "waterline"
@@ -1086,7 +1090,7 @@ export const Constants = {
       maintenance_recurrence_kind: ["time", "turnover"],
       maintenance_recurrence_unit: ["day", "week", "month"],
       member_role: ["operator", "staff", "owner"],
-      notification_type: ["turnover_ready", "assigned"],
+      notification_type: ["turnover_ready", "assigned", "draft_reminder"],
       photo_slot: [
         "wide",
         "waterline",

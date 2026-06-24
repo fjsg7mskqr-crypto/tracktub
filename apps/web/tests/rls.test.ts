@@ -1090,6 +1090,99 @@ describe.skipIf(!ready)("RLS isolation", () => {
     });
   });
 
+  // ── Unfinished-turnover reminder (issue #177) ──────────────────────────────
+  // nudge_stale_draft_turnovers() is a cron-only SECURITY DEFINER writer: it
+  // nudges the submitter of any `draft` turnover older than the threshold, once.
+  describe("Unfinished-turnover draft nudge", () => {
+    it("nudges the submitter of a stale draft, and the submitter sees their nudge", async () => {
+      // A draft older than the threshold (force created_at into the past).
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "draft",
+          share_token: randomUUID(),
+          created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        })
+        .select("id")
+        .single();
+
+      // Run the job (service-role; the function is cron/owner-only).
+      const { data: nudged, error } = await admin.rpc(
+        "nudge_stale_draft_turnovers"
+      );
+      expect(error).toBeNull();
+      expect(nudged ?? 0).toBeGreaterThanOrEqual(1);
+
+      // The submitter (cleaner) sees exactly their own draft_reminder.
+      const { data: rows } = await staffA.client
+        .from("notification")
+        .select("id, user_id, type, message")
+        .eq("turnover_id", to!.id);
+      expect(rows).toHaveLength(1);
+      expect(rows![0].user_id).toBe(staffA.id);
+      expect(rows![0].type).toBe("draft_reminder");
+      expect(rows![0].message).toContain("unfinished");
+
+      // No other org member is nudged about this draft.
+      const { data: otherRows } = await operatorB.client
+        .from("notification")
+        .select("id")
+        .eq("turnover_id", to!.id);
+      expect(otherRows ?? []).toHaveLength(0);
+    });
+
+    it("does not nudge a fresh draft below the threshold", async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "draft",
+          share_token: randomUUID(),
+        })
+        .select("id")
+        .single();
+
+      await admin.rpc("nudge_stale_draft_turnovers");
+
+      const { count } = await admin
+        .from("notification")
+        .select("id", { count: "exact", head: true })
+        .eq("turnover_id", to!.id);
+      expect(count).toBe(0);
+    });
+
+    it("nudges each stale draft exactly once across repeat runs (dedupe)", async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: staffA.id,
+          status: "draft",
+          share_token: randomUUID(),
+          created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        })
+        .select("id")
+        .single();
+
+      await admin.rpc("nudge_stale_draft_turnovers");
+      await admin.rpc("nudge_stale_draft_turnovers");
+
+      const { count } = await admin
+        .from("notification")
+        .select("id", { count: "exact", head: true })
+        .eq("turnover_id", to!.id);
+      expect(count).toBe(1);
+    });
+
+    it("an app user cannot invoke the cron-only writer", async () => {
+      const { error } = await staffA.client.rpc("nudge_stale_draft_turnovers");
+      expect(error).not.toBeNull();
+    });
+  });
+
   describe("maintenance_task / maintenance_log", () => {
     it("operator can create a schedule on their property", async () => {
       const { data, error } = await operatorA.client
