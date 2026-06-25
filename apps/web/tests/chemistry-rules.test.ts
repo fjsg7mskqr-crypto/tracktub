@@ -17,19 +17,21 @@ function t(
   return { at: hoursAgo(hAgo), sanitizerPpm, cloudy };
 }
 
-describe("batherLoadActive", () => {
+// Default sanitizer type is chlorine (band 1–3 ppm), so "low" is < 1 ppm and a
+// healthy post-shock residual is ≥ 1 ppm.
+describe("batherLoadActive (default chlorine band 1–3 ppm)", () => {
   const cases: [string, TurnoverChem[], boolean][] = [
     ["no turnovers", [], false],
     ["one recent turnover", [t(2)], false],
     ["two within 48h, latest sanitizer unknown → active", [t(2), t(20)], true],
     [
-      "two within 48h, latest low sanitizer → active",
-      [t(2, 1), t(20, 1)],
+      "two within 48h, latest low sanitizer (0.5) → active",
+      [t(2, 0.5), t(20, 0.5)],
       true,
     ],
     [
-      "two within 48h, latest healthy sanitizer (post-shock) → cleared",
-      [t(2, 4), t(20, 1)],
+      "two within 48h, latest healthy sanitizer (2 ppm, post-shock) → cleared",
+      [t(2, 2), t(20, 0.5)],
       false,
     ],
     ["two but one is older than 48h → inactive", [t(2), t(60)], false],
@@ -46,28 +48,47 @@ describe("batherLoadActive", () => {
   });
 });
 
+describe("batherLoadActive (type-aware, #178)", () => {
+  it("treats 2 ppm as low for bromine (band 3–5) → active", () => {
+    expect(batherLoadActive([t(2, 2), t(20, 2)], NOW, "bromine")).toBe(true);
+  });
+
+  it("treats 2 ppm as healthy for chlorine (band 1–3) → cleared", () => {
+    expect(batherLoadActive([t(2, 2), t(20, 1)], NOW, "chlorine")).toBe(false);
+  });
+
+  it("treats 4 ppm as healthy for bromine → cleared", () => {
+    expect(batherLoadActive([t(2, 4), t(20, 2)], NOW, "bromine")).toBe(false);
+  });
+});
+
 describe("clarityFlag", () => {
   it("flags low sanitizer with a re-shock action", () => {
-    const flag = clarityFlag(t(1, 1));
+    const flag = clarityFlag(t(1, 0.5));
     expect(flag?.reason).toBe("low_sanitizer");
-    expect(flag?.message).toContain("1 ppm");
+    expect(flag?.message).toContain("0.5 ppm");
     expect(flag?.action).toMatch(/re-shock/i);
   });
 
   it("flags cloudy water when sanitizer is fine", () => {
-    const flag = clarityFlag(t(1, 4, true));
+    const flag = clarityFlag(t(1, 2, true));
     expect(flag?.reason).toBe("cloudy");
   });
 
   it("prefers the low-sanitizer reason when both apply", () => {
-    expect(clarityFlag(t(1, 1, true))?.reason).toBe("low_sanitizer");
+    expect(clarityFlag(t(1, 0.5, true))?.reason).toBe("low_sanitizer");
   });
 
   it("returns null for a healthy, clear turnover", () => {
-    expect(clarityFlag(t(1, 4, false))).toBeNull();
+    expect(clarityFlag(t(1, 2, false))).toBeNull();
   });
 
   it("does not flag when sanitizer was not recorded and water is clear", () => {
     expect(clarityFlag(t(1, null, false))).toBeNull();
+  });
+
+  it("is type-aware: 2 ppm is low for bromine but fine for chlorine (#178)", () => {
+    expect(clarityFlag(t(1, 2), "bromine")?.reason).toBe("low_sanitizer");
+    expect(clarityFlag(t(1, 2), "chlorine")).toBeNull();
   });
 });

@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { asSanitizerType } from "@/lib/chemistry";
 
 export type CreatePropertyResult =
   | { ok: true; propertyId: string }
@@ -22,6 +24,7 @@ export async function createPropertyAction(
     ((formData.get("address") as string) ?? "").trim() || null;
   const tubNotes =
     ((formData.get("tub_notes") as string) ?? "").trim() || null;
+  const sanitizerType = asSanitizerType(formData.get("sanitizer_type"));
 
   if (!name) return { ok: false, error: "Property name is required." };
 
@@ -49,6 +52,7 @@ export async function createPropertyAction(
       name,
       address,
       tub_notes: tubNotes,
+      sanitizer_type: sanitizerType,
       org_id: membership.org_id,
     })
     .select("id")
@@ -61,6 +65,32 @@ export async function createPropertyAction(
     };
 
   return { ok: true, propertyId: property.id };
+}
+
+// Per-property settings edit (#178). Currently the sanitizer type — RLS scopes
+// the update to properties the caller can manage, so no extra ownership check is
+// needed here. Returns the saved type so the client can reflect it.
+export async function updatePropertySanitizerTypeAction(
+  propertyId: string,
+  rawType: unknown
+): Promise<{ ok: true; sanitizerType: "chlorine" | "bromine" } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const sanitizerType = asSanitizerType(rawType);
+
+  const { error } = await supabase
+    .from("property")
+    .update({ sanitizer_type: sanitizerType })
+    .eq("id", propertyId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/p/${propertyId}`);
+  return { ok: true, sanitizerType };
 }
 
 // WTP fake-door (PRD §12): logs paid intent when an operator hits the

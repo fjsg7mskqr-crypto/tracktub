@@ -1,4 +1,5 @@
-import { sanitizerLow } from "./chemistry";
+import { DEFAULT_SANITIZER_TYPE, sanitizerLow } from "./chemistry";
+import type { SanitizerType } from "./chemistry";
 
 // Chemistry-aware heuristics (PRD §8.8, issue #100). Sensor-free — they ride on
 // data already captured (#99) plus turnover cadence. Every rule is a single
@@ -33,7 +34,8 @@ export interface TurnoverChem {
  */
 export function batherLoadActive(
   turnovers: TurnoverChem[],
-  nowMs: number
+  nowMs: number,
+  sanitizerType: SanitizerType = DEFAULT_SANITIZER_TYPE
 ): boolean {
   if (turnovers.length === 0) return false;
   const sorted = [...turnovers].sort((a, b) => b.at.localeCompare(a.at));
@@ -46,7 +48,8 @@ export function batherLoadActive(
 
   const latest = sorted[0];
   const postShock =
-    latest.sanitizerPpm != null && !sanitizerLow(latest.sanitizerPpm);
+    latest.sanitizerPpm != null &&
+    !sanitizerLow(latest.sanitizerPpm, sanitizerType);
   return !postShock;
 }
 
@@ -60,8 +63,11 @@ export interface ClarityFlag {
  * Water-clarity flag for a single turnover: a `water_cloudy` tag OR a sanitizer
  * reading below threshold raises an open issue with a recommended action.
  */
-export function clarityFlag(t: TurnoverChem): ClarityFlag | null {
-  if (sanitizerLow(t.sanitizerPpm)) {
+export function clarityFlag(
+  t: TurnoverChem,
+  sanitizerType: SanitizerType = DEFAULT_SANITIZER_TYPE
+): ClarityFlag | null {
+  if (sanitizerLow(t.sanitizerPpm, sanitizerType)) {
     return {
       reason: "low_sanitizer",
       message: `Low sanitizer${t.sanitizerPpm != null ? ` (${t.sanitizerPpm} ppm)` : ""}`,

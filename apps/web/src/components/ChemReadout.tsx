@@ -1,8 +1,10 @@
 import {
+  DEFAULT_SANITIZER_TYPE,
   alkalinityOutOfRange,
   calciumHardnessOutOfRange,
   phOutOfRange,
   sanitizerOutOfRange,
+  type SanitizerType,
 } from "@/lib/chemistry";
 
 /** Compact mono chemistry readout (`.creadout` atom) in buffer-correct order
@@ -12,6 +14,7 @@ import {
  *  reading to show. */
 export function ChemReadout({
   reading,
+  sanitizerType = DEFAULT_SANITIZER_TYPE,
 }: {
   reading: {
     total_alkalinity: number | null;
@@ -19,6 +22,7 @@ export function ChemReadout({
     calcium_hardness: number | null;
     sanitizer_ppm: number | null;
   } | null;
+  sanitizerType?: SanitizerType;
 }) {
   if (
     !reading ||
@@ -49,7 +53,7 @@ export function ChemReadout({
       {cell(
         "San",
         reading.sanitizer_ppm,
-        sanitizerOutOfRange(reading.sanitizer_ppm)
+        sanitizerOutOfRange(reading.sanitizer_ppm, sanitizerType)
       )}
     </div>
   );
