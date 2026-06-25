@@ -20,6 +20,11 @@ describe("blog content", () => {
     expect(getPostBySlug("does-not-exist")).toBeNull();
   });
 
+  it("rejects path traversal in slug", () => {
+    expect(getPostBySlug("../secrets")).toBeNull();
+    expect(getPostBySlug("foo/bar")).toBeNull();
+  });
+
   it("exposes slugs for static generation", () => {
     expect(getPostSlugs()).toContain("str-hot-tub-turnover-checklist");
   });

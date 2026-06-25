@@ -62,6 +62,7 @@ export function getPostSlugs(): string[] {
 }
 
 export function getPostBySlug(slug: string): BlogPost | null {
+  if (!/^[a-z0-9-]+$/.test(slug)) return null;
   const filePath = path.join(CONTENT_DIR, `${slug}.md`);
   if (!fs.existsSync(filePath)) return null;
   const raw = fs.readFileSync(filePath, "utf8");

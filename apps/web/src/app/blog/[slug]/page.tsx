@@ -58,6 +58,7 @@ export default async function BlogPostPage({ params }: Props) {
               year: "numeric",
               month: "long",
               day: "numeric",
+              timeZone: "UTC",
             })}
           </time>
           <span>{post.author ?? "TrackTub Team"}</span>

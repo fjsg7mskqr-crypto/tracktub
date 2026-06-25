@@ -5,8 +5,7 @@
   text-decoration: none;
 }
 
-.tt-blog .navlinks a.active,
-.tt-blog .navlinks Link.active {
+.tt-blog .navlinks a.active {
   color: var(--ink);
 }
 
