@@ -1090,6 +1090,96 @@ describe.skipIf(!ready)("RLS isolation", () => {
     });
   });
 
+  describe("Stale-draft nudge (nudge_stale_draft_turnovers, #177)", () => {
+    // Insert a draft turnover for `submitterId` on propAssigned, backdating
+    // created_at so the 30-minute staleness gate considers it (or not). The
+    // service-role admin client bypasses the server-authoritative trigger, so it
+    // can set submitter_id + created_at explicitly for the harness.
+    async function makeDraft(submitterId: string, ageMinutes: number) {
+      const createdAt = new Date(Date.now() - ageMinutes * 60_000).toISOString();
+      const { data, error } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: submitterId,
+          status: "draft",
+          created_at: createdAt,
+        })
+        .select("id")
+        .single();
+      if (error || !data) throw error ?? new Error("draft insert failed");
+      return data.id;
+    }
+
+    it("is cron-only — anon and authenticated cannot execute it", async () => {
+      const anonClient = createClient<Database>(url!, anon!, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { error: anonErr } = await anonClient.rpc("nudge_stale_draft_turnovers");
+      expect(anonErr).not.toBeNull();
+
+      const { error: authedErr } = await staffA.client.rpc("nudge_stale_draft_turnovers");
+      expect(authedErr).not.toBeNull();
+    });
+
+    it("nudges the submitter of a stale draft, and only the submitter sees it", async () => {
+      const turnoverId = await makeDraft(staffA.id, 45);
+
+      // The cron job runs as the definer/service owner.
+      const { error } = await admin.rpc("nudge_stale_draft_turnovers");
+      expect(error).toBeNull();
+
+      // The submitter (staffA) sees exactly one draft_reminder for this draft.
+      const { data: mine } = await staffA.client
+        .from("notification")
+        .select("id, user_id, type, message")
+        .eq("turnover_id", turnoverId);
+      expect(mine).toHaveLength(1);
+      expect(mine![0].user_id).toBe(staffA.id);
+      expect(mine![0].type).toBe("draft_reminder");
+      expect(mine![0].message).toContain("unfinished");
+
+      // The org operator is NOT notified — no host/operator escalation in v1.
+      const { data: opRows } = await operatorA.client
+        .from("notification")
+        .select("id")
+        .eq("turnover_id", turnoverId);
+      expect(opRows ?? []).toHaveLength(0);
+
+      // A member of another org sees nothing.
+      const { data: otherRows } = await operatorB.client
+        .from("notification")
+        .select("id")
+        .eq("turnover_id", turnoverId);
+      expect(otherRows ?? []).toHaveLength(0);
+    });
+
+    it("does not nudge a fresh draft (under the 30-minute threshold)", async () => {
+      const turnoverId = await makeDraft(staffA.id, 5);
+      await admin.rpc("nudge_stale_draft_turnovers");
+
+      const { count } = await admin
+        .from("notification")
+        .select("id", { count: "exact", head: true })
+        .eq("turnover_id", turnoverId);
+      expect(count).toBe(0);
+    });
+
+    it("is idempotent — running twice nudges a given draft exactly once", async () => {
+      const turnoverId = await makeDraft(staffA.id, 90);
+
+      await admin.rpc("nudge_stale_draft_turnovers");
+      await admin.rpc("nudge_stale_draft_turnovers");
+
+      const { count } = await admin
+        .from("notification")
+        .select("id", { count: "exact", head: true })
+        .eq("turnover_id", turnoverId)
+        .eq("type", "draft_reminder");
+      expect(count).toBe(1);
+    });
+  });
+
   describe("maintenance_task / maintenance_log", () => {
     it("operator can create a schedule on their property", async () => {
       const { data, error } = await operatorA.client
