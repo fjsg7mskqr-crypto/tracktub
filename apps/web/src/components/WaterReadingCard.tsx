@@ -2,12 +2,16 @@ import { Icon } from "@/components/Icon";
 import { Mono } from "@/components/ui";
 import {
   CHEM_THRESHOLDS,
+  DEFAULT_SANITIZER_TYPE,
   alkalinityOutOfRange,
   calciumHardnessOutOfRange,
   phOutOfRange,
+  sanitizerBand,
+  sanitizerLabel,
   sanitizerOutOfRange,
   tempHigh,
   treatmentLabel,
+  type SanitizerType,
   type WaterReadingValues,
 } from "@/lib/chemistry";
 
@@ -59,10 +63,13 @@ function Field({
 export function WaterReadingCard({
   reading,
   heading = "Water — as found",
+  sanitizerType = DEFAULT_SANITIZER_TYPE,
 }: {
   reading: WaterReadingValues;
   heading?: string;
+  sanitizerType?: SanitizerType;
 }) {
+  const sanBand = sanitizerBand(sanitizerType);
   return (
     <div className="card pad stack">
       <div className="spread">
@@ -99,11 +106,11 @@ export function WaterReadingCard({
           hint={`Target ${CHEM_THRESHOLDS.calciumHardness.min}–${CHEM_THRESHOLDS.calciumHardness.max} ppm`}
         />
         <Field
-          label="Sanitizer"
+          label={sanitizerLabel(sanitizerType)}
           value={reading.sanitizer_ppm}
           unit="ppm"
-          flagged={sanitizerOutOfRange(reading.sanitizer_ppm)}
-          hint={`Target ${CHEM_THRESHOLDS.sanitizerPpm.min}–${CHEM_THRESHOLDS.sanitizerPpm.max} ppm`}
+          flagged={sanitizerOutOfRange(reading.sanitizer_ppm, sanitizerType)}
+          hint={`Target ${sanBand.min}–${sanBand.max} ppm`}
         />
         <Field
           label="Temp"

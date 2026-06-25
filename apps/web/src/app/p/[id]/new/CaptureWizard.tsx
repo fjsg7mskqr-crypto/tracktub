@@ -31,12 +31,16 @@ import { Input, Label } from "@/components/ui";
 import { photoPublicUrl } from "@/lib/supabase/storage";
 import {
   CHEM_THRESHOLDS,
+  DEFAULT_SANITIZER_TYPE,
   WATER_TREATMENTS,
   alkalinityOutOfRange,
   calciumHardnessOutOfRange,
   phOutOfRange,
+  sanitizerBand,
+  sanitizerLabel,
   sanitizerOutOfRange,
   tempHigh,
+  type SanitizerType,
 } from "@/lib/chemistry";
 
 const numOrNull = (v: string): number | null => {
@@ -51,6 +55,7 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
 interface Props {
   propertyId: string;
   propertyName: string;
+  sanitizerType?: SanitizerType;
   initialDraft?: DraftSnapshot | null;
   resumeTurnoverId?: string | null;
 }
@@ -114,9 +119,11 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
 export default function CaptureWizard({
   propertyId,
   propertyName,
+  sanitizerType = DEFAULT_SANITIZER_TYPE,
   initialDraft,
   resumeTurnoverId,
 }: Props) {
+  const sanBand = sanitizerBand(sanitizerType);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const guidedFileRef = useRef<HTMLInputElement | null>(null);
@@ -945,24 +952,23 @@ export default function CaptureWizard({
             </div>
             <div>
               <Label htmlFor="sanitizer">
-                Sanitizer — Chlorine/Bromine (ppm)
+                {sanitizerLabel(sanitizerType)} (ppm)
               </Label>
               <Input
                 id="sanitizer"
                 type="number"
                 inputMode="decimal"
                 step="0.1"
-                placeholder={`${CHEM_THRESHOLDS.sanitizerPpm.min}–${CHEM_THRESHOLDS.sanitizerPpm.max} ppm`}
+                placeholder={`${sanBand.min}–${sanBand.max} ppm`}
                 value={sanitizer}
                 onChange={(e) => setSanitizer(e.target.value)}
               />
-              {sanitizerOutOfRange(numOrNull(sanitizer)) && (
+              {sanitizerOutOfRange(numOrNull(sanitizer), sanitizerType) && (
                 <p
                   className="tiny"
                   style={{ color: "var(--pending)", margin: "6px 0 0" }}
                 >
-                  Outside {CHEM_THRESHOLDS.sanitizerPpm.min}–
-                  {CHEM_THRESHOLDS.sanitizerPpm.max} ppm — re-shock and retest.
+                  Outside {sanBand.min}–{sanBand.max} ppm — re-shock and retest.
                 </p>
               )}
             </div>

@@ -96,6 +96,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   if (
     pathname.startsWith("/proof") ||
     pathname.startsWith("/landing") ||
+    pathname.startsWith("/blog") ||
     pathname.startsWith("/invite")
   )
     return <>{children}</>;

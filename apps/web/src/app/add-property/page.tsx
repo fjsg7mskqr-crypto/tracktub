@@ -8,7 +8,20 @@ import {
   joinPaidWaitlistAction,
 } from "@/lib/actions/property";
 import { track } from "@/lib/analytics";
-import { Button, Card, Input, Label, Note, Textarea } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Input,
+  Label,
+  Note,
+  Select,
+  Textarea,
+} from "@/components/ui";
+import {
+  DEFAULT_SANITIZER_TYPE,
+  SANITIZER_BANDS,
+  type SanitizerType,
+} from "@/lib/chemistry";
 
 export default function AddProperty() {
   const router = useRouter();
@@ -16,6 +29,8 @@ export default function AddProperty() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [tubNotes, setTubNotes] = useState("");
+  const [sanitizerType, setSanitizerType] =
+    useState<SanitizerType>(DEFAULT_SANITIZER_TYPE);
   const [error, setError] = useState<string | null>(null);
   const [showWtp, setShowWtp] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -27,6 +42,7 @@ export default function AddProperty() {
     formData.append("name", name.trim());
     formData.append("address", address.trim());
     formData.append("tub_notes", tubNotes.trim());
+    formData.append("sanitizer_type", sanitizerType);
     setError(null);
     startTransition(async () => {
       const result = await createPropertyAction(formData);
@@ -127,6 +143,30 @@ export default function AddProperty() {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           />
+        </div>
+        <div>
+          <Label eyebrow htmlFor="sanitizer_type">
+            Sanitizer type
+          </Label>
+          <Select
+            id="sanitizer_type"
+            value={sanitizerType}
+            onChange={(e) =>
+              setSanitizerType(e.target.value as SanitizerType)
+            }
+          >
+            <option value="chlorine">
+              Chlorine ({SANITIZER_BANDS.chlorine.min}–
+              {SANITIZER_BANDS.chlorine.max} ppm)
+            </option>
+            <option value="bromine">
+              Bromine ({SANITIZER_BANDS.bromine.min}–
+              {SANITIZER_BANDS.bromine.max} ppm)
+            </option>
+          </Select>
+          <div className="tiny dim" style={{ marginTop: 4 }}>
+            Sets the target band the readings panel flags against.
+          </div>
         </div>
         <div>
           <Label eyebrow htmlFor="notes">

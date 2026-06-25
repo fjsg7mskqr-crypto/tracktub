@@ -1,4 +1,5 @@
-const FAQS: { q: string; a: string }[] = [
+/** Landing FAQ copy — exported for FAQPage JSON-LD on `/landing`. */
+export const LANDING_FAQS: { q: string; a: string }[] = [
   {
     q: "Do I need a cleaner to use this?",
     a: "No. Use it yourself, or hand the guided capture to whoever does your turnover — it's built for one-person operations.",
@@ -29,7 +30,7 @@ const FAQS: { q: string; a: string }[] = [
 export function Faq() {
   return (
     <div className="faq">
-      {FAQS.map((f) => (
+      {LANDING_FAQS.map((f) => (
         <details key={f.q}>
           <summary>{f.q}</summary>
           <p>{f.a}</p>
