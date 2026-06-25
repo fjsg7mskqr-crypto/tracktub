@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./landing.css";
 import { Lockup, Mark, Waterline } from "./_marks";
 import { LandingWaitlist } from "./LandingWaitlist";
-import { Faq } from "./Faq";
+import { Faq, LANDING_FAQS } from "./Faq";
+import { marketingMetadata } from "@/lib/marketing-seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = marketingMetadata({
   title: "TrackTub — know your hot tub was guest-ready",
   description:
     "For self-managed STR hosts: capture each hot-tub turnover, lock it as tamper-proof proof, and share it in one tap. Free for your first property.",
-};
+  pathname: "/landing",
+});
 
 const PLATES = [
   { src: "/landing/full-frame.jpg", label: "Full frame" },
@@ -43,6 +46,20 @@ export default function Landing() {
           }),
         }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: LANDING_FAQS.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }),
+        }}
+      />
       <div className="wrap">
         {/* NAV */}
         <div className="nav">
@@ -50,6 +67,7 @@ export default function Landing() {
           <div className="navlinks">
             <a href="#why">Why it matters</a>
             <a href="#how">How it works</a>
+            <Link href="/blog">Resources</Link>
             <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
           </div>
@@ -499,6 +517,9 @@ export default function Landing() {
             <Waterline strokeWidth={1.4} />
           </div>
           <div className="fcopy">© 2026 TrackTub</div>
+          <Link href="/blog" className="flink">
+            Resources
+          </Link>
           <a className="fx" href="https://x.com/tracktub" target="_blank" rel="noopener noreferrer" aria-label="TrackTub on X">
             <svg viewBox="0 0 24 24" width="15" height="15">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
