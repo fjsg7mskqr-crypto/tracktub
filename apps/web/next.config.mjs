@@ -61,8 +61,8 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Silence the multiple-lockfile workspace-root warning.
-  outputFileTracingRoot: path.join(import.meta.dirname),
+  // Monorepo file tracing must anchor at the repo root (not apps/web).
+  outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
