@@ -28,6 +28,7 @@ function profileName(p: ProfileLite, fallback = "A teammate"): string {
 export default async function TeamPage() {
   const me = await requireOperator();
   const supabase = await createClient();
+  // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
   const cutoff = new Date(Date.now() - WEEK_MS).toISOString();
 
   const [

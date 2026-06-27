@@ -38,6 +38,7 @@ export default async function OperationsPage() {
     )
     .order("created_at");
 
+  // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
   const now = Date.now();
   const cards = (properties ?? []).map((p) => {
     const locked = (p.turnover ?? [])

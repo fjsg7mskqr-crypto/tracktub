@@ -197,11 +197,7 @@ export default function CaptureWizard({
   }, [propertyId]);
 
   useEffect(() => {
-    if (initialDraft) {
-      applyDraft(initialDraft);
-      setDraftLoading(false);
-      return;
-    }
+    if (initialDraft) return;
 
     let cancelled = false;
     (async () => {

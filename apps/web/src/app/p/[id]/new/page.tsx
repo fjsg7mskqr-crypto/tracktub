@@ -39,6 +39,7 @@ export default async function NewTurnoverPage({
 
   return (
     <CaptureWizard
+      key={`${property.id}-${initialDraft.turnoverId}`}
       propertyId={property.id}
       propertyName={property.name}
       sanitizerType={asSanitizerType(property.sanitizer_type)}

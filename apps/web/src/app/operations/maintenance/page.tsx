@@ -27,6 +27,7 @@ export default async function MaintenancePage() {
     )
     .order("created_at");
 
+  // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
   const now = Date.now();
   const groups: PropertyTasks[] = (properties ?? []).map((p) => {
     const lockedAts = (p.turnover ?? [])

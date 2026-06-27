@@ -60,6 +60,7 @@ export default async function Insights() {
   if (!user) redirect("/login");
 
   const since = new Date(
+    // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
     Date.now() - WEEKS * 7 * 24 * 60 * 60 * 1000
   ).toISOString();
 

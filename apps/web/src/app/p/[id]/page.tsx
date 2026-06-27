@@ -75,6 +75,7 @@ export default async function PropertyPage({
       (i) => i.tag === "water_cloudy" && !i.confirmed_at
     ),
   }));
+  // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
   const batherLoad = batherLoadActive(chem, Date.now(), sanitizerType);
   const latestFlag =
     chem.length > 0 ? clarityFlag(chem[0], sanitizerType) : null;
