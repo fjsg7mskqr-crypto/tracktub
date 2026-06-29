@@ -62,6 +62,7 @@ export default async function Home() {
     ])
   );
 
+  // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
   const now = Date.now();
   const rows = (properties ?? []).map((p) => {
     const locked = (p.turnover ?? [])
