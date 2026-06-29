@@ -1262,6 +1262,74 @@ describe.skipIf(!ready)("RLS isolation", () => {
     });
   });
 
+  describe("equipment / org_note", () => {
+    it("operator can create equipment on their property", async () => {
+      const { data, error } = await operatorA.client
+        .from("equipment")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          type: "pump",
+          make_model: "Balboa BP6013G1",
+        })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+      expect(data?.id).toBeTruthy();
+    });
+
+    it("assigned staff can create equipment", async () => {
+      const { error } = await staffA.client.from("equipment").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        type: "heater",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("operator of another org cannot create equipment on this property", async () => {
+      const { error } = await operatorB.client.from("equipment").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        type: "cover",
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("operator can upsert org_note for their org", async () => {
+      const { error } = await operatorA.client.from("org_note").upsert({
+        org_id: orgA,
+        body: "Pool supply acct #1234",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("operator of another org cannot write org_note", async () => {
+      const { error } = await operatorB.client.from("org_note").upsert({
+        org_id: orgA,
+        body: "Sneaky",
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("org member (staff) can read org_note but not write", async () => {
+      await admin.from("org_note").upsert({ org_id: orgA, body: "Shared ref" });
+      const { data: read, error: readErr } = await staffA.client
+        .from("org_note")
+        .select("body")
+        .eq("org_id", orgA)
+        .single();
+      expect(readErr).toBeNull();
+      expect(read?.body).toBe("Shared ref");
+
+      const { error: writeErr } = await staffA.client.from("org_note").upsert({
+        org_id: orgA,
+        body: "Staff edit",
+      });
+      expect(writeErr).not.toBeNull();
+    });
+  });
+
   describe("scheduled_item", () => {
     it("operator can create a scheduled item on their property", async () => {
       const { data, error } = await operatorA.client
