@@ -11,7 +11,7 @@ function generateNonce(): string {
   return btoa(Array.from(bytes, (b) => String.fromCodePoint(b)).join(""));
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const csp = buildCsp(nonce, { reportUri: getCspReportUri() });
 
