@@ -10,14 +10,20 @@ export type EquipmentType =
   | "other";
 
 export const EQUIPMENT_TYPES: { value: EquipmentType; label: string }[] = [
-  { value: "tub_shell", label: "Tub/Shell" },
   { value: "pump", label: "Pump" },
   { value: "heater", label: "Heater" },
   { value: "cover", label: "Cover" },
   { value: "filter", label: "Filter" },
   { value: "control_pack", label: "Control pack" },
+  { value: "tub_shell", label: "Tub/Shell" },
   { value: "other", label: "Other" },
 ];
+
+/**
+ * The standard components shown as the "what's on this tub" checklist row
+ * (issue #224). `other` is excluded — it's reached via "+ Add other / another".
+ */
+export const CHECKLIST_TYPES = EQUIPMENT_TYPES.filter((t) => t.value !== "other");
 
 export function equipmentTypeLabel(type: EquipmentType): string {
   return EQUIPMENT_TYPES.find((t) => t.value === type)?.label ?? type;

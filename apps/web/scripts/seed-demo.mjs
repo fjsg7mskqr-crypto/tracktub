@@ -246,6 +246,37 @@ async function main() {
     .insert({ property_id: byName["Ridgeline A-Frame"], staff_user_id: cleaner.id });
   if (saErr && saErr.code !== "23505") throw new Error(`staff_assignment: ${saErr.message}`);
 
+  // ── Equipment per property (issue #224) — populates the Operations →
+  // Equipment tab so it opens as a real registry, never an empty shell. One
+  // heater (Ridgeline) is intentionally out-of-warranty to show the warn flag.
+  const equipment = [
+    // Ridgeline A-Frame
+    { name: "Ridgeline A-Frame", type: "pump", make_model: "Balboa BP6013G1", installed_at: "2023-04-12", warranty_until: "2028-04-12" },
+    { name: "Ridgeline A-Frame", type: "heater", make_model: "Balboa M7 Titanium", installed_at: "2021-10-05", warranty_until: "2025-11-01", notes: "Out of warranty — watch for element failure." },
+    { name: "Ridgeline A-Frame", type: "cover", make_model: "Covana Legend", installed_at: "2024-06-20", warranty_until: "2029-06-20" },
+    { name: "Ridgeline A-Frame", type: "filter", make_model: "Pleatco PWW50", installed_at: "2026-03-01" },
+    // Lakeview Cabin 4
+    { name: "Lakeview Cabin 4", type: "pump", make_model: "Waterway Executive 56", installed_at: "2022-08-15", warranty_until: "2027-08-15" },
+    { name: "Lakeview Cabin 4", type: "heater", make_model: "Balboa M7", installed_at: "2022-08-15", warranty_until: "2027-08-15" },
+    { name: "Lakeview Cabin 4", type: "cover", make_model: "ThermoFloat vinyl", installed_at: "2026-05-10", warranty_until: "2028-05-10", notes: "Replaced May 2026." },
+    { name: "Lakeview Cabin 4", type: "filter", make_model: "Pleatco PWW50", installed_at: "2026-06-01" },
+    // Pine Chalet
+    { name: "Pine Chalet", type: "pump", make_model: "Gecko Aqua-Flo XP2", installed_at: "2023-01-20", warranty_until: "2028-01-20" },
+    { name: "Pine Chalet", type: "heater", make_model: "Gecko In.YE-5", installed_at: "2023-01-20", warranty_until: "2028-01-20" },
+    { name: "Pine Chalet", type: "cover", make_model: "Marquis hard cover", installed_at: "2025-02-14", warranty_until: "2030-02-14" },
+    { name: "Pine Chalet", type: "filter", make_model: "Unicel C-4326", installed_at: "2026-06-10" },
+  ].map(({ name, ...rest }) => ({ org_id: orgId, property_id: byName[name], ...rest }));
+  const { error: eqErr } = await hc.from("equipment").insert(equipment);
+  if (eqErr) throw new Error(`equipment insert: ${eqErr.message}`);
+
+  // Org-wide shared note (vendor contacts / account numbers).
+  const { error: noteErr } = await hc.from("org_note").upsert({
+    org_id: orgId,
+    body: "Pool supply account #CS-4471 (Big Bear Spa & Pool, 909-555-0142).\nCover vendor: Covana West — warranty claims 800-555-0199.\nAfter-hours heater tech: Dwayne, 909-555-0177.",
+    updated_at: new Date().toISOString(),
+  });
+  if (noteErr) throw new Error(`org_note upsert: ${noteErr.message}`);
+
   // ── Live turnovers (RLS capturer path) — these are each property's latest ──
   // Ridgeline: healthy contrast tub. Shared + opened a few times (Insights).
   await makeTurnover(hc, {
@@ -297,6 +328,7 @@ async function main() {
   console.log("  3 properties; chemistry: Lakeview = shock due + low sanitizer,");
   console.log("  Pine Chalet = low sanitizer dip, Ridgeline = healthy (multi-point trends).");
   console.log("  before/after photo sets, shared proof links + recipient opens,");
+  console.log("  equipment per property (Ridgeline heater out-of-warranty) + a shared note,");
   console.log("  and an unread 'turnover ready' notification waiting for the host.");
 }
 

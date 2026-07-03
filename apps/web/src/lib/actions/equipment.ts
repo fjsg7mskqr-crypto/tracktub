@@ -54,7 +54,9 @@ function equipmentRow(parsed: EquipmentInput) {
   };
 }
 
-export async function createEquipmentAction(formData: FormData): Promise<ActionResult> {
+export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
+
+export async function createEquipmentAction(formData: FormData): Promise<CreateResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -64,10 +66,14 @@ export async function createEquipmentAction(formData: FormData): Promise<ActionR
   const parsed = parseEquipmentInput(formData);
   if ("error" in parsed) return { ok: false, error: parsed.error };
 
-  const { error } = await supabase.from("equipment").insert(equipmentRow(parsed));
+  const { data, error } = await supabase
+    .from("equipment")
+    .insert(equipmentRow(parsed))
+    .select("id")
+    .single();
   if (error) return { ok: false, error: error.message };
   revalidatePath("/operations/equipment");
-  return { ok: true };
+  return { ok: true, id: data.id };
 }
 
 export async function updateEquipmentAction(
