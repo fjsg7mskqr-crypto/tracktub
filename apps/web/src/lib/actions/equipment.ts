@@ -73,6 +73,8 @@ export async function createEquipmentAction(formData: FormData): Promise<CreateR
     .single();
   if (error) return { ok: false, error: error.message };
   revalidatePath("/operations/equipment");
+  revalidatePath("/operations");
+  revalidatePath("/operations/maintenance");
   return { ok: true, id: data.id };
 }
 
@@ -96,6 +98,8 @@ export async function updateEquipmentAction(
     .eq("id", equipmentId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/operations/equipment");
+  revalidatePath("/operations");
+  revalidatePath("/operations/maintenance");
   return { ok: true };
 }
 
@@ -107,6 +111,8 @@ export async function archiveEquipmentAction(equipmentId: string): Promise<Actio
     .eq("id", equipmentId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/operations/equipment");
+  revalidatePath("/operations");
+  revalidatePath("/operations/maintenance");
   return { ok: true };
 }
 
@@ -124,5 +130,7 @@ export async function saveOrgNoteAction(orgId: string, body: string): Promise<Ac
   });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/operations/equipment");
+  revalidatePath("/operations");
+  revalidatePath("/operations/maintenance");
   return { ok: true };
 }

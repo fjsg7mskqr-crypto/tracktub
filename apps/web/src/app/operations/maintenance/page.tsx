@@ -23,12 +23,16 @@ export default async function MaintenancePage() {
          id, title, recurrence_kind, recurrence_value, recurrence_unit,
          last_done_at, notes, archived_at
        ),
-       turnover(submitted_at_server, status)`
+       turnover(submitted_at_server, status),
+       equipment(
+         id, type, make_model, installed_at, warranty_until, archived_at
+       )`
     )
     .order("created_at");
 
   // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
   const now = Date.now();
+  const today = new Date(now).toISOString().slice(0, 10);
   const groups: PropertyTasks[] = (properties ?? []).map((p) => {
     const lockedAts = (p.turnover ?? [])
       .filter((t) => t.status === "submitted_locked" && t.submitted_at_server)
@@ -58,13 +62,27 @@ export default async function MaintenancePage() {
         };
       });
 
-    return { id: p.id, name: p.name, orgId: p.org_id, tasks };
+    return {
+      id: p.id,
+      name: p.name,
+      orgId: p.org_id,
+      tasks,
+      equipment: (p.equipment ?? [])
+        .filter((e) => !e.archived_at)
+        .map((e) => ({
+          id: e.id,
+          type: e.type,
+          makeModel: e.make_model,
+          installedAt: e.installed_at,
+          warrantyUntil: e.warranty_until,
+        })),
+    };
   });
 
   return (
     <div className="stack">
       <OperationsHeader active="maintenance" />
-      <MaintenanceClient groups={groups} canEdit={canEdit} />
+      <MaintenanceClient groups={groups} canEdit={canEdit} today={today} />
     </div>
   );
 }

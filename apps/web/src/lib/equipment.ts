@@ -29,6 +29,36 @@ export function equipmentTypeLabel(type: EquipmentType): string {
   return EQUIPMENT_TYPES.find((t) => t.value === type)?.label ?? type;
 }
 
+/** Days before expiry to surface a dashboard / attention signal (issue #227). */
+export const WARRANTY_SOON_DAYS = 30;
+
+export type WarrantyAlert = "expired" | "expiring_soon";
+
+/** Past or within {@link WARRANTY_SOON_DAYS} of expiry — null when no date or still comfortably covered. */
+export function warrantyAlert(
+  warrantyUntil: string | null,
+  today: string
+): WarrantyAlert | null {
+  if (!warrantyUntil) return null;
+  if (warrantyUntil < today) return "expired";
+  if (warrantyUntil <= addDaysIso(today, WARRANTY_SOON_DAYS)) return "expiring_soon";
+  return null;
+}
+
+export function countWarrantyAlerts(
+  items: { warrantyUntil: string | null }[],
+  today: string
+): { expired: number; expiringSoon: number } {
+  let expired = 0;
+  let expiringSoon = 0;
+  for (const item of items) {
+    const alert = warrantyAlert(item.warrantyUntil, today);
+    if (alert === "expired") expired++;
+    else if (alert === "expiring_soon") expiringSoon++;
+  }
+  return { expired, expiringSoon };
+}
+
 /** spill pill tone for warranty — green is success-only; expired = warn. */
 export function warrantyTone(
   warrantyUntil: string | null,
@@ -46,6 +76,13 @@ export function warrantyLabel(
   if (!warrantyUntil) return null;
   if (warrantyUntil < today) return "Warranty expired";
   return `Warranty until ${formatShortDate(warrantyUntil)}`;
+}
+
+function addDaysIso(isoDate: string, days: number): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return dt.toISOString().slice(0, 10);
 }
 
 function formatShortDate(isoDate: string): string {
