@@ -277,6 +277,36 @@ async function main() {
   });
   if (noteErr) throw new Error(`org_note upsert: ${noteErr.message}`);
 
+  // ── Supplies per property (issue #152) — populates the Operations →
+  // Supplies tab as a real inventory. Each property has at least one item at or
+  // below its reorder threshold so the "Low" flag + low-stock count show on
+  // first load (never an empty tab). `last_restocked_at` is relative to today.
+  const restocked = (days) => ago(days * DAY).slice(0, 10);
+  const supplies = [
+    // Ridgeline A-Frame — one low (chlorine at threshold).
+    { name: "Ridgeline A-Frame", nm: "Chlorine granules", unit: "lb", quantity: 1, reorder_at: 1, last_restocked_at: restocked(24), notes: "Big Bear Spa & Pool acct #CS-4471." },
+    { name: "Ridgeline A-Frame", nm: "pH Down", unit: "lb", quantity: 4, reorder_at: 1, last_restocked_at: restocked(24) },
+    { name: "Ridgeline A-Frame", nm: "Filter cartridge", unit: "cartridge", quantity: 2, reorder_at: 1, last_restocked_at: restocked(60) },
+    { name: "Ridgeline A-Frame", nm: "Test strips", unit: "strips", quantity: 50, reorder_at: 25, last_restocked_at: restocked(12) },
+    // Lakeview Cabin 4 — two low (shock + cartridge out).
+    { name: "Lakeview Cabin 4", nm: "Shock / oxidizer", unit: "lb", quantity: 0.5, reorder_at: 2, last_restocked_at: restocked(30), notes: "Burned through after a big group." },
+    { name: "Lakeview Cabin 4", nm: "Filter cartridge", unit: "cartridge", quantity: 0, reorder_at: 1, last_restocked_at: restocked(45) },
+    { name: "Lakeview Cabin 4", nm: "Bromine tablets", unit: "tabs", quantity: 30, reorder_at: 10, last_restocked_at: restocked(8) },
+    { name: "Lakeview Cabin 4", nm: "Clarifier", unit: "bottle", quantity: 2, reorder_at: 1, last_restocked_at: restocked(20) },
+    // Pine Chalet — all stocked (contrast; no low flag).
+    { name: "Pine Chalet", nm: "Chlorine granules", unit: "lb", quantity: 5, reorder_at: 1, last_restocked_at: restocked(5) },
+    { name: "Pine Chalet", nm: "pH Up", unit: "lb", quantity: 3, reorder_at: 1, last_restocked_at: restocked(5) },
+    { name: "Pine Chalet", nm: "Cover cleaner", unit: "bottle", quantity: 2, reorder_at: 1, last_restocked_at: restocked(40) },
+    { name: "Pine Chalet", nm: "Test strips", unit: "strips", quantity: 75, reorder_at: 25, last_restocked_at: restocked(15) },
+  ].map(({ name, nm, ...rest }) => ({
+    org_id: orgId,
+    property_id: byName[name],
+    name: nm,
+    ...rest,
+  }));
+  const { error: supErr } = await hc.from("supply").insert(supplies);
+  if (supErr) throw new Error(`supply insert: ${supErr.message}`);
+
   // ── Live turnovers (RLS capturer path) — these are each property's latest ──
   // Ridgeline: healthy contrast tub. Shared + opened a few times (Insights).
   await makeTurnover(hc, {
@@ -329,6 +359,7 @@ async function main() {
   console.log("  Pine Chalet = low sanitizer dip, Ridgeline = healthy (multi-point trends).");
   console.log("  before/after photo sets, shared proof links + recipient opens,");
   console.log("  equipment per property (Ridgeline heater out-of-warranty) + a shared note,");
+  console.log("  supplies per property (Ridgeline 1 low, Lakeview 2 low, Pine all stocked),");
   console.log("  and an unread 'turnover ready' notification waiting for the host.");
 }
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 /**
  * Header for the Operations hub. Operations is a multi-module surface: Maintenance,
- * Water & chemistry, and Equipment are live; Supplies is still a placeholder tab.
+ * Water & chemistry, Supplies, and Equipment are all live.
  * Mirrors the Team & Insights sub-tab pattern.
  */
 
@@ -12,7 +12,7 @@ type Module = { key: string; label: string; href?: string };
 const MODULES: Module[] = [
   { key: "maintenance", label: "Maintenance Schedule", href: "/operations/maintenance" },
   { key: "chemistry", label: "Water & Chemistry", href: "/operations" },
-  { key: "supplies", label: "Supplies & Inventory" },
+  { key: "supplies", label: "Supplies & Inventory", href: "/operations/supplies" },
   { key: "equipment", label: "Equipment", href: "/operations/equipment" },
 ];
 

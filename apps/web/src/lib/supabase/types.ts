@@ -787,6 +787,63 @@ export type Database = {
           },
         ]
       }
+      supply: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          last_restocked_at: string | null
+          name: string
+          notes: string | null
+          org_id: string
+          property_id: string
+          quantity: number | null
+          reorder_at: number | null
+          unit: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          last_restocked_at?: string | null
+          name: string
+          notes?: string | null
+          org_id: string
+          property_id: string
+          quantity?: number | null
+          reorder_at?: number | null
+          unit?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          last_restocked_at?: string | null
+          name?: string
+          notes?: string | null
+          org_id?: string
+          property_id?: string
+          quantity?: number | null
+          reorder_at?: number | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task: {
         Row: {
           created_at: string
