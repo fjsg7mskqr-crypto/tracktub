@@ -15,6 +15,10 @@ import {
   markMaintenanceDoneAction,
   archiveMaintenanceTaskAction,
 } from "@/lib/actions/maintenance";
+import {
+  EquipmentPartsList,
+  type EquipmentPartRow,
+} from "@/components/EquipmentPartsList";
 
 export interface TaskRow {
   id: string;
@@ -30,6 +34,7 @@ export interface PropertyTasks {
   name: string;
   orgId: string;
   tasks: TaskRow[];
+  equipment: EquipmentPartRow[];
 }
 
 const PRESETS: {
@@ -57,9 +62,11 @@ function recurrenceText(r: {
 export function MaintenanceClient({
   groups,
   canEdit,
+  today,
 }: {
   groups: PropertyTasks[];
   canEdit: boolean;
+  today: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -109,6 +116,7 @@ export function MaintenanceClient({
           <h2 className="small" style={{ margin: 0 }}>
             {g.name}
           </h2>
+          <EquipmentPartsList items={g.equipment} today={today} />
           {g.tasks.length === 0 ? (
             <Card className="pad">
               <p className="muted small">No maintenance scheduled.</p>
