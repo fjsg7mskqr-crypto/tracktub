@@ -1330,6 +1330,52 @@ describe.skipIf(!ready)("RLS isolation", () => {
     });
   });
 
+  describe("supply", () => {
+    it("operator can create a supply on their property", async () => {
+      const { data, error } = await operatorA.client
+        .from("supply")
+        .insert({
+          property_id: propAssigned,
+          org_id: orgA,
+          name: "Chlorine granules",
+          unit: "lb",
+          quantity: 3,
+          reorder_at: 1,
+        })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+      expect(data?.id).toBeTruthy();
+    });
+
+    it("assigned staff can create a supply", async () => {
+      const { error } = await staffA.client.from("supply").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        name: "Test strips",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("operator of another org cannot create a supply on this property", async () => {
+      const { error } = await operatorB.client.from("supply").insert({
+        property_id: propAssigned,
+        org_id: orgA,
+        name: "Sneaky",
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("cannot spoof org_id onto a mismatched property", async () => {
+      const { error } = await operatorA.client.from("supply").insert({
+        property_id: propAssigned,
+        org_id: orgB, // mismatched org
+        name: "Spoof",
+      });
+      expect(error).not.toBeNull();
+    });
+  });
+
   describe("scheduled_item", () => {
     it("operator can create a scheduled item on their property", async () => {
       const { data, error } = await operatorA.client
