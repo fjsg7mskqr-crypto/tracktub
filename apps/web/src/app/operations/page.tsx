@@ -12,6 +12,7 @@ import {
   type TurnoverChem,
 } from "@/lib/chemistry-rules";
 import { maintenanceStatus, type MaintenanceInput } from "@/lib/maintenance";
+import { countWarrantyAlerts } from "@/lib/equipment";
 import { asSanitizerType } from "@/lib/chemistry";
 
 export default async function OperationsPage() {
@@ -34,12 +35,14 @@ export default async function OperationsPage() {
        ),
        maintenance_task(
          id, recurrence_kind, recurrence_value, recurrence_unit, last_done_at, archived_at
-       )`
+       ),
+       equipment(type, warranty_until, archived_at)`
     )
     .order("created_at");
 
   // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
   const now = Date.now();
+  const today = new Date(now).toISOString().slice(0, 10);
   const cards = (properties ?? []).map((p) => {
     const locked = (p.turnover ?? [])
       .filter((t) => t.status === "submitted_locked")
@@ -92,9 +95,25 @@ export default async function OperationsPage() {
         };
         return maintenanceStatus(input, now).state === "overdue";
       }).length;
-    const attention = batherLoad || chemFlag != null || overdueMaintenance > 0;
+    const activeEquipment = (p.equipment ?? [])
+      .filter((e) => !e.archived_at)
+      .map((e) => ({ warrantyUntil: e.warranty_until }));
+    const warrantyAlerts = countWarrantyAlerts(activeEquipment, today);
+    const warrantyAttention = warrantyAlerts.expired + warrantyAlerts.expiringSoon > 0;
+    const attention =
+      batherLoad || chemFlag != null || overdueMaintenance > 0 || warrantyAttention;
 
-    return { ...p, sanitizerType, batherLoad, chemFlag, flags, readings, attention, overdueMaintenance };
+    return {
+      ...p,
+      sanitizerType,
+      batherLoad,
+      chemFlag,
+      flags,
+      readings,
+      attention,
+      overdueMaintenance,
+      warrantyAlerts,
+    };
   });
 
   // Demo story: tubs needing attention float to the top, then alphabetical.
@@ -191,6 +210,16 @@ export default async function OperationsPage() {
                     {p.overdueMaintenance > 0 && (
                       <span className="spill warn">
                         Maintenance: {p.overdueMaintenance} overdue
+                      </span>
+                    )}
+                    {p.warrantyAlerts.expired > 0 && (
+                      <span className="spill warn">
+                        Warranty: {p.warrantyAlerts.expired} expired
+                      </span>
+                    )}
+                    {p.warrantyAlerts.expiringSoon > 0 && (
+                      <span className="spill">
+                        Warranty: {p.warrantyAlerts.expiringSoon} expiring
                       </span>
                     )}
                     {!p.attention &&
