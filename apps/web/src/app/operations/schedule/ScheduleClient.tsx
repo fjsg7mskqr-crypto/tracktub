@@ -315,6 +315,7 @@ export function ScheduleClient({
 
       {open?.kind === "add" && canEdit && (
         <AddPanel
+          key={open.date}
           date={open.date}
           properties={properties}
           pending={isPending}
@@ -336,6 +337,7 @@ export function ScheduleClient({
 
       {open?.kind === "detail" && (
         <DetailPanel
+          key={`${open.entry.id ?? "v"}-${open.entry.date}-${open.entry.title}-${open.entry.propertyId}`}
           entry={open.entry}
           members={members}
           canEdit={canEdit}
