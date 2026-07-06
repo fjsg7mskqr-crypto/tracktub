@@ -159,3 +159,37 @@ export async function skipScheduledItemAction(
   revalidate();
   return { ok: true };
 }
+
+export async function completeMaintenanceOccurrenceAction(input: {
+  maintenanceTaskId: string;
+  propertyId: string;
+  orgId: string;
+  title: string;
+  scheduledFor: string; // YYYY-MM-DD
+  note?: string | null;
+}): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const title = input.title.trim();
+  if (!title) return { ok: false, error: "Title is required." };
+  if (!input.maintenanceTaskId || !input.propertyId || !input.orgId)
+    return { ok: false, error: "Missing task or property." };
+
+  const { data, error } = await supabase.rpc("complete_maintenance_occurrence", {
+    p_maintenance_task_id: input.maintenanceTaskId,
+    p_property_id: input.propertyId,
+    p_org_id: input.orgId,
+    p_title: title,
+    p_scheduled_for: input.scheduledFor,
+    ...(input.note?.trim() ? { p_note: input.note.trim() } : {}),
+  });
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Could not complete maintenance." };
+
+  revalidate();
+  return { ok: true };
+}

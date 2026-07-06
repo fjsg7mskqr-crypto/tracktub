@@ -30,15 +30,9 @@ export interface MaintenanceStatus {
 
 const MS_PER_DAY = 86_400_000;
 
-function unitDays(unit: RecurrenceUnit): number {
-  switch (unit) {
-    case "day":
-      return 1;
-    case "week":
-      return 7;
-    case "month":
-      return 30; // calendar-approx; good enough for a maintenance cadence
-  }
+export function cycleDays(value: number, unit: RecurrenceUnit): number {
+  const perUnit = unit === "week" ? 7 : unit === "month" ? 30 : 1;
+  return value * perUnit;
 }
 
 export function maintenanceStatus(
@@ -55,18 +49,18 @@ export function maintenanceStatus(
   }
 
   // time-based
-  const cycleDays = t.recurrenceValue * unitDays(t.recurrenceUnit ?? "day");
+  const cycle = cycleDays(t.recurrenceValue, t.recurrenceUnit ?? "day");
   // never done → treat as overdue (needs a first completion)
   if (t.lastDoneAt == null) {
     return { state: "overdue", overdueDays: 0 };
   }
-  const dueAt = Date.parse(t.lastDoneAt) + cycleDays * MS_PER_DAY;
+  const dueAt = Date.parse(t.lastDoneAt) + cycle * MS_PER_DAY;
   const diffDays = Math.floor((dueAt - now) / MS_PER_DAY);
   if (diffDays < 0) {
     return { state: "overdue", overdueDays: -diffDays };
   }
   // due-soon window: within 20% of the cycle, floored at ≤ 3 days
-  const soonWindow = Math.max(3, Math.ceil(cycleDays * 0.2));
+  const soonWindow = Math.max(3, Math.ceil(cycle * 0.2));
   return {
     state: diffDays <= soonWindow ? "due_soon" : "ok",
     daysLeft: diffDays,
