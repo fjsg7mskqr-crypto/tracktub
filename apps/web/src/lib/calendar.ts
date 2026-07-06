@@ -55,8 +55,12 @@ export function maintenanceOccurrences(
   const cycle = cycleDays(task.recurrenceValue, task.recurrenceUnit ?? "day");
   if (cycle <= 0) return [];
   let due = addDays(task.lastDoneAt.slice(0, 10), cycle);
-  // advance to the first due date >= fromDate
-  while (due < fromDate) due = addDays(due, cycle);
+  if (due < fromDate) {
+    const gapDays =
+      Math.ceil((Date.parse(fromDate) - Date.parse(due)) / MS_PER_DAY / cycle) *
+      cycle;
+    due = addDays(due, gapDays);
+  }
   // emit through the horizon (guard against runaway loops)
   for (let i = 0; due <= end && i < 400; i++) {
     out.push({ maintenanceTaskId: task.maintenanceTaskId, title: task.title, dueDate: due });

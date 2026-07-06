@@ -63,6 +63,24 @@ describe("maintenanceOccurrences", () => {
     );
     expect(occ).toEqual([]);
   });
+  it("O(1) catch-up: daily task ~3 years stale returns first due on fromDate", () => {
+    const fromDate = "2026-07-05";
+    const cycle = 1;
+    const t0 = performance.now();
+    const occ = maintenanceOccurrences(
+      timeTask({
+        recurrenceValue: 1,
+        recurrenceUnit: "day",
+        lastDoneAt: "2023-07-05T12:00:00Z",
+      }),
+      fromDate,
+      7
+    );
+    expect(performance.now() - t0).toBeLessThan(50);
+    expect(occ.length).toBeGreaterThan(0);
+    expect(occ[0].dueDate).toBe(fromDate);
+    expect(occ[0].dueDate < addDays(fromDate, cycle)).toBe(true);
+  });
 });
 
 describe("weekDays", () => {
