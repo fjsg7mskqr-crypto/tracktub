@@ -179,38 +179,16 @@ export async function completeMaintenanceOccurrenceAction(input: {
   if (!input.maintenanceTaskId || !input.propertyId || !input.orgId)
     return { ok: false, error: "Missing task or property." };
 
-  const nowIso = new Date().toISOString();
-
-  // 1) persist a done maintenance scheduled_item for the calendar record
-  const { error: insErr } = await supabase.from("scheduled_item").insert({
-    property_id: input.propertyId,
-    org_id: input.orgId,
-    kind: "maintenance",
-    title,
-    scheduled_for: input.scheduledFor,
-    maintenance_task_id: input.maintenanceTaskId,
-    source: "auto",
-    status: "done",
-    done_at: nowIso,
-    notes: input.note?.trim() || null,
+  const { data, error } = await supabase.rpc("complete_maintenance_occurrence", {
+    p_maintenance_task_id: input.maintenanceTaskId,
+    p_property_id: input.propertyId,
+    p_org_id: input.orgId,
+    p_title: title,
+    p_scheduled_for: input.scheduledFor,
+    ...(input.note?.trim() ? { p_note: input.note.trim() } : {}),
   });
-  if (insErr) return { ok: false, error: insErr.message };
-
-  // 2) write the maintenance completion log
-  const { error: logErr } = await supabase.from("maintenance_log").insert({
-    task_id: input.maintenanceTaskId,
-    property_id: input.propertyId,
-    done_by: user.id,
-    note: input.note?.trim() || null,
-  });
-  if (logErr) return { ok: false, error: logErr.message };
-
-  // 3) re-arm the task's cycle
-  const { error: taskErr } = await supabase
-    .from("maintenance_task")
-    .update({ last_done_at: nowIso })
-    .eq("id", input.maintenanceTaskId);
-  if (taskErr) return { ok: false, error: taskErr.message };
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Could not complete maintenance." };
 
   revalidate();
   return { ok: true };
