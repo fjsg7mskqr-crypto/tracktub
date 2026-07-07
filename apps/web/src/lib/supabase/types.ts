@@ -1052,6 +1052,17 @@ export type Database = {
       }
       app_is_member: { Args: { p_org: string }; Returns: boolean }
       app_shares_org: { Args: { p_user: string }; Returns: boolean }
+      complete_maintenance_occurrence: {
+        Args: {
+          p_maintenance_task_id: string
+          p_note?: string
+          p_org_id: string
+          p_property_id: string
+          p_scheduled_for: string
+          p_title: string
+        }
+        Returns: string
+      }
       founder_metrics: { Args: never; Returns: Json }
       fulfill_scheduled_turnover: {
         Args: { p_turnover_id: string }
