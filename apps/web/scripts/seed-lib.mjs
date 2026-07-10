@@ -432,7 +432,7 @@ export async function seedWorkspace({
   });
 
   if (includeMaintenance) {
-    const maintenance = [
+    const maintenanceDefs = [
       {
         name: "Lakeview Cabin 4",
         title: "Drain & refill",
@@ -465,16 +465,138 @@ export async function seedWorkspace({
         recurrence_unit: "day",
         last_done_at: ago(5 * DAY),
       },
-    ]
-      .filter(({ name }) => byName[name])
-      .map(({ name, ...rest }) => ({
-        org_id: orgId,
-        property_id: byName[name],
-        ...rest,
-      }));
-    const { error: mtErr } = await client.from("maintenance_task").insert(maintenance);
+    ].filter(({ name }) => byName[name]);
+
+    const maintenance = maintenanceDefs.map(({ name, ...rest }) => ({
+      org_id: orgId,
+      property_id: byName[name],
+      ...rest,
+    }));
+    const { data: insertedTasks, error: mtErr } = await client
+      .from("maintenance_task")
+      .insert(maintenance)
+      .select("id, property_id, last_done_at");
     if (mtErr) throw new Error(`maintenance_task insert: ${mtErr.message}`);
+
+    const logs = (insertedTasks ?? [])
+      .filter((t) => t.last_done_at)
+      .map((t) => ({
+        task_id: t.id,
+        property_id: t.property_id,
+        done_by: operatorId,
+        done_at: t.last_done_at,
+        note: "Routine completion (seeded history).",
+      }));
+    if (logs.length > 0) {
+      const { error: mlErr } = await client.from("maintenance_log").insert(logs);
+      if (mlErr) throw new Error(`maintenance_log insert: ${mlErr.message}`);
+    }
   }
+
+  const fromToday = (dayOffset) => {
+    const d = new Date(tNow);
+    d.setUTCDate(d.getUTCDate() + dayOffset);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const scheduledDefs = [
+    { name: "Pine Chalet", kind: "turnover", title: "Turnover", scheduled_for: fromToday(0), status: "scheduled" },
+    {
+      name: "Ridgeline A-Frame",
+      kind: "turnover",
+      title: "Turnover",
+      scheduled_for: fromToday(1),
+      status: "scheduled",
+      assignee: "cleaner",
+    },
+    {
+      name: "Lakeview Cabin 4",
+      kind: "turnover",
+      title: "Turnover",
+      scheduled_for: fromToday(2),
+      status: "scheduled",
+      assignee: "cleaner",
+      notes: "Before Saturday check-in — recheck sanitizer after shock.",
+    },
+    {
+      name: "Summit View Lodge",
+      kind: "turnover",
+      title: "Turnover",
+      scheduled_for: fromToday(5),
+      status: "scheduled",
+      assignee: "cleaner",
+    },
+    {
+      name: "Lakeview Cabin 4",
+      kind: "custom",
+      title: "Replace filter cartridge",
+      scheduled_for: fromToday(3),
+      status: "scheduled",
+      assignee: "cleaner",
+      notes: "Pleatco PWW50 — reorder from Big Bear Spa & Pool.",
+    },
+    {
+      name: "Ridgeline A-Frame",
+      kind: "custom",
+      title: "Cover inspection",
+      scheduled_for: fromToday(7),
+      status: "scheduled",
+    },
+    {
+      name: "Summit View Lodge",
+      kind: "custom",
+      title: "Post-storm cover check",
+      scheduled_for: fromToday(12),
+      status: "scheduled",
+    },
+    {
+      name: "Lakeview Cabin 4",
+      kind: "turnover",
+      title: "Turnover",
+      scheduled_for: fromToday(14),
+      status: "scheduled",
+      assignee: "cleaner",
+    },
+    {
+      name: "Pine Chalet",
+      kind: "turnover",
+      title: "Turnover",
+      scheduled_for: fromToday(-2),
+      status: "done",
+      done_at: ago(2 * DAY),
+      assignee: "cleaner",
+    },
+    {
+      name: "Ridgeline A-Frame",
+      kind: "custom",
+      title: "Restock test strips",
+      scheduled_for: fromToday(-4),
+      status: "done",
+      done_at: ago(4 * DAY),
+      assignee: "operator",
+    },
+    {
+      name: "Summit View Lodge",
+      kind: "turnover",
+      title: "Turnover",
+      scheduled_for: fromToday(-6),
+      status: "done",
+      done_at: ago(6 * DAY),
+    },
+  ]
+    .filter(({ name }) => byName[name])
+    .map(({ name, assignee, done_at, ...rest }) => ({
+      org_id: orgId,
+      property_id: byName[name],
+      source: "manual",
+      assignee_user_id:
+        assignee === "cleaner" ? cleanerId : assignee === "operator" ? operatorId : null,
+      ...(done_at ? { done_at } : {}),
+      ...rest,
+    }));
+
+  const { error: siErr } = await client.from("scheduled_item").insert(scheduledDefs);
+  if (siErr) throw new Error(`scheduled_item insert: ${siErr.message}`);
 
   return { byName, ago, DAY };
 }

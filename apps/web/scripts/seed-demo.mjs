@@ -92,13 +92,15 @@ async function main() {
   });
 
   console.log("Seeded demo workspace 'Cascade Stays':");
-  console.log(`  host:    ${HOST.email}  /  ${HOST.password}`);
-  console.log(`  cleaner: ${CLEANER.email}  /  ${CLEANER.password}`);
+  console.log(`  host:    ${HOST.email}`);
+  console.log(`  cleaner: ${CLEANER.email}`);
+  console.log("  Sign in via the Local demo buttons on /login (tt-demo prints the password).");
   console.log("  3 properties; chemistry: Lakeview = shock due + low sanitizer,");
   console.log("  Pine Chalet = low sanitizer dip, Ridgeline = healthy (multi-point trends).");
   console.log("  before/after photo sets, shared proof links + recipient opens,");
   console.log("  equipment per property (Ridgeline heater out-of-warranty) + a shared note,");
   console.log("  supplies per property (Ridgeline 1 low, Lakeview 2 low, Pine all stocked),");
+  console.log("  schedule calendar (upcoming turnovers + custom tasks, some assigned to Maria),");
   console.log("  and an unread 'turnover ready' notification waiting for the host.");
 }
 

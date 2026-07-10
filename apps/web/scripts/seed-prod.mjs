@@ -106,6 +106,11 @@ async function main() {
   }
   const orgId = mem.org_id;
 
+  const { data: org, error: orgErr } = await admin.from("org").select("id, name").eq("id", orgId).single();
+  if (orgErr || !org) throw new Error(`org lookup: ${orgErr?.message ?? "not found"}`);
+  console.log(`   org:     ${org.name} (${org.id})`);
+  console.log("");
+
   const { count } = await admin
     .from("property")
     .select("id", { count: "exact", head: true })
@@ -133,8 +138,8 @@ async function main() {
   console.log("");
   console.log("✓ Seeded prod demo workspace 'Cascade Stays' into the founder org.");
   console.log(`  operator: ${FOUNDER_EMAIL} (your Google login — unchanged)`);
-  console.log(`  staff:    ${STAFF.email}  /  ${STAFF.password}`);
-  console.log("  4 properties; chemistry story + maintenance due/overdue + operations tabs populated.");
+  console.log(`  staff:    ${STAFF.email} (demo team member — login not required)`);
+  console.log("  4 properties; chemistry story + maintenance due/overdue + schedule calendar populated.");
   console.log("  Verify at https://tracktub.com — dashboard, /chemistry, /operations/*, Team, proof links.");
   console.log("");
 }
