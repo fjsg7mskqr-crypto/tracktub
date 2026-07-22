@@ -66,9 +66,21 @@ Decided: **record-only** (no dosing engine, no reagent-by-reagent coaching — b
 
 Just make it a **fast, beautiful mobile flow.** Dosing recommendations and reagent coaching are explicitly out (future options).
 
+## 5b. Visual design — a first-class part of this build (decided 2026-07-21)
+
+**Correction to the deferral posture.** The 2026-07-15 spec punted the visual skin to "a Figma/AI mockup later." That was wrong: the founder (the user) named the *look* as a core reason he won't use the current app — its generic dark-SaaS console feel. So visual design is **owned inside this build**, not skinned on afterward, and the direction below is settled by founder sign-off (mockup: `claude.ai/code/artifact/25c55634` — the chemistry step built two ways, "Water" chosen).
+
+**Direction: "Water" — calm, light, on-brand.** Reconciles what the founder liked in competitor **TubTest** (warm, calm, one-task-at-a-time, considered — *not* a techy dashboard) with TrackTub's real brand tokens (`branding/tokens.css`). It is **not** a brand departure: blue-on-light is TrackTub's default theme.
+
+- **Palette (from `branding/tokens.css`):** light surfaces (white cards on a soft blue-grey ground, `#F4F6F9`); **brand blue `#3B82F6` / `#2563EB`** ("the water") drives all actions — primary button, selected value, links, active progress; **green `#34D399` reserved strictly for verified/in-range status** (never an action or decoration — brand rule); ink `#08090A` on white = the record. Amber `#E8A33D` = pending/cloudy, red `#EF4444` = urgent, per existing semantic tokens.
+- **Type:** body **Inter**; data/units **JetBrains Mono** — both from brand. **Plus one proposed addition: an editorial serif** (Palatino/Iowan system stack on the founder's Apple devices) for **display numbers and card titles** — this is a large part of why the direction reads "considered" rather than techy. *Open sub-decision:* if the founder prefers strict brand type, the big readouts flip to JetBrains Mono (reads more "receipt/evidence"). Default = serif until he says otherwise; trivial to swap.
+- **Structure (TubTest-derived, applies to every screen):** one task per screen; one large readout; fat thumb targets (chunky preset pad + big ± steppers, no keyboard); a **single status pill**, not a data wall; step progress ("Step 1 of 4", the TA→pH→hardness→sanitizer sequence); generous but restrained card radius (~16–20px — softer than the token's 12px sharp default, but not pillowy, honoring "minimal/sharp").
+- **This is the quality bar.** The chemistry mockup is the reference every screen in the flow must match. "Looks generic / like the old console" is a valid reason to reject a build slice.
+
 ## 6. Scope boundaries
 
 **In scope (this build):**
+- The "Water" visual foundation (§5b) — palette, type, component structure — established as the shared design system for the flow, not skinned on afterward.
 - New mobile-first front-end shell for the core flow (bottom-reachable primary action; no horizontal clipping).
 - Today: simple per-tub next-visit card.
 - Guided, resumable, no-timeout camera-anchored turnover capture (§4.3).
