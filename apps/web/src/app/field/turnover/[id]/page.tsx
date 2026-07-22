@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ensureDraftTurnoverAction } from "@/lib/actions/turnover";
 import { computeInitialStep } from "@/lib/capture-v2";
+import { asSanitizerType } from "@/lib/chemistry";
 import CaptureFlow from "./CaptureFlow";
 
 /**
@@ -27,7 +28,7 @@ export default async function FieldTurnoverPage({
   // reuse the access-checked draft action, which is keyed on property + user.
   const { data: turnover } = await supabase
     .from("turnover")
-    .select("id, property_id, status, property:property(id, name)")
+    .select("id, property_id, status, property:property(id, name, sanitizer_type)")
     .eq("id", turnoverId)
     .single();
   if (!turnover) notFound();
@@ -51,6 +52,7 @@ export default async function FieldTurnoverPage({
       initialStep={initialStep}
       propertyId={propertyId}
       propertyName={property?.name ?? "This tub"}
+      sanitizerType={asSanitizerType(property?.sanitizer_type)}
     />
   );
 }
