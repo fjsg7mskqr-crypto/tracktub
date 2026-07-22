@@ -3,8 +3,11 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CaptureAnchor } from "@/components/field/CaptureAnchor";
+import { ChemistryStep } from "@/components/field/ChemistryStep";
 import { FieldButton } from "@/components/field/FieldButton";
+import { FieldScreenHeader } from "@/components/field/FieldScreenHeader";
 import type { DraftPhoto, DraftSnapshot } from "@/lib/actions/turnover";
+import type { SanitizerType } from "@/lib/chemistry";
 import {
   CAPTURE_STEP_AFTER_START,
   CAPTURE_STEP_BEFORE,
@@ -48,11 +51,13 @@ export default function CaptureFlow({
   initialStep,
   propertyId,
   propertyName,
+  sanitizerType,
 }: {
   draft: DraftSnapshot;
   initialStep: number;
   propertyId: string;
   propertyName: string;
+  sanitizerType: SanitizerType;
 }) {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<DraftSnapshot>(draft);
@@ -100,13 +105,17 @@ export default function CaptureFlow({
     );
   }
 
-  // --- Water (Task 4 ChemistryStep seam) ------------------------------------
+  // --- Water (chemistry — Task 4) -------------------------------------------
   if (step === CAPTURE_STEP_WATER) {
     return (
-      <WaterStepStub
-        stepLabel={stepLabel()}
+      <ChemistryStep
+        turnoverId={turnoverId}
+        propertyId={propertyId}
+        sanitizerType={sanitizerType}
+        value={snapshot.reading}
+        onSaved={setSnapshot}
         onBack={() => setStep(CAPTURE_STEP_BEFORE)}
-        onNext={() => setStep(CAPTURE_STEP_AFTER_START)}
+        onDone={() => setStep(CAPTURE_STEP_AFTER_START)}
       />
     );
   }
@@ -149,120 +158,6 @@ export default function CaptureFlow({
   );
 }
 
-/** Placeholder for the Task 4 chemistry step. Advances the flow without input. */
-function WaterStepStub({
-  stepLabel,
-  onBack,
-  onNext,
-}: {
-  stepLabel: string;
-  onBack: () => void;
-  onNext: () => void;
-}) {
-  return (
-    // SEAM: replace this block with <ChemistryStep … onDone={onNext} /> (Task 4).
-    <main
-      style={{
-        padding: "24px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 20,
-        minHeight: "100dvh",
-      }}
-    >
-      <header style={{ display: "grid", gap: 8 }}>
-        <p
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: "var(--field-muted)",
-            margin: 0,
-          }}
-        >
-          {stepLabel}
-        </p>
-        <h1
-          style={{
-            fontFamily: "var(--field-serif)",
-            fontSize: 30,
-            fontWeight: 600,
-            lineHeight: 1.12,
-            margin: 0,
-            color: "var(--field-ink)",
-          }}
-        >
-          Water test
-        </h1>
-      </header>
-
-      <div style={{ flex: 1 }}>
-        <div
-          style={{
-            background: "var(--field-card)",
-            borderRadius: 18,
-            border: "1px solid rgba(8, 9, 10, 0.06)",
-            padding: 24,
-            display: "grid",
-            gap: 8,
-            placeItems: "center",
-            textAlign: "center",
-          }}
-        >
-          <p
-            style={{
-              fontFamily: "var(--field-serif)",
-              fontSize: 20,
-              fontWeight: 600,
-              margin: 0,
-              color: "var(--field-ink)",
-            }}
-          >
-            Water test — coming next
-          </p>
-          <p
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: 14,
-              lineHeight: 1.5,
-              color: "var(--field-muted)",
-              margin: 0,
-            }}
-          >
-            The tap-pad chemistry step (TA → pH → hardness → sanitizer) lands in
-            the next build.
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <FieldButton type="button" onClick={onNext}>
-          Skip for now
-        </FieldButton>
-        <button
-          type="button"
-          onClick={onBack}
-          style={{
-            appearance: "none",
-            background: "transparent",
-            border: "none",
-            padding: "8px",
-            minHeight: 44,
-            fontFamily: "var(--font-sans)",
-            fontSize: 15,
-            fontWeight: 600,
-            color: "var(--field-muted)",
-            cursor: "pointer",
-          }}
-        >
-          Back
-        </button>
-      </div>
-    </main>
-  );
-}
-
 /** Placeholder finish screen. Nothing irreversible — lock/send arrive in Task 5. */
 function FinishStub({
   propertyName,
@@ -292,44 +187,11 @@ function FinishStub({
         minHeight: "100dvh",
       }}
     >
-      <header style={{ display: "grid", gap: 8 }}>
-        <p
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: "var(--field-muted)",
-            margin: 0,
-          }}
-        >
-          {stepLabel}
-        </p>
-        <h1
-          style={{
-            fontFamily: "var(--field-serif)",
-            fontSize: 30,
-            fontWeight: 600,
-            lineHeight: 1.12,
-            margin: 0,
-            color: "var(--field-ink)",
-          }}
-        >
-          Turnover captured
-        </h1>
-        <p
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: 15,
-            lineHeight: 1.5,
-            color: "var(--field-muted)",
-            margin: 0,
-          }}
-        >
-          {propertyName} · {capturedRequired} of {REQUIRED_LOCK_PHOTOS.length}{" "}
-          required photos captured.
-        </p>
-      </header>
+      <FieldScreenHeader
+        eyebrow={stepLabel}
+        title="Turnover captured"
+        hint={`${propertyName} · ${capturedRequired} of ${REQUIRED_LOCK_PHOTOS.length} required photos captured.`}
+      />
 
       <div style={{ flex: 1 }}>
         <div

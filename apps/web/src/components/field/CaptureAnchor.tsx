@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { FieldButton } from "@/components/field/FieldButton";
+import { FieldScreenHeader } from "@/components/field/FieldScreenHeader";
 import { saveGuidedPhotoAction, type DraftSnapshot } from "@/lib/actions/turnover";
 import { photoPublicUrl } from "@/lib/supabase/storage";
 import type { CapturePhase, PhotoSlot } from "@/lib/types";
@@ -119,43 +120,7 @@ export function CaptureAnchor({
         onChange={onFile}
       />
 
-      <header style={{ display: "grid", gap: 8 }}>
-        <p
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: "var(--field-muted)",
-            margin: 0,
-          }}
-        >
-          {stepLabel}
-        </p>
-        <h1
-          style={{
-            fontFamily: "var(--field-serif)",
-            fontSize: 30,
-            fontWeight: 600,
-            lineHeight: 1.12,
-            margin: 0,
-            color: "var(--field-ink)",
-          }}
-        >
-          {title}
-        </h1>
-        <p
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: 15,
-            lineHeight: 1.5,
-            color: "var(--field-muted)",
-            margin: 0,
-          }}
-        >
-          {hint}
-        </p>
-      </header>
+      <FieldScreenHeader eyebrow={stepLabel} title={title} hint={hint} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
         {preview ? (
