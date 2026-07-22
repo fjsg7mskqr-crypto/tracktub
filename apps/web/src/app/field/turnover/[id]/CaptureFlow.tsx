@@ -1,11 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { CaptureAnchor } from "@/components/field/CaptureAnchor";
 import { ChemistryStep } from "@/components/field/ChemistryStep";
-import { FieldButton } from "@/components/field/FieldButton";
-import { FieldScreenHeader } from "@/components/field/FieldScreenHeader";
+import { FinishProof } from "@/components/field/FinishProof";
 import type { DraftPhoto, DraftSnapshot } from "@/lib/actions/turnover";
 import type { SanitizerType } from "@/lib/chemistry";
 import {
@@ -13,7 +11,6 @@ import {
   CAPTURE_STEP_BEFORE,
   CAPTURE_STEP_SUBMIT,
   CAPTURE_STEP_WATER,
-  REQUIRED_LOCK_PHOTOS,
 } from "@/lib/capture-v2";
 import {
   CAPTURE_V2_AFTER_SLOTS,
@@ -59,7 +56,6 @@ export default function CaptureFlow({
   propertyName: string;
   sanitizerType: SanitizerType;
 }) {
-  const router = useRouter();
   const [snapshot, setSnapshot] = useState<DraftSnapshot>(draft);
   const [step, setStep] = useState(initialStep);
 
@@ -146,126 +142,16 @@ export default function CaptureFlow({
     );
   }
 
-  // --- Finish (Task 5 FinishProof seam) -------------------------------------
+  // --- Finish (proof + lock + send — Task 5) --------------------------------
   return (
-    <FinishStub
+    <FinishProof
+      turnoverId={turnoverId}
+      propertyId={propertyId}
       propertyName={propertyName}
+      reading={snapshot.reading}
       photos={snapshot.photos}
-      stepLabel={stepLabel()}
+      sanitizerType={sanitizerType}
       onBack={() => setStep(CAPTURE_STEP_SUBMIT - 1)}
-      onDone={() => router.push("/field/today")}
     />
-  );
-}
-
-/** Placeholder finish screen. Nothing irreversible — lock/send arrive in Task 5. */
-function FinishStub({
-  propertyName,
-  photos,
-  stepLabel,
-  onBack,
-  onDone,
-}: {
-  propertyName: string;
-  photos: DraftPhoto[];
-  stepLabel: string;
-  onBack: () => void;
-  onDone: () => void;
-}) {
-  const capturedRequired = REQUIRED_LOCK_PHOTOS.filter(({ slot, phase }) =>
-    photos.some((p) => p.slot === slot && p.phase === phase && !!p.storagePath)
-  ).length;
-
-  return (
-    // SEAM: replace this block with <FinishProof … /> (Task 5: lock + send).
-    <main
-      style={{
-        padding: "24px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 20,
-        minHeight: "100dvh",
-      }}
-    >
-      <FieldScreenHeader
-        eyebrow={stepLabel}
-        title="Turnover captured"
-        hint={`${propertyName} · ${capturedRequired} of ${REQUIRED_LOCK_PHOTOS.length} required photos captured.`}
-      />
-
-      <div style={{ flex: 1 }}>
-        <div
-          style={{
-            background: "var(--field-card)",
-            borderRadius: 18,
-            border: "1px solid rgba(8, 9, 10, 0.06)",
-            padding: 24,
-            display: "grid",
-            gap: 8,
-            textAlign: "center",
-          }}
-        >
-          <p
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: 14,
-              lineHeight: 1.5,
-              color: "var(--field-muted)",
-              margin: 0,
-            }}
-          >
-            Proof assembly and sending to the homeowner arrive in the next build.
-            Nothing has been locked or sent yet.
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <FieldButton
-          type="button"
-          disabled
-          style={{ opacity: 0.5, cursor: "default" }}
-        >
-          Send to homeowner (coming soon)
-        </FieldButton>
-        <button
-          type="button"
-          onClick={onDone}
-          style={{
-            appearance: "none",
-            background: "transparent",
-            border: "1px solid rgba(8, 9, 10, 0.14)",
-            borderRadius: 12,
-            padding: "12px 20px",
-            minHeight: 48,
-            fontFamily: "var(--font-sans)",
-            fontSize: 16,
-            fontWeight: 600,
-            color: "var(--field-ink)",
-            cursor: "pointer",
-          }}
-        >
-          Done for now
-        </button>
-        <button
-          type="button"
-          onClick={onBack}
-          style={{
-            appearance: "none",
-            background: "transparent",
-            border: "none",
-            padding: "8px",
-            minHeight: 44,
-            fontFamily: "var(--font-sans)",
-            fontSize: 15,
-            fontWeight: 600,
-            color: "var(--field-muted)",
-            cursor: "pointer",
-          }}
-        >
-          Back
-        </button>
-      </div>
-    </main>
   );
 }
