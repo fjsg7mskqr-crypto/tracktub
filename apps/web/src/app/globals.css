@@ -1061,20 +1061,3 @@ select.input {
   color: var(--field-ink);
   min-height: 100dvh;
 }
-
-/* ============================================================
-   Field section — mobile-first "Water" scope tokens (Task 1)
-   ============================================================ */
-.field-scope {
-  --field-bg: #f4f6f9;
-  --field-card: #ffffff;
-  --field-ink: #08090a;
-  --field-muted: #5a5f6a;
-  --field-accent: #2563eb;      /* actions/text on light */
-  --field-accent-bar: #3b82f6;  /* fills, active progress */
-  --field-ok: #34d399;          /* verified/in-range status ONLY */
-  --field-serif: 'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
-  background: var(--field-bg);
-  color: var(--field-ink);
-  min-height: 100dvh;
-}
