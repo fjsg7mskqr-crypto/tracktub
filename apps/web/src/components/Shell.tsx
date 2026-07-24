@@ -92,12 +92,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // Capability-link / unauthenticated surfaces render without the app chrome.
+  // Capability-link / unauthenticated surfaces — and the mobile field section,
+  // which brings its own full-bleed shell (bottom-tab nav) — render without the
+  // desktop console chrome.
   if (
     pathname.startsWith("/proof") ||
     pathname.startsWith("/landing") ||
     pathname.startsWith("/blog") ||
-    pathname.startsWith("/invite")
+    pathname.startsWith("/invite") ||
+    pathname.startsWith("/field")
   )
     return <>{children}</>;
 
