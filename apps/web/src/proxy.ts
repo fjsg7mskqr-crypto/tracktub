@@ -15,11 +15,20 @@ export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const csp = buildCsp(nonce, { reportUri: getCspReportUri() });
 
-  // Forward x-nonce to the Next.js render layer via updateSession's
-  // extraRequestHeaders so Next.js applies the nonce to its inline bootstrap
-  // <script> tags automatically (App Router reads x-nonce from the forwarded
-  // request headers during server rendering).
-  const response = await updateSession(request, { "x-nonce": nonce });
+  // Next.js reads the nonce from the `Content-Security-Policy` header on the
+  // *forwarded request* (NOT `x-nonce`): seeing a nonce'd CSP there is what makes
+  // it (a) stamp that nonce onto every <script> it emits and (b) opt the route
+  // out of static generation so each response carries a fresh, matching nonce.
+  // Forwarding only `x-nonce` did neither — routes stayed statically prerendered
+  // and CDN-cached with nonce-less scripts, while the response CSP still sent a
+  // per-request `strict-dynamic` nonce. The nonce never matched, so a CSP3
+  // browser (incl. iOS Safari 15.4+) blocked EVERY script → no hydration → dead
+  // buttons on prod (e.g. "Continue with Google" never firing). `x-nonce` stays
+  // forwarded for any component that wants to read it directly.
+  const response = await updateSession(request, {
+    "x-nonce": nonce,
+    "Content-Security-Policy": csp,
+  });
 
   // Attach the enforcing CSP to every response (pass-through or redirect).
   response.headers.set("Content-Security-Policy", csp);
