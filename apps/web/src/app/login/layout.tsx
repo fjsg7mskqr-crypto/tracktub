@@ -14,8 +14,14 @@ export const metadata: Metadata = {
 // prerendered /login is served as frozen, nonce-less HTML while the response
 // header still carries a fresh nonce — nothing matches, every script is blocked,
 // the page never hydrates, and "Continue with Google" silently does nothing
-// (its onClick is never bound). This was live on prod: /login was the only
-// user-facing statically prerendered route, so it was the only dead one.
+// (its onClick is never bound). This was live on prod.
+//
+// Correction (#281): /login was NOT the only user-facing prerendered route, as
+// this note originally claimed. /landing and /blog were prerendered too and had
+// the same dead-JS failure — it just wasn't noticed, because unlike sign-in
+// those pages still *look* fine without JS. They are now force-dynamic as well,
+// and tests/csp-nonce-coverage.test.ts fails the build if any scripted route
+// goes back to being prerendered.
 export const dynamic = "force-dynamic";
 
 export default function LoginLayout({

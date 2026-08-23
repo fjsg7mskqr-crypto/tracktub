@@ -6,6 +6,14 @@ import { LandingWaitlist } from "./LandingWaitlist";
 import { Faq, LANDING_FAQS } from "./Faq";
 import { marketingMetadata } from "@/lib/marketing-seo";
 
+// MUST stay dynamic — see the note in src/app/login/layout.tsx (#41, #271, #281).
+// The enforcing CSP is nonce-based with 'strict-dynamic', so a prerendered page
+// is served as frozen, nonce-less HTML and every script on it is blocked. On
+// this page that killed the waitlist form: LandingWaitlist is a client component
+// using useActionState with no `permalink`, which React does not progressively
+// enhance on a statically rendered page, so with JS blocked it cannot submit.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = marketingMetadata({
   title: "TrackTub — know your hot tub was guest-ready",
   description:
