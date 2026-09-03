@@ -3,7 +3,7 @@
 **Status:** draft for founder review
 **Date:** 2026-09-03
 **Supersedes:** `2026-07-15-mobile-first-redesign-design.md`, `2026-07-21-core-flow-rebuild-design.md`
-**Design canvas:** https://claude.ai/code/artifact/d7ab9c0b-5162-42f2-bbcb-bca114bcfd19
+**Design canvas:** [https://claude.ai/code/artifact/d7ab9c0b-5162-42f2-bbcb-bca114bcfd19](https://claude.ai/code/artifact/d7ab9c0b-5162-42f2-bbcb-bca114bcfd19)
 
 ## Why we are doing this
 
@@ -12,19 +12,19 @@ turnover on production. Investigation found the cause is not the platform:
 
 - Google auth works. He signed in at 02:27 UTC and browsed four property pages.
 - RLS is correct. Impersonating his user id in a rolled-back transaction,
-  `app_can_capture_property` returns true for all four properties.
+`app_can_capture_property` returns true for all four properties.
 - The schema holds real data and prod deploys fine.
 
 What is broken is the surface:
 
 1. **The July field flow is unreachable.** `/field/today` and
-   `/field/turnover/[id]` shipped to production (PRs #253–#257) with **no link to
-   them from anywhere in the app**, and `BottomTabBar` advertises four tabs of
-   which three — `/field/tubs`, `/field/history`, `/field/more` — have no route
-   and 404.
+ `/field/turnover/[id]` shipped to production (PRs #253–#257) with **no link to
+ them from anywhere in the app**, and `BottomTabBar` advertises four tabs of
+ which three — `/field/tubs`, `/field/history`, `/field/more` — have no route
+ and 404.
 2. **Two rival capture flows exist.** The desktop wizard `/p/[id]/new` and the
-   mobile field flow both call `ensureDraftTurnoverAction`, and neither knows the
-   other exists.
+ mobile field flow both call `ensureDraftTurnoverAction`, and neither knows the
+ other exists.
 3. **A tap on "New turnover" silently does nothing.** See "The dead tap" below.
 
 This is the same failure named in the July retro: work was built as parallel
@@ -75,10 +75,10 @@ Five screens. One path. Nothing else ships until these are good.
 
 - Date header.
 - **Up next** — tubs due, worst first. A single due tub renders as a full card
-  with its photo, last readings and one primary action; it must never render as
-  a one-row list.
+with its photo, last readings and one primary action; it must never render as
+a one-row list.
 - **Your tubs** — every tub, always visible, sorted by attention: thumbnail,
-  name, client, days since service, status dot.
+name, client, days since service, status dot.
 - Bottom tabs: **Today · Tubs · Reports**.
 
 **There is no "done today" list.** The founder rejected it as repetitive, and
@@ -95,8 +95,8 @@ delta against the previous visit) → **a sparkline** for pH → **"last time
 you…"** (drained, cleaned the filter, sent a report, each with days since) →
 the **chronological visit list, demoted to the bottom**.
 
-The list is the artifact. The four blocks above it are the product. Skimmer's
-top App Store complaint is having to click week-by-week through history; that is
+The list is the artifact. The four blocks above it are the product. Skimmer's  
+top App Store complaint is having to click week-by-week through history; that is  
 the failure mode this ordering avoids.
 
 ### 3. The visit — one scrolling sheet
@@ -105,11 +105,14 @@ Photo tiles and chemistry on **one screen**, not a wizard. Skimmer enters
 chemistry on a scrolling screen; every forced "Next" is a failure point with wet
 gloves, and a scroll survives a mistap where a wizard step does not.
 
-- **Photos**: four tiles — before, water level, full frame, cover on. A tile
-  opens the camera.
+- **Photos**: three tiles — **before**, **after (full frame)**, **cover on**. A
+tile opens the camera. Founder's call, 2026-09-03: the separate water-level shot
+is dropped, because the level is legible in the full-frame shot and a fourth
+tile is a fourth thing to do in the cold. Extra photos can still be added, but
+nothing asks for them.
 - **The water**: alkalinity, pH, calcium hardness, sanitizer — in that order,
-  which is buffer-correct. Each row shows **last visit's value inline**, because
-  reading a strip is a judgement call and the previous number is the reference.
+which is buffer-correct. Each row shows **last visit's value inline**, because
+reading a strip is a judgement call and the previous number is the reference.
 - **What you added**: dosage chips with amounts.
 - **Notes**.
 
@@ -126,6 +129,36 @@ the previous visit's shot at bottom-left to frame against. Shutter, and Skip.
 **Camera capture only — no camera-roll uploads.** Skimmer enforces this, and it
 is what makes the timestamps defensible to a client. It is the whole
 dispute-grade claim; without it the report footer's on-site assertion is a lie.
+
+## Offline
+
+**Decided 2026-09-03: the visit is written to the phone first and syncs when
+signal returns.** A tub can sit in a canyon; losing a turnover to a dead bar and
+redoing it later from memory would defeat the entire point of the timestamps.
+
+- A draft visit — photos, readings, treatments, notes — is written to local
+  storage the moment it is captured, before any network call.
+- A background queue uploads it when connectivity returns. The operator never
+  waits on a spinner and never sees an upload failure mid-visit.
+- The UI states plainly what is not yet synced, per visit. Never a silent
+  pending state.
+
+**The capture timestamp is the device time at the shutter, not the upload
+time.** This is load-bearing: a photo taken at 1:48 pm and uploaded at 4:10 pm
+must read 1:48 pm on the record, or the on-site claim in the report footer is
+false. Store both — `captured_at` (device, authoritative for the record) and
+`uploaded_at` (server) — and show the first.
+
+**Trust boundary, to be handled honestly:** device clocks can be wrong or
+deliberately changed. The server should record its own receipt time and flag a
+record whose device time and receipt time diverge implausibly, rather than
+silently trusting the phone. What we claim in the client-facing report is "taken
+on site during this visit" — which the camera-only rule supports — not
+"cryptographically proven at 1:48 pm".
+
+Scope discipline: this is offline **capture**, not an offline-first app. Browsing
+the tub roster and history still expects a connection. Full offline-first was
+considered and rejected as disproportionate for now.
 
 ### 5. The record
 
@@ -187,20 +220,20 @@ their rows so the schedule work can return without a migration.
 
 These are not polish; each one is a bug we have already paid for.
 
-1. **`error.tsx` boundaries.** The app currently has only `global-error.tsx`,
-   which catches root-layout failures alone. Every route segment gets an
-   `error.tsx`. A server-component throw during a client-side navigation with no
-   boundary in the segment tree makes the router abort **silently** — a tap that
-   does nothing, which is the leading explanation for the dead tap below.
+1. `**error.tsx` boundaries.** The app currently has only `global-error.tsx`,
+ which catches root-layout failures alone. Every route segment gets an
+ `error.tsx`. A server-component throw during a client-side navigation with no
+ boundary in the segment tree makes the router abort **silently** — a tap that
+ does nothing, which is the leading explanation for the dead tap below.
 2. **No orphan routes.** Every tab and link resolves to a route that exists. A CI
-   check should assert that each `href` in the nav has a matching page file —
-   three of four field tabs 404'd in production for six weeks.
+ check should assert that each `href` in the nav has a matching page file —
+ three of four field tabs 404'd in production for six weeks.
 3. **One capture flow.** `/p/[id]/new` and `/field/turnover/[id]` collapse into
-   one. Two flows is what produced this situation.
+ one. Two flows is what produced this situation.
 4. **No side effects on GET.** `/p/[id]/new` creates a draft turnover row while
-   *rendering*. Draft creation moves to an explicit action.
+ *rendering*. Draft creation moves to an explicit action.
 5. **CSP.** Read `docs/incidents/` on the nonce-vs-prerendered-route bug before
-   touching render modes. The CI guard stays.
+ touching render modes. The CI guard stays.
 
 ### The dead tap — unresolved
 
@@ -226,11 +259,17 @@ sends himself the report — then wants to do it again next time.
 
 Not "the screens are built."
 
+## Resolved 2026-09-03
+
+- **Photo count** → **three**: before, after full frame, cover on. The separate
+  water-level shot is dropped.
+- **Reports tab** → **kept**. Today · Tubs · Reports.
+- **Offline** → **queue locally, sync when signal returns.** See "Offline" above.
+
 ## Open questions
 
-1. **Typeface** — Archivo, Schibsted Grotesk, Manrope or Instrument Sans.
-2. **Photo count** — four tiles may be one or two too many for a real turnover.
-3. **Reports tab** — earns a tab because a client may ask for a record while he
-   is away from a tub. Unconfirmed against his actual habit.
-4. **Offline** — a tub in a canyon may have no signal. Not addressed in this
-   design; needs a decision before build, since it shapes the draft model.
+1. **Typeface** — Archivo (working default), Schibsted Grotesk, Manrope or
+   Instrument Sans. The canvas carries a live switcher; the founder has not
+   chosen yet. One token, changeable in a line — build proceeds on Archivo, and
+   `branding/brand-notes.md` is updated once it is settled.
+
