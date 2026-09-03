@@ -4,10 +4,8 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { BottomTabBar, type FieldTab } from "@/components/field/BottomTabBar";
 
-function activeTab(pathname: string | null): FieldTab {
-  if (pathname?.startsWith("/field/tubs")) return "tubs";
-  if (pathname?.startsWith("/field/history")) return "history";
-  if (pathname?.startsWith("/field/more")) return "more";
+/** Only one tab exists today; see the note in BottomTabBar. */
+function activeTab(_pathname: string | null): FieldTab {
   return "today";
 }
 
