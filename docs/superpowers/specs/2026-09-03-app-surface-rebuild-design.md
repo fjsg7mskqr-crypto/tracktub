@@ -130,35 +130,31 @@ the previous visit's shot at bottom-left to frame against. Shutter, and Skip.
 is what makes the timestamps defensible to a client. It is the whole
 dispute-grade claim; without it the report footer's on-site assertion is a lie.
 
-## Offline
+## Offline — out of scope
 
-**Decided 2026-09-03: the visit is written to the phone first and syncs when
-signal returns.** A tub can sit in a canyon; losing a turnover to a dead bar and
-redoing it later from memory would defeat the entire point of the timestamps.
+**Decided 2026-09-03: not building it.** The app requires a connection. This was
+briefly specified as offline capture-and-sync and then cut on the founder's call
+once the cost was clear.
 
-- A draft visit — photos, readings, treatments, notes — is written to local
-  storage the moment it is captured, before any network call.
-- A background queue uploads it when connectivity returns. The operator never
-  waits on a spinner and never sees an upload failure mid-visit.
-- The UI states plainly what is not yet synced, per visit. Never a silent
-  pending state.
+**The consequence, stated plainly so nobody is surprised by it later:** at a tub
+with no signal, the visit cannot be logged there and then. It has to be entered
+once back in range, which means the readings are recalled rather than recorded,
+and the photo timestamps are the time of entry, not the time at the tub. For a
+product whose claim is dispute-grade evidence, that is a real hole — it is
+acceptable only for as long as the tubs in question have coverage.
 
-**The capture timestamp is the device time at the shutter, not the upload
-time.** This is load-bearing: a photo taken at 1:48 pm and uploaded at 4:10 pm
-must read 1:48 pm on the record, or the on-site claim in the report footer is
-false. Store both — `captured_at` (device, authoritative for the record) and
-`uploaded_at` (server) — and show the first.
+**Revisit this the first time a real turnover is lost or fudged because of it.**
+That is the signal, and it is worth watching for rather than waiting to be told.
 
-**Trust boundary, to be handled honestly:** device clocks can be wrong or
-deliberately changed. The server should record its own receipt time and flag a
-record whose device time and receipt time diverge implausibly, rather than
-silently trusting the phone. What we claim in the client-facing report is "taken
-on site during this visit" — which the camera-only rule supports — not
-"cryptographically proven at 1:48 pm".
+Two things stay in scope regardless, because they are cheap now and expensive to
+retrofit:
 
-Scope discipline: this is offline **capture**, not an offline-first app. Browsing
-the tub roster and history still expects a connection. Full offline-first was
-considered and rejected as disproportionate for now.
+- **Photos carry `captured_at` (device, at the shutter) separately from the
+  server's receipt time**, and the record displays the former. Today they will
+  be seconds apart; keeping the columns distinct is what makes offline capture a
+  later feature rather than a later migration.
+- **Draft visits survive a page reload.** Not a sync queue — just not losing
+  half a turnover to a backgrounded tab or a dropped request.
 
 ### 5. The record
 
@@ -264,7 +260,8 @@ Not "the screens are built."
 - **Photo count** → **three**: before, after full frame, cover on. The separate
   water-level shot is dropped.
 - **Reports tab** → **kept**. Today · Tubs · Reports.
-- **Offline** → **queue locally, sync when signal returns.** See "Offline" above.
+- **Offline** → **cut.** Connection required. See "Offline — out of scope" above
+  for the consequence and the signal to revisit it.
 
 ## Open questions
 
