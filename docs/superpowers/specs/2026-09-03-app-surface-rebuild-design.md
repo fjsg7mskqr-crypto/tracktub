@@ -231,15 +231,52 @@ These are not polish; each one is a bug we have already paid for.
 5. **CSP.** Read `docs/incidents/` on the nonce-vs-prerendered-route bug before
  touching render modes. The CI guard stays.
 
-### The dead tap — unresolved
+### The dead tap — still unreproduced, but narrowed
 
-The founder tapped "New turnover" and nothing happened. Established:
-`can_capture` is true so the button renders; `/p/[id]/new` creates a draft row on
-render and **zero draft rows exist**, so it never rendered; Vercel logs show no
-request for it. Leading hypothesis is the missing error boundary (1 above).
-**Not yet reproduced locally. Reproduce before fixing** — requirement 1 may
-already cure it, but shipping a fix for an unconfirmed cause is how this gets
-missed again.
+The founder tapped "New turnover" and nothing happened.
+
+**Established from production:** `can_capture` is true for his user on all four
+properties, so the button renders; `/p/[id]/new` creates a draft row while
+rendering and **zero draft rows exist**, so it never rendered; Vercel logs show
+no request for it during his session.
+
+**Ruled out by a local investigation on 2026-09-03** (local Supabase stack, dev
+server, seeded demo host):
+
+- **Not a server-side failure.** `GET /p/[id]/new` with a valid session returns
+  200 and renders the capture wizard.
+- **Not the RSC navigation.** A client-side navigation is a GET carrying an
+  `RSC: 1` header. It returns 307 to the same path plus `?_rsc`, then 200 —
+  and `/p/[id]` and `/` behave identically. That redirect is normal Next
+  behaviour, not a fault.
+- **Not the prerender/CSP class.** `next build` reports both `/p/[id]` and
+  `/p/[id]/new` as dynamic (`ƒ`), so neither is a frozen nonce-less shell. This
+  is a different failure from #271/#281.
+- **The missing error boundary does not explain it on its own.** A boundary
+  makes a *thrown* error visible, but nothing throws on this path locally.
+
+**What the evidence still has to satisfy:** the tap produced **no server request
+at all**. `<Link>` renders a plain `<a href>`, so even with completely dead
+JavaScript a tap would cause a full document navigation and a log line. Two
+explanations survive:
+
+1. **The tap never landed on the button.** `/p/[id]` is the desktop console
+   layout, and he was on a phone. The header is `.spread` — `display: flex;
+   justify-content: space-between` with **no `flex-wrap` and no mobile
+   breakpoint** (`globals.css:187`) — holding a 28px `h1` beside the button. At
+   390px this can push the button out of the viewport or under an overlapping
+   element. This uniquely explains zero requests, and it is consistent with
+   every other fact.
+2. **The production logs are incomplete.** This is a Vercel Hobby project;
+   absence of a log line is weaker evidence than presence of one.
+
+**The decisive test needs a browser at phone width, which this session could not
+run** (Chrome extension not connected; the founder uses Safari). Either drive
+`/p/[id]` at 390px in a real browser, or have the founder retry on his phone
+while production logs are watched live.
+
+**This does not block the rebuild.** Hypothesis 1 disappears on its own: the new
+flow is phone-first and the desktop console page is deleted in phase 2.
 
 ### Separately
 
