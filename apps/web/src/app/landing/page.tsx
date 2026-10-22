@@ -76,7 +76,6 @@ export default function Landing() {
             <a href="#why">Why it matters</a>
             <a href="#how">How it works</a>
             <Link href="/blog">Resources</Link>
-            <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
           </div>
           <div className="sp">
@@ -117,7 +116,7 @@ export default function Landing() {
                 <Check color="#34D399" w={3} />
                 Free for your first property
               </span>
-              <span>No app to install · ~$12/property at 2+</span>
+              <span>No app to install</span>
             </div>
           </div>
 
@@ -187,8 +186,7 @@ export default function Landing() {
               </div>
               <h3>Know it was safe &amp; ready</h3>
               <p>
-                Water level, clarity, and the control panel, captured every time.{" "}
-                <em>Coming: reminders so the water doesn&rsquo;t crash between back-to-back guests.</em>
+                Water level, clarity, and the control panel, captured every time.
               </p>
             </div>
             <div className="glass fcard">
@@ -441,51 +439,6 @@ export default function Landing() {
               </p>
             </div>
             <div className="pimg" style={{ backgroundImage: "url(/landing/water.jpg)" }} aria-hidden="true" />
-          </div>
-        </div>
-
-        {/* PRICING */}
-        <div className="section" id="pricing">
-          <span className="eyebrow">Simple pricing</span>
-          <div className="sechead">
-            <h2>Start free. Add properties when you grow.</h2>
-          </div>
-          <div className="price">
-            <div className="glass pcard">
-              <div className="k">Free</div>
-              <div className="v">$0</div>
-              <div className="d">Your first property, free. All features.</div>
-              <ul>
-                {["1 property", "Unlimited proofs & share links", "Server timestamp + tamper-proof record"].map((f) => (
-                  <li key={f}>
-                    <Check size={16} color="#60A5FA" w={2.4} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <a href="#join" className="btn ghost" style={{ width: "100%", justifyContent: "center" }}>
-                Start free
-              </a>
-            </div>
-            <div className="glass pcard hot">
-              <span className="tagtop">For portfolios</span>
-              <div className="k">Pro</div>
-              <div className="v">
-                $12<small> /property / mo</small>
-              </div>
-              <div className="d">Everything in Free, across every tub you manage.</div>
-              <ul>
-                {["2+ properties", "Multi-property cockpit + alerts", "Dispute-ready PDF exports"].map((f) => (
-                  <li key={f}>
-                    <Check size={16} color="#60A5FA" w={2.4} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <a href="#join" className="btn" style={{ width: "100%", justifyContent: "center" }}>
-                Get early access
-              </a>
-            </div>
           </div>
         </div>
 
