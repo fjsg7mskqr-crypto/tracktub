@@ -1,10 +1,30 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { joinWaitlist, type WaitlistState } from "./actions";
+import { useEffect, useState, type FormEvent } from "react";
+import type { WaitlistState } from "./waitlist/route";
 import { track } from "@/lib/analytics";
 
 const INITIAL: WaitlistState = { status: "idle" };
+const FAILED: WaitlistState = {
+  status: "error",
+  message: "Something went wrong — please try again.",
+};
+
+/** POSTs to the stable /landing/waitlist route (not a Server Action — see the
+ *  route for why). */
+async function joinWaitlist(email: string): Promise<WaitlistState> {
+  try {
+    const res = await fetch("/landing/waitlist", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const state = (await res.json()) as WaitlistState;
+    return state?.status ? state : FAILED;
+  } catch {
+    return FAILED;
+  }
+}
 
 const srOnly = {
   position: "absolute" as const,
@@ -20,7 +40,16 @@ const srOnly = {
  *  states. Inherits text-align from its container so it stays centered in the
  *  launch CTA and left-aligned in the hero. */
 export function LandingWaitlist({ cta = "Get early access" }: { cta?: string }) {
-  const [state, formAction, pending] = useActionState(joinWaitlist, INITIAL);
+  const [state, setState] = useState<WaitlistState>(INITIAL);
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const email = String(new FormData(e.currentTarget).get("email") ?? "");
+    setPending(true);
+    setState(await joinWaitlist(email));
+    setPending(false);
+  }
 
   useEffect(() => {
     if (state.status === "ok") track("waitlist_joined");
@@ -41,7 +70,7 @@ export function LandingWaitlist({ cta = "Get early access" }: { cta?: string }) 
 
   return (
     <>
-      <form className="capture" action={formAction}>
+      <form className="capture" onSubmit={onSubmit}>
         <label htmlFor="tt-wl-email" style={srOnly}>
           Work email
         </label>
