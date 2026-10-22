@@ -22,7 +22,7 @@ export const LANDING_FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Do I need to know hot tub chemistry?",
-    a: "No — the guided set is just photos. Simple water reminders are coming to help, not to require expertise.",
+    a: "No — the guided set is just photos. You don’t need to be a water-chemistry expert.",
   },
 ];
 
