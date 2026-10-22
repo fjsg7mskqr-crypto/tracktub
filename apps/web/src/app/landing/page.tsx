@@ -37,6 +37,21 @@ function Check({ size = 11, color = "#04240f", w = 3.2 }: { size?: number; color
   );
 }
 
+/** Mini timestamped log used inside the feature-showcase cards. */
+function UiLog({ rows }: { rows: [string, string][] }) {
+  return (
+    <div className="uilog">
+      {rows.map(([t, label]) => (
+        <div key={label} className="uirow">
+          <span className="t">{t}</span>
+          {label}
+          <span className="ok">✓</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Landing() {
   return (
     <div className="tt-landing">
@@ -278,19 +293,13 @@ export default function Landing() {
               <h3>Server timestamp</h3>
               <p>Stamped the moment it&rsquo;s submitted — our clock, never the cleaner&rsquo;s phone.</p>
               <div className="ui">
-                <div className="uilog">
-                  {[
+                <UiLog
+                  rows={[
                     ["14:22:07", "Photos submitted"],
                     ["14:22:08", "Server-stamped"],
                     ["14:22:08", "Record locked"],
-                  ].map(([t, label]) => (
-                    <div key={label} className="uirow">
-                      <span className="t">{t}</span>
-                      {label}
-                      <span className="ok">✓</span>
-                    </div>
-                  ))}
-                </div>
+                  ]}
+                />
               </div>
             </div>
 
@@ -373,19 +382,13 @@ export default function Landing() {
               <h3>Audit trail</h3>
               <p>Every photo and every change is logged with who and when — and the log itself can&rsquo;t be edited.</p>
               <div className="ui">
-                <div className="uilog">
-                  {[
+                <UiLog
+                  rows={[
                     ["14:22:07", "Turnover created"],
-                    ["14:22:08", "4 photos added"],
+                    ["14:22:08", "Photos added"],
                     ["14:22:08", "Submitted & locked"],
-                  ].map(([t, label]) => (
-                    <div key={label} className="uirow">
-                      <span className="t">{t}</span>
-                      {label}
-                      <span className="ok">✓</span>
-                    </div>
-                  ))}
-                </div>
+                  ]}
+                />
               </div>
             </div>
           </div>
