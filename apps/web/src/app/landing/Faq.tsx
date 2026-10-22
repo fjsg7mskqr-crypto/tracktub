@@ -6,11 +6,11 @@ export const LANDING_FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What does my guest or owner see?",
-    a: "A clean, read-only link with the photos, timestamp, and verification — no login, nothing to install.",
+    a: "A clean, read-only link with the photos and the server timestamp — no login, nothing to install.",
   },
   {
     q: "I already take photos. Why this?",
-    a: "Camera-roll photos aren't stamped on a trusted clock, locked against edits, or shareable as proof. TrackTub makes them count.",
+    a: "Camera-roll photos can come from any day and be edited later. TrackTub photos are taken live, stamped on our server, and locked once submitted — so they hold up when someone asks.",
   },
   {
     q: "Is it hard to set up?",
