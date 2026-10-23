@@ -62,7 +62,7 @@ Take the same photo set every turnover:
 - Control panel (no error codes)
 - Water chemistry reading (test strip or meter)
 
-Camera-roll photos help operationally, but they are weak as **dispute evidence** — no trusted timestamp, easy to edit, hard to share. A structured capture with server time, on-site verification, and a locked record is what holds up when an owner or Airbnb asks "was it actually ready?"
+Camera-roll photos help operationally, but they are weak as **dispute evidence** — no trusted timestamp, easy to edit, hard to share. A structured capture with server time, live camera photos, and a locked record is what holds up when an owner or Airbnb asks "was it actually ready?"
 
 ## What to log every turnover
 
@@ -110,4 +110,4 @@ The checklist only works if whoever does the turnover actually runs it. Tips for
 
 ---
 
-*TrackTub is built for self-managed STR hosts who want guest-ready peace of mind first — and dispute-grade proof when anyone asks. [Join the early-access list](/landing#join) to capture guided turnover records with server timestamps, on-site verification, and one-tap share links.*
+*TrackTub is built for self-managed STR hosts who want guest-ready peace of mind first — and a record to show when anyone asks. [Join the early-access list](/landing#join) to capture guided turnover records with server timestamps, camera-only photos, and one-tap share links.*
