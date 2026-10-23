@@ -29,11 +29,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(getURL()),
   title: "TrackTub — guest-ready hot tub proof",
   description:
-    "Dispute-grade turnover proof for short-term-rental operators. Capture, prove, share.",
+    "Timestamped hot-tub turnover records for short-term rentals. Capture, keep, share.",
   openGraph: {
     title: "TrackTub — guest-ready hot tub proof",
     description:
-      "The dispute-grade evidence layer for short-term-rental hot-tub turnovers.",
+      "Timestamped, locked records of every short-term-rental hot-tub turnover.",
     siteName: "TrackTub",
     type: "website",
   },
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "TrackTub — guest-ready hot tub proof",
     description:
-      "The dispute-grade evidence layer for short-term-rental hot-tub turnovers.",
+      "Timestamped, locked records of every short-term-rental hot-tub turnover.",
   },
   // Google Search Console domain verification. No-op until the env var is set in
   // Vercel (then redeploy — NEXT_PUBLIC_* is inlined at build time). Lets the
