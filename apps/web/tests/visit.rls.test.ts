@@ -5,8 +5,15 @@ import type { Database } from "@/lib/supabase/types";
 import {
   createDraft,
   findOpenDraft,
+  finishVisit,
   loadVisitSnapshot,
+  logReading,
+  saveAdded,
+  saveNotes,
+  savePhoto,
+  saveWork,
 } from "@/lib/visit-data";
+import { isPartial, type ReadingValues } from "@/lib/visit";
 
 // Visit data layer against a real Supabase (run by the CI `rls` job via
 // `npm run test:rls`). Self-skips without the service-role env, like
@@ -149,5 +156,104 @@ describe.skipIf(!ready)("visit data", () => {
     await expect(loadVisitSnapshot(db, randomUUID())).rejects.toThrow(
       "Visit not found"
     );
+  });
+  const jpeg = () =>
+    new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: "image/jpeg" });
+  const blank: ReadingValues = {
+    total_alkalinity: null,
+    ph: null,
+    calcium_hardness: null,
+    sanitizer_ppm: null,
+  };
+
+  it("reload restores every entry type", async () => {
+    const tub = await newTub("Reload");
+    const id = await createDraft(db, tub, userId);
+    const reload = () => loadVisitSnapshot(db, id);
+
+    await savePhoto(db, id, "before", jpeg(), "2026-10-27T09:43:00.000Z");
+    let s = await reload();
+    expect(s.photos.map((p) => [p.kind, p.capturedAt])).toEqual([
+      ["before", "2026-10-27T09:43:00.000Z"],
+    ]);
+
+    const found = { ...blank, ph: 8, sanitizer_ppm: 0.5 };
+    await logReading(db, id, "found", found);
+    s = await reload();
+    expect(s.found).toEqual(found);
+    expect(s.foundAt).not.toBeNull();
+    expect(s.left).toBeNull();
+
+    await saveWork(db, id, ["wiped", "filter_replaced"]);
+    s = await reload();
+    expect(s.work).toEqual(["wiped", "filter_replaced"]);
+
+    await saveAdded(db, id, [{ product: "pH down", amount: "2 oz" }]);
+    s = await reload();
+    expect(s.added).toEqual([{ product: "pH down", amount: "2 oz" }]);
+    expect(s.found).toEqual(found);
+
+    await saveNotes(db, id, "Jets weak");
+    s = await reload();
+    expect(s.notes).toBe("Jets weak");
+
+    const left = { total_alkalinity: 100, ph: 7.5, calcium_hardness: 190, sanitizer_ppm: 2 };
+    await logReading(db, id, "left", left);
+    s = await reload();
+    expect(s.left).toEqual(left);
+    expect(s.leftAt).not.toBeNull();
+    expect(s.found).toEqual(found);
+
+    await savePhoto(db, id, "after", jpeg(), "2026-10-27T10:50:00.000Z");
+    await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:52:00.000Z");
+    s = await reload();
+    expect(s.photos.map((p) => p.kind).sort()).toEqual(["after", "before", "cover"]);
+    expect(s.work).toEqual(["wiped", "filter_replaced"]);
+    expect(s.added).toEqual([{ product: "pH down", amount: "2 oz" }]);
+    expect(s.notes).toBe("Jets weak");
+    expect(isPartial(s)).toBe(false);
+  });
+
+  it("logReading stores null for unset rows", async () => {
+    const tub = await newTub("Nulls");
+    const id = await createDraft(db, tub, userId);
+    await logReading(db, id, "found", { ...blank, total_alkalinity: 90 });
+    await logReading(db, id, "left", { ...blank, ph: 7.5 });
+    const { data } = await admin
+      .from("water_reading")
+      .select("*")
+      .eq("turnover_id", id)
+      .single();
+    expect(data).toMatchObject({
+      total_alkalinity: 90,
+      ph: null,
+      calcium_hardness: null,
+      sanitizer_ppm: null,
+      left_total_alkalinity: null,
+      left_ph: 7.5,
+      left_calcium_hardness: null,
+      left_sanitizer_ppm: null,
+    });
+    expect(data?.left_recorded_at).not.toBeNull();
+  });
+
+  it("retaking a photo keeps one row per kind", async () => {
+    const tub = await newTub("Retake");
+    const id = await createDraft(db, tub, userId);
+    await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:00:00.000Z");
+    await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:05:00.000Z");
+    const { data } = await admin.from("photo").select("captured_at").eq("turnover_id", id);
+    expect(data).toHaveLength(1);
+    expect(Date.parse(data![0].captured_at!)).toBe(Date.parse("2026-10-27T10:05:00.000Z"));
+  });
+
+  it("finish locks an empty visit as partial", async () => {
+    const tub = await newTub("Empty finish");
+    const id = await createDraft(db, tub, userId);
+    await finishVisit(db, id);
+    const s = await loadVisitSnapshot(db, id);
+    expect(s.status).toBe("submitted_locked");
+    expect(isPartial(s)).toBe(true);
+    await expect(saveNotes(db, id, "late")).rejects.toThrow("Visit is locked");
   });
 });
