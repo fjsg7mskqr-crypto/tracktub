@@ -647,6 +647,7 @@ export type Database = {
           org_id: string
           sanitizer_type: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes: string | null
+          volume_gallons: number | null
         }
         Insert: {
           address?: string | null
@@ -662,6 +663,7 @@ export type Database = {
           org_id: string
           sanitizer_type?: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes?: string | null
+          volume_gallons?: number | null
         }
         Update: {
           address?: string | null
@@ -677,6 +679,7 @@ export type Database = {
           org_id?: string
           sanitizer_type?: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes?: string | null
+          volume_gallons?: number | null
         }
         Relationships: [
           {
@@ -968,6 +971,7 @@ export type Database = {
           geofence_ok: boolean | null
           id: string
           notes: string | null
+          owner_flag: string | null
           property_id: string
           share_token: string | null
           status: Database["public"]["Enums"]["turnover_status"]
@@ -984,6 +988,7 @@ export type Database = {
           geofence_ok?: boolean | null
           id?: string
           notes?: string | null
+          owner_flag?: string | null
           property_id: string
           share_token?: string | null
           status?: Database["public"]["Enums"]["turnover_status"]
@@ -1000,6 +1005,7 @@ export type Database = {
           geofence_ok?: boolean | null
           id?: string
           notes?: string | null
+          owner_flag?: string | null
           property_id?: string
           share_token?: string | null
           status?: Database["public"]["Enums"]["turnover_status"]

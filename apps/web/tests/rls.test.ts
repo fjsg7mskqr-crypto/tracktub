@@ -1952,4 +1952,89 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(mismatched).toEqual([]);
     });
   });
+
+  describe("turnover owner_flag", () => {
+    const draftTurnover = async () => {
+      const { data: to, error } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      if (error || !to) throw error ?? new Error("turnover insert failed");
+      return to.id;
+    };
+
+    it("owner_flag saves on a draft", async () => {
+      const id = await draftTurnover();
+      const { error } = await operatorA.client
+        .from("turnover")
+        .update({ owner_flag: "Cover strap is fraying — worth replacing." })
+        .eq("id", id);
+      expect(error).toBeNull();
+      const { data } = await admin
+        .from("turnover")
+        .select("owner_flag")
+        .eq("id", id)
+        .single();
+      expect(data?.owner_flag).toBe(
+        "Cover strap is fraying — worth replacing."
+      );
+    });
+
+    it("owner_flag blocked once locked", async () => {
+      const id = await draftTurnover();
+      const { error: lockErr } = await admin
+        .from("turnover")
+        .update({ status: "submitted_locked" })
+        .eq("id", id);
+      expect(lockErr).toBeNull();
+      // turnover_update_draft's USING denies the operator → 0 rows.
+      const { data: updated } = await operatorA.client
+        .from("turnover")
+        .update({ owner_flag: "tampered" })
+        .eq("id", id)
+        .select("id");
+      expect(updated ?? []).toHaveLength(0);
+      // turnover_lock_guard rejects even the service role (bypasses RLS).
+      const { error: guardErr } = await admin
+        .from("turnover")
+        .update({ owner_flag: "tampered" })
+        .eq("id", id);
+      expect(guardErr?.message).toMatch(/locked/);
+      const { data } = await admin
+        .from("turnover")
+        .select("owner_flag")
+        .eq("id", id)
+        .single();
+      expect(data?.owner_flag).toBeNull();
+    });
+  });
+
+  describe("property volume", () => {
+    it("volume_gallons: 0 rejected, 450 accepted, null accepted", async () => {
+      const set = (v: number | null) =>
+        operatorA.client
+          .from("property")
+          .update({ volume_gallons: v })
+          .eq("id", propUnassigned)
+          .select("volume_gallons");
+
+      const { error: zero } = await set(0);
+      expect(zero).not.toBeNull();
+      const { error: tooBig } = await set(5001);
+      expect(tooBig).not.toBeNull();
+
+      const { data: fourFifty, error: e450 } = await set(450);
+      expect(e450).toBeNull();
+      expect(fourFifty?.[0]).toEqual({ volume_gallons: 450 });
+
+      const { data: unset, error: eNull } = await set(null);
+      expect(eNull).toBeNull();
+      expect(unset?.[0]).toEqual({ volume_gallons: null });
+    });
+  });
 });
