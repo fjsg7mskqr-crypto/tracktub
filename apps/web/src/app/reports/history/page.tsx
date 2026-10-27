@@ -101,8 +101,9 @@ export default async function HistoryPage({
                   {r.partial.length > 0 && " · Partial"}
                 </p>
                 <p className="tt-record-text">
-                  {ph && `pH ${ph.found} → ${ph.left}`}
-                  {cl && ` · Cl ${cl.found} → ${cl.left}`}
+                  {r.water.any && ph && cl
+                    ? `pH ${ph.found} → ${ph.left} · Cl ${cl.found} → ${cl.left}`
+                    : "No reading logged"}
                 </p>
                 <p className="tt-record-text">
                   {[

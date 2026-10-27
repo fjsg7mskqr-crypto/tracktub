@@ -116,6 +116,8 @@ describe("/reports/history", () => {
     ]);
     expect(container.textContent).toContain("pH 8.0 → 7.5");
     expect(container.textContent).toContain("3 photos");
+    expect(container.textContent).toContain("No reading logged");
+    expect(container.textContent).not.toContain("— →");
     expect(container.textContent).toContain("Partial");
     const text = container.innerHTML.toLowerCase();
     for (const word of BANNED_WORDS) expect(text).not.toContain(word);
