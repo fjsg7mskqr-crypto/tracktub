@@ -2,7 +2,11 @@
 // starts unset with a greyed suggestion, and only − / + or tapping the value
 // sets it. Unset rows log as null.
 
-import { READING_FIELDS, READING_TARGETS, type ReadingField } from "@/lib/readings";
+import {
+  READING_FIELDS,
+  READING_TARGETS,
+  type ReadingField,
+} from "@/lib/readings";
 import type { ReadingValues } from "@/lib/visit";
 
 export type RowState = {
@@ -32,17 +36,16 @@ export function initSheet(
 }
 
 /** One step up or down from what's shown; sets the row. */
-export function bump(
-  s: SheetState,
-  f: ReadingField,
-  dir: 1 | -1
-): SheetState {
+export function bump(s: SheetState, f: ReadingField, dir: 1 | -1): SheetState {
   const { lo, hi, step } = READING_TARGETS[f];
   const row = s[f];
   const from = row.set
     ? (row.value ?? 0)
     : (row.suggestion ?? round(f, (lo + hi) / 2));
-  return { ...s, [f]: { ...row, value: round(f, from + dir * step), set: true } };
+  return {
+    ...s,
+    [f]: { ...row, value: round(f, from + dir * step), set: true },
+  };
 }
 
 /** Take the shown suggestion as read. No-op when there is none. */

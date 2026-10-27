@@ -70,9 +70,9 @@ describe("visit domain", () => {
       calcium_hardness: null,
       sanitizer_ppm: null,
     };
-    expect(
-      missingParts({ photos: [], found: empty, left: null })
-    ).toContain("reading as found");
+    expect(missingParts({ photos: [], found: empty, left: null })).toContain(
+      "reading as found"
+    );
   });
 
   it("a complete visit is not partial", () => {
