@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/lib/supabase/types";
 import type { CleaningStepCode } from "@/lib/types";
-import { CLEANING_STEPS } from "@/lib/types";
+import { CLEANING_STEPS, LEGACY_DEFAULT_STEPS } from "@/lib/types";
 import { sendReadyEmail } from "@/lib/email";
 import {
   REQUIRED_LOCK_PHOTOS,
@@ -184,7 +184,7 @@ export async function ensureDraftTurnoverAction(
       submitter_id: user.id,
       status: "draft",
       share_token: shareToken,
-      cleaning_steps: CLEANING_STEPS.map((s) => s.code),
+      cleaning_steps: LEGACY_DEFAULT_STEPS,
     })
     .select("id")
     .single();
