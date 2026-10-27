@@ -1710,4 +1710,28 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(preexisting).toEqual([]);
     });
   });
+
+  describe("property care intervals", () => {
+    it("property care intervals: 0 rejected, 90 accepted, null accepted", async () => {
+      const set = (v: number | null) =>
+        operatorA.client
+          .from("property")
+          .update({ drain_interval_days: v, filter_interval_days: v })
+          .eq("id", propUnassigned)
+          .select("drain_interval_days, filter_interval_days");
+
+      const { error: zero } = await set(0);
+      expect(zero).not.toBeNull();
+      const { error: tooLong } = await set(731);
+      expect(tooLong).not.toBeNull();
+
+      const { data: ninety, error: e90 } = await set(90);
+      expect(e90).toBeNull();
+      expect(ninety?.[0]).toEqual({ drain_interval_days: 90, filter_interval_days: 90 });
+
+      const { data: unset, error: eNull } = await set(null);
+      expect(eNull).toBeNull();
+      expect(unset?.[0]).toEqual({ drain_interval_days: null, filter_interval_days: null });
+    });
+  });
 });

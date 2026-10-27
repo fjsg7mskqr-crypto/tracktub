@@ -637,6 +637,8 @@ export type Database = {
           address: string | null
           client_id: string | null
           created_at: string
+          drain_interval_days: number | null
+          filter_interval_days: number | null
           geofence_radius_m: number
           id: string
           lat: number | null
@@ -650,6 +652,8 @@ export type Database = {
           address?: string | null
           client_id?: string | null
           created_at?: string
+          drain_interval_days?: number | null
+          filter_interval_days?: number | null
           geofence_radius_m?: number
           id?: string
           lat?: number | null
@@ -663,6 +667,8 @@ export type Database = {
           address?: string | null
           client_id?: string | null
           created_at?: string
+          drain_interval_days?: number | null
+          filter_interval_days?: number | null
           geofence_radius_m?: number
           id?: string
           lat?: number | null
