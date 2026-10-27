@@ -1051,7 +1051,13 @@ export type Database = {
           balanced: boolean
           calcium_hardness: number | null
           created_at: string
+          found_recorded_at: string | null
           id: string
+          left_calcium_hardness: number | null
+          left_ph: number | null
+          left_recorded_at: string | null
+          left_sanitizer_ppm: number | null
+          left_total_alkalinity: number | null
           ph: number | null
           property_id: string
           recorded_at: string
@@ -1066,7 +1072,13 @@ export type Database = {
           balanced?: boolean
           calcium_hardness?: number | null
           created_at?: string
+          found_recorded_at?: string | null
           id?: string
+          left_calcium_hardness?: number | null
+          left_ph?: number | null
+          left_recorded_at?: string | null
+          left_sanitizer_ppm?: number | null
+          left_total_alkalinity?: number | null
           ph?: number | null
           property_id: string
           recorded_at?: string
@@ -1081,7 +1093,13 @@ export type Database = {
           balanced?: boolean
           calcium_hardness?: number | null
           created_at?: string
+          found_recorded_at?: string | null
           id?: string
+          left_calcium_hardness?: number | null
+          left_ph?: number | null
+          left_recorded_at?: string | null
+          left_sanitizer_ppm?: number | null
+          left_total_alkalinity?: number | null
           ph?: number | null
           property_id?: string
           recorded_at?: string
