@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { asSanitizerType } from "@/lib/chemistry";
+import { tubPath } from "@/lib/app-routes";
 
 export type CreatePropertyResult =
   | { ok: true; propertyId: string }
@@ -89,7 +90,7 @@ export async function updatePropertySanitizerTypeAction(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/p/${propertyId}`);
+  revalidatePath(tubPath(propertyId));
   return { ok: true, sanitizerType };
 }
 

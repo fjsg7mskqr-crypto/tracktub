@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { tubPath } from "@/lib/app-routes";
 import { Icon } from "@/components/Icon";
 import { Seal } from "@/components/Seal";
 import { formatDateTime } from "@/lib/format";
@@ -55,7 +56,9 @@ export default async function TurnoverPage({
     <div className="stack" style={{ maxWidth: 880 }}>
       <div className="crumb">
         <Link href="/">Dashboard</Link> /{" "}
-        <Link href={`/p/${property?.id}`}>{property?.name}</Link> / Turnover
+        <Link href={property?.id ? tubPath(property.id) : "/tubs"}>
+          {property?.name}
+        </Link> / Turnover
       </div>
 
       <div className="spread pagehead">
@@ -91,8 +94,8 @@ export default async function TurnoverPage({
       {isDraft && property?.id && (
         <div className="note">
           This turnover is still in progress.{" "}
-          <Link href={`/p/${property.id}/new?turnover=${t.id}`}>
-            Resume capture →
+          <Link href={tubPath(property.id)}>
+            Continue it from the tub →
           </Link>
         </div>
       )}
