@@ -154,10 +154,10 @@ All tiers share one database (`CLAUDE.md`). Every change is validated on the loc
 | Change | Kind | Notes |
 |---|---|---|
 | `client` table (`id`, `org_id`, `name`, contact email, timestamps); `property.client_id` nullable FK; backfill one client per org | Additive | RLS scoped like `property` |
-| `water_reading.kind` (`found` \| `left`), existing rows backfilled `found`; unique `(turnover_id, kind)` replaces unique `(turnover_id)` | **Shared object, founder signed off 2026-10-27** (D27) | Update RLS/insert paths that assume one row |
+| As-left reading as **new columns** on `water_reading`: `left_total_alkalinity`, `left_ph`, `left_calcium_hardness`, `left_sanitizer_ppm`, `left_recorded_at`, plus `found_recorded_at` (backfilled). Existing columns stay the as-found reading; one row per visit is unchanged | Additive (D27) | Chosen over a `kind` column + changed unique key: prod code reads the reading as one embedded row, and changing the key would break the live site before the new app ships. The founder's sign-off for the riskier form isn't needed. |
 | New `turnover.cleaning_steps` codes: `filter_replaced`, `drained_refilled`, `cover_cleaned` | Values only | Keep existing codes |
 | Per-tub intervals: `property.drain_interval_days`, `property.filter_interval_days` (nullable = use default) | Additive | Powers Calendar and the brief (D28) |
-| Record opened tracking: `share_token.first_opened_at`, `last_opened_at` (or an append-only `share_view` table) | Additive | Set by the `/proof/[token]` route |
+| Record opened tracking: append-only `share_view` table + `record_share_view(token)` function | Additive | A separate table because `turnover_lock_guard` blocks updates to a locked turnover. Called by the `/proof/[token]` route |
 | Audit readings columns against prod (alkalinity/hardness drift fixed via MCP in July) | Check | Migrations must match prod |
 | Regenerate `types.ts` after each change | — | |
 
