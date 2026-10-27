@@ -69,6 +69,16 @@ function phTile(visits: readonly HistoryVisit[]): BriefTile {
   };
 }
 
+function lastVisitNote(
+  sinceVisit: number | null,
+  opened: boolean | null
+): string {
+  if (sinceVisit === null) return "No visits yet";
+  if (opened === true) return "Record opened by owner";
+  if (opened === false) return "Not opened yet";
+  return "Not sent";
+}
+
 /**
  * `lastVisitOpened`: whether the owner opened the last visit's record — null
  * when that record was never shared.
@@ -89,14 +99,7 @@ export function buildBrief(input: {
     {
       value: sinceVisit === null ? EMPTY : `${sinceVisit}d`,
       label: "Since last visit",
-      note:
-        sinceVisit === null
-          ? "No visits yet"
-          : lastVisitOpened === true
-            ? "Record opened by owner"
-            : lastVisitOpened === false
-              ? "Not opened yet"
-              : "Not sent",
+      note: lastVisitNote(sinceVisit, lastVisitOpened),
       tone: "plain",
     },
   ];

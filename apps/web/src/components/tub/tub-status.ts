@@ -64,7 +64,10 @@ export function nextCare(
   const items = (["drain", "filter"] as const)
     .map((k) => careFor(tub, visits, k, now))
     .filter((c): c is NextCare => c !== null);
-  if (items.length === 0) return null;
+  return items.reduce<NextCare | null>(
+    (a, b) => (!a || b.dueOn < a.dueOn ? b : a),
+    null
+  );
   return items.reduce((a, b) => (b.dueOn < a.dueOn ? b : a));
 }
 

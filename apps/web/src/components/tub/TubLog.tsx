@@ -128,7 +128,10 @@ function OpenVisit({ v, now }: { v: LogVisit; now: Date }) {
           }}
         >
           {draftEntries(v).map((e, i) => (
-            <div key={i} style={card}>
+            <div // Static, render-only list (never reordered in place).
+              key={`${i}-${e.title}`}
+              style={card}
+            >
               <span style={{ fontSize: 12, color: "var(--tt-text-3)" }}>
                 {e.at ? `${formatTime(e.at)} · ${e.title}` : e.title}
               </span>
