@@ -252,3 +252,12 @@
     background: #ffffff !important;
   }
 }
+
+.tt-record-history-row {
+  gap: 4px !important;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eceef1;
+}
+.tt-record-history-row a {
+  text-decoration: none;
+}
