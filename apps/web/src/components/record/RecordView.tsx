@@ -8,6 +8,10 @@ import "./record.css";
 export const RECORD_FOOTER =
   "Photos taken live in the TrackTub camera. Times stamped by TrackTub's server; the record was locked when submitted and can't be edited.";
 
+/** "10:58 AM" → "10:58": badge, table headers and captions use the bare clock
+ *  (as the mockup); the period is on the span line above them. */
+const clock = (t: string | null) => (t ?? "").replace(/ [AP]M$/, "");
+
 /**
  * The record (spec §9) — the same facts for every holder (D23). The operator
  * view adds a dark bar on top with Send to owner / Copy link; below it is
@@ -89,7 +93,7 @@ export function RecordView({
                   <rect x="5" y="11" width="14" height="10" rx="2" />
                   <path d="M8 11V8a4 4 0 0 1 8 0v3" />
                 </svg>
-                Locked {visit.lockedAt}
+                Locked {clock(visit.lockedAt)}
               </span>
             ) : (
               <span className="tt-record-badge draft">Draft</span>
@@ -115,11 +119,13 @@ export function RecordView({
                   <span role="columnheader" />
                   <span role="columnheader">
                     {visit.water.foundAt
-                      ? `Found ${visit.water.foundAt}`
+                      ? `Found ${clock(visit.water.foundAt)}`
                       : "Found"}
                   </span>
                   <span role="columnheader">
-                    {visit.water.leftAt ? `Left ${visit.water.leftAt}` : "Left"}
+                    {visit.water.leftAt
+                      ? `Left ${clock(visit.water.leftAt)}`
+                      : "Left"}
                   </span>
                   <span role="columnheader">Target</span>
                 </div>
@@ -173,7 +179,7 @@ export function RecordView({
                   {/* eslint-disable-next-line @next/next/no-img-element -- stored photo, not a static asset */}
                   <img src={p.url} alt={`${p.label} photo`} loading="lazy" />
                   <figcaption>
-                    {p.label} · {p.time}
+                    {p.label} · {clock(p.time)}
                   </figcaption>
                 </figure>
               ))}
