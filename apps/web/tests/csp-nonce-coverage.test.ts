@@ -32,11 +32,6 @@ const APP_DIR = join(__dirname, "..", ".next", "server", "app");
  * if a new page shows up here, that is the signal to make it dynamic instead.
  */
 const ALLOWED: Record<string, string> = {
-  "chemistry.html":
-    "server-side redirect() to /operations — responds 307, this shell is never sent",
-  "operations/maintenance.html":
-    "server-side redirect() to /operations/schedule — responds 307, never sent",
-  "dev/ui.html": "dev-only gallery; notFound() in production",
   // These two are served, but degrade acceptably: static error text with no
   // interactive elements. Next does not support route segment config on the
   // built-in not-found/global-error boundaries.
