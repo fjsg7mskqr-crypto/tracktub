@@ -36,16 +36,6 @@ export const CLEANING_STEPS: { code: CleaningStepCode; label: string }[] = [
   { code: "cover_cleaned", label: "Cleaned cover" },
 ];
 
-/** Pre-ticked steps for the legacy capture flow — the original five, never the
- * rebuild's work codes (a pre-tick would claim a drain/filter that didn't happen). */
-export const LEGACY_DEFAULT_STEPS: CleaningStepCode[] = [
-  "water_topped",
-  "wiped",
-  "debris_removed",
-  "filters_cleaned",
-  "reassembled",
-];
-
 /** Human-readable labels for every photo_slot enum value (legacy + capture v2). */
 export const PHOTO_SLOT_LABELS: Record<PhotoSlot, string> = {
   wide: "Wide shot",
