@@ -25,7 +25,7 @@ export default function robots(): MetadataRoute.Robots {
           "/auth/",
           "/p/",
           "/tubs",
-          "/t/",
+          "/records/",
           "/proof/",
           "/invite",
           "/api/",
