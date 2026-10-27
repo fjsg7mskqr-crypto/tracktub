@@ -9,6 +9,7 @@ import {
   loadVisitSnapshot,
   logReading as logReadingData,
   saveAdded as saveAddedData,
+  saveFlag as saveFlagData,
   saveNotes as saveNotesData,
   savePhoto as savePhotoData,
   saveWork as saveWorkData,
@@ -117,6 +118,13 @@ export async function logReading(
 ): Promise<VisitSnapshot> {
   if (kind !== "found" && kind !== "left") throw new Error("Unknown reading");
   return write(visitId, (db) => logReadingData(db, visitId, kind, values));
+}
+
+export async function saveFlag(
+  visitId: string,
+  flag: string | null
+): Promise<VisitSnapshot> {
+  return write(visitId, (db) => saveFlagData(db, visitId, flag));
 }
 
 /** FormData: visitId, kind (before | after | cover), file, capturedAt (ISO). */

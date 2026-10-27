@@ -15,6 +15,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 const actions = vi.hoisted(() => ({
   saveWork: vi.fn(),
   saveAdded: vi.fn(),
+  saveFlag: vi.fn(),
   saveNotes: vi.fn(),
   logReading: vi.fn(),
   savePhoto: vi.fn(),
@@ -144,5 +145,22 @@ describe("VisitScreen", () => {
     expect(
       screen.getByRole("button", { name: "Log reading as left" })
     ).toBeTruthy();
+  });
+
+  it("flag saves and shows", async () => {
+    actions.saveFlag.mockResolvedValue(snap({ flag: "Cover strap torn" }));
+    render(<VisitScreen initial={snap()} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Flag something for the owner" })
+    );
+    fireEvent.change(screen.getByLabelText("For the owner"), {
+      target: { value: " Cover strap torn " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save flag" }));
+    await waitFor(() =>
+      expect(actions.saveFlag).toHaveBeenCalledWith("v1", "Cover strap torn")
+    );
+    expect(await screen.findByText("Cover strap torn")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove flag" })).toBeTruthy();
   });
 });

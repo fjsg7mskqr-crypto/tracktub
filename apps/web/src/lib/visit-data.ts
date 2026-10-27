@@ -123,7 +123,7 @@ export async function loadVisitSnapshot(
   const { data: t, error } = await db
     .from("turnover")
     .select(
-      `id, property_id, status, created_at, notes, cleaning_steps,
+      `id, property_id, status, created_at, notes, cleaning_steps, owner_flag,
        property:property(name),
        photos:photo(id, phase, slot, storage_path, captured_at, created_at),
        water:water_reading(${READING_SELECT})`
@@ -158,7 +158,7 @@ export async function loadVisitSnapshot(
       decodeAdded
     ),
     notes: t.notes ?? "",
-    flag: null,
+    flag: t.owner_flag ?? null,
     previous: await loadPrevious(db, t.property_id, t.id, t.created_at),
   };
 }
@@ -361,6 +361,21 @@ export async function savePhoto(
     .map((p) => p.storage_path)
     .filter((p): p is string => !!p && p !== storagePath);
   if (stale.length) await db.storage.from("photos").remove(stale);
+}
+
+/** Flag something for the owner (null clears it). Sets urgent to match. */
+export async function saveFlag(
+  db: Db,
+  visitId: string,
+  flag: string | null
+): Promise<void> {
+  await requireDraft(db, visitId);
+  const text = flag?.trim() || null;
+  const { error } = await db
+    .from("turnover")
+    .update({ owner_flag: text, urgent: text !== null })
+    .eq("id", visitId);
+  fail("flag", error);
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   finishVisit,
   logReading,
   saveAdded,
+  saveFlag,
   saveNotes,
   savePhoto,
   saveWork,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/visit";
 import { AddedList } from "./AddedList";
 import { CameraSheet, compressPhoto } from "./CameraSheet";
+import { OwnerFlag } from "./OwnerFlag";
 import { ReadingSheet } from "./ReadingSheet";
 
 /**
@@ -105,6 +107,11 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   function changeAdded(added: AddedProduct[]) {
     setSnap((s) => ({ ...s, added }));
     void run(() => saveAdded(id, added));
+  }
+
+  function changeFlag(flag: string | null) {
+    setSnap((s) => ({ ...s, flag }));
+    void run(() => saveFlag(id, flag));
   }
 
   function flushNotes() {
@@ -366,6 +373,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
             resize: "none",
           }}
         />
+        <OwnerFlag flag={snap.flag} onSave={changeFlag} />
       </section>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
