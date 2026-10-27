@@ -968,6 +968,7 @@ export type Database = {
           geofence_ok: boolean | null
           id: string
           notes: string | null
+          owner_flag: string | null
           property_id: string
           share_token: string | null
           status: Database["public"]["Enums"]["turnover_status"]
@@ -984,6 +985,7 @@ export type Database = {
           geofence_ok?: boolean | null
           id?: string
           notes?: string | null
+          owner_flag?: string | null
           property_id: string
           share_token?: string | null
           status?: Database["public"]["Enums"]["turnover_status"]
@@ -1000,6 +1002,7 @@ export type Database = {
           geofence_ok?: boolean | null
           id?: string
           notes?: string | null
+          owner_flag?: string | null
           property_id?: string
           share_token?: string | null
           status?: Database["public"]["Enums"]["turnover_status"]
