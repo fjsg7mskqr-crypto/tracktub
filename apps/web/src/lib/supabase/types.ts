@@ -808,6 +808,32 @@ export type Database = {
           },
         ]
       }
+      share_view: {
+        Row: {
+          id: string
+          opened_at: string
+          turnover_id: string
+        }
+        Insert: {
+          id?: string
+          opened_at?: string
+          turnover_id: string
+        }
+        Update: {
+          id?: string
+          opened_at?: string
+          turnover_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_view_turnover_id_fkey"
+            columns: ["turnover_id"]
+            isOneToOne: false
+            referencedRelation: "turnover"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_assignment: {
         Row: {
           property_id: string
@@ -1135,6 +1161,7 @@ export type Database = {
         Returns: number
       }
       record_proof_open: { Args: { p_share_token: string }; Returns: undefined }
+      record_share_view: { Args: { p_token: string }; Returns: undefined }
     }
     Enums: {
       capture_phase: "before" | "after"

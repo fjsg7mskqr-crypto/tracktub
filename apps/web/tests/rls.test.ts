@@ -1734,4 +1734,136 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(unset?.[0]).toEqual({ drain_interval_days: null, filter_interval_days: null });
     });
   });
+
+  describe("share_view", () => {
+    const anonClient = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as ReturnType<typeof createClient<Database>>);
+
+    let lockedId: string;
+    let lockedToken: string;
+    let draftId: string;
+    let draftToken: string;
+
+    beforeAll(async () => {
+      lockedToken = randomUUID();
+      const { data: t, error } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "draft",
+          share_token: lockedToken,
+          urgent: false,
+          notes: "",
+        })
+        .select("id")
+        .single();
+      if (error || !t) throw error ?? new Error("turnover insert failed");
+      lockedId = t.id;
+      // Lock it: from here turnover_lock_guard rejects any update to the row.
+      const { error: lockErr } = await admin
+        .from("turnover")
+        .update({ status: "submitted_locked" })
+        .eq("id", lockedId);
+      if (lockErr) throw lockErr;
+
+      draftToken = randomUUID();
+      const { data: d, error: dErr } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "draft",
+          share_token: draftToken,
+          urgent: false,
+          notes: "",
+        })
+        .select("id")
+        .single();
+      if (dErr || !d) throw dErr ?? new Error("draft insert failed");
+      draftId = d.id;
+    });
+
+    const viewsOf = async (turnoverId: string) => {
+      const { data, error } = await admin
+        .from("share_view")
+        .select("id, opened_at")
+        .eq("turnover_id", turnoverId);
+      if (error) throw error;
+      return data ?? [];
+    };
+
+    it("record_share_view on a locked turnover succeeds", async () => {
+      const { error } = await anonClient.rpc("record_share_view", {
+        p_token: lockedToken,
+      });
+      expect(error).toBeNull();
+      expect(await viewsOf(lockedId)).toHaveLength(1);
+
+      // A reload within the minute collapses into the same open.
+      await anonClient.rpc("record_share_view", { p_token: lockedToken });
+      expect(await viewsOf(lockedId)).toHaveLength(1);
+    });
+
+    it("unknown token is a no-op", async () => {
+      const { count: before } = await admin
+        .from("share_view")
+        .select("id", { count: "exact", head: true });
+      const { error } = await anonClient.rpc("record_share_view", {
+        p_token: randomUUID(),
+      });
+      expect(error).toBeNull();
+      const { count: after } = await admin
+        .from("share_view")
+        .select("id", { count: "exact", head: true });
+      expect(after).toBe(before);
+    });
+
+    it("a draft's token records nothing (anon can't open a draft)", async () => {
+      const { error } = await anonClient.rpc("record_share_view", {
+        p_token: draftToken,
+      });
+      expect(error).toBeNull();
+      expect(await viewsOf(draftId)).toHaveLength(0);
+    });
+
+    it("share_view not readable by anon", async () => {
+      const { data } = await anonClient
+        .from("share_view")
+        .select("id")
+        .eq("turnover_id", lockedId);
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it("share_view readable by the owning org, not by another org", async () => {
+      const { data: mine, error } = await operatorA.client
+        .from("share_view")
+        .select("id")
+        .eq("turnover_id", lockedId);
+      expect(error).toBeNull();
+      expect(mine ?? []).toHaveLength(1);
+
+      const { data: theirs } = await operatorB.client
+        .from("share_view")
+        .select("id")
+        .eq("turnover_id", lockedId);
+      expect(theirs ?? []).toHaveLength(0);
+    });
+
+    it("nobody can write share_view directly", async () => {
+      const { error: anonIns } = await anonClient
+        .from("share_view")
+        .insert({ turnover_id: lockedId });
+      expect(anonIns).not.toBeNull();
+      const { error: opIns } = await operatorA.client
+        .from("share_view")
+        .insert({ turnover_id: lockedId });
+      expect(opIns).not.toBeNull();
+      await operatorA.client.from("share_view").delete().eq("turnover_id", lockedId);
+      expect(await viewsOf(lockedId)).toHaveLength(1);
+    });
+  });
 });
