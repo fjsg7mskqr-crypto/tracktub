@@ -25,7 +25,7 @@ const control: React.CSSProperties = {
   fontWeight: 400,
 };
 
-/** Add tub: name, client (pick or create), address (spec §4). */
+/** Add tub: name, client (pick or create), address, volume (spec §4). */
 export function AddTubForm({
   clients,
 }: {
@@ -91,6 +91,20 @@ export function AddTubForm({
           name="address"
           autoComplete="street-address"
           placeholder="412 Shore Rd"
+          style={control}
+        />
+      </label>
+
+      <label style={field}>
+        Volume (gallons)
+        <input
+          name="volume"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={5000}
+          step={1}
+          placeholder="450"
           style={control}
         />
       </label>

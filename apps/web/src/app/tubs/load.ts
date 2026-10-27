@@ -70,7 +70,10 @@ export async function loadTubHistories(
   return out;
 }
 
-export type TubDetail = TubRowData & { address: string | null };
+export type TubDetail = TubRowData & {
+  address: string | null;
+  volumeGallons: number | null;
+};
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -83,7 +86,7 @@ export async function loadTub(
   const { data: p, error } = await supabase
     .from("property")
     .select(
-      "id, name, address, client_id, drain_interval_days, filter_interval_days, client(name)"
+      "id, name, address, volume_gallons, client_id, drain_interval_days, filter_interval_days, client(name)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -93,6 +96,7 @@ export async function loadTub(
     id: p.id,
     name: p.name,
     address: p.address,
+    volumeGallons: p.volume_gallons,
     clientId: p.client_id,
     clientName: one(p.client)?.name ?? null,
     drainIntervalDays: p.drain_interval_days,

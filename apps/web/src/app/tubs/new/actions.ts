@@ -38,7 +38,6 @@ export async function createTubAction(
     clientId = client.id;
   }
 
-  // volume_gallons is wired once Lane 1's column lands (migration 20261028120600).
   const { data: tub, error } = await supabase
     .from("property")
     .insert({
@@ -46,6 +45,7 @@ export async function createTubAction(
       name: input.name,
       address: input.address,
       client_id: clientId,
+      volume_gallons: input.volumeGallons,
     })
     .select("id")
     .single();

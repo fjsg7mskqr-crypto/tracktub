@@ -28,7 +28,13 @@ export default async function TubPage({
   const last = locked.at(-1) ?? null;
   const now = new Date();
 
-  const sub = [tub.clientName, tub.address].filter(Boolean).join(" · ");
+  const sub = [
+    tub.clientName,
+    tub.address,
+    tub.volumeGallons === null ? null : `${tub.volumeGallons} gal`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <main
