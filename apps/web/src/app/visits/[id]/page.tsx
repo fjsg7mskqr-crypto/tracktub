@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { recordPath } from "@/lib/app-routes";
 import { getCurrentMembership } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { loadVisitSnapshot } from "@/lib/visit-data";
@@ -20,7 +21,7 @@ export default async function VisitPage({
   const snapshot = await loadVisitSnapshot(db, id).catch(() => null);
   if (!snapshot) notFound();
   // A locked visit can't be edited; show its record instead.
-  if (snapshot.status !== "draft") redirect(`/t/${id}`);
+  if (snapshot.status !== "draft") redirect(recordPath(id));
 
   return <VisitScreen initial={snapshot} />;
 }

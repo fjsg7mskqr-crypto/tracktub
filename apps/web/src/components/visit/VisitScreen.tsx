@@ -12,7 +12,7 @@ import {
   savePhoto,
   saveWork,
 } from "@/lib/actions/visit";
-import { tubPath } from "@/lib/app-routes";
+import { recordPath, tubPath } from "@/lib/app-routes";
 import {
   READING_FIELDS,
   READING_TARGETS,
@@ -38,11 +38,6 @@ import { CameraSheet, compressPhoto } from "./CameraSheet";
 import { OwnerFlag } from "./OwnerFlag";
 import { ReadingSheet } from "./ReadingSheet";
 
-/**
- * Where Finish lands. The operator record (/records/[id]) is Lane 4's; until it
- * ships, the existing turnover page shows the locked visit.
- */
-const recordHref = (visitId: string) => `/t/${visitId}`;
 
 const CHIP_LABEL: Record<ReadingField, string> = {
   total_alkalinity: "Alk",
@@ -160,7 +155,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
     flushNotes();
     try {
       await finishVisit(id);
-      router.push(recordHref(id));
+      router.push(recordPath(id));
     } catch {
       setFinishing(false);
       setSave({ kind: "error" });
