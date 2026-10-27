@@ -363,12 +363,24 @@ export async function savePhoto(
   if (stale.length) await db.storage.from("photos").remove(stale);
 }
 
-/** Lock the visit. Nothing is required; missing parts make it partial. */
+/**
+ * Lock the visit. Nothing is required; missing parts make it partial. The
+ * share token is set in the same update, because turnover_lock_guard refuses
+ * every change once the visit is locked (the record links depend on it).
+ */
 export async function finishVisit(db: Db, visitId: string): Promise<void> {
   await requireDraft(db, visitId);
+  const { data } = await db
+    .from("turnover")
+    .select("share_token")
+    .eq("id", visitId)
+    .single();
   const { error } = await db
     .from("turnover")
-    .update({ status: "submitted_locked" })
+    .update({
+      status: "submitted_locked",
+      share_token: data?.share_token ?? crypto.randomUUID(),
+    })
     .eq("id", visitId);
   fail("visit", error);
 }

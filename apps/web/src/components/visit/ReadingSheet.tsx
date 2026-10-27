@@ -9,7 +9,7 @@ import {
   type ReadingKind,
 } from "@/lib/readings";
 import type { ReadingValues, VisitSnapshot } from "@/lib/visit";
-import { Clock } from "./Clock";
+import { formatTime } from "@/lib/time";
 import {
   accept,
   bump,
@@ -159,7 +159,7 @@ export function ReadingSheet({
             Log a reading
           </h2>
           <span style={{ fontSize: 13, color: "var(--tt-text-3)" }}>
-            <Clock iso={new Date()} /> · {snapshot.propertyName}
+            {formatTime(new Date())} · {snapshot.propertyName}
           </span>
         </div>
 

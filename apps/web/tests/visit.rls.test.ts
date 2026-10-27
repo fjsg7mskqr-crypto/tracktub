@@ -267,6 +267,24 @@ describe.skipIf(!ready)("visit data", () => {
     );
   });
 
+  it("finish sets a share token on a draft that has none", async () => {
+    const tub = await newTub("No token");
+    const { data: t } = await admin
+      .from("turnover")
+      .insert({ property_id: tub, submitter_id: userId, status: "draft" })
+      .select("id, share_token")
+      .single();
+    expect(t?.share_token).toBeNull();
+    await finishVisit(db, t!.id);
+    const { data } = await admin
+      .from("turnover")
+      .select("status, share_token")
+      .eq("id", t!.id)
+      .single();
+    expect(data?.status).toBe("submitted_locked");
+    expect(data?.share_token).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
   it("finish locks an empty visit as partial", async () => {
     const tub = await newTub("Empty finish");
     const id = await createDraft(db, tub, userId);

@@ -20,6 +20,7 @@ import {
   type ReadingKind,
 } from "@/lib/readings";
 import { photoPublicUrl } from "@/lib/supabase/storage";
+import { formatShortDate, formatTime } from "@/lib/time";
 import type { CleaningStepCode } from "@/lib/types";
 import {
   PHOTO_KINDS,
@@ -33,7 +34,6 @@ import {
 } from "@/lib/visit";
 import { AddedList } from "./AddedList";
 import { CameraSheet, compressPhoto } from "./CameraSheet";
-import { Clock, clockText, dayText } from "./Clock";
 import { ReadingSheet } from "./ReadingSheet";
 
 /**
@@ -225,7 +225,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
           Visit in progress
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: "var(--tt-text-2)" }}>
-          Opened <Clock iso={snap.openedAt} />. Leave it open while you work —
+          Opened {formatTime(snap.openedAt)}. Leave it open while you work —
           everything saves as you go.
         </p>
       </div>
@@ -464,7 +464,7 @@ function SaveIndicator({ state }: { state: SaveState }) {
       >
         <path d="M5 12l5 5 9-10" />
       </svg>
-      {state.kind === "saved" ? `Saved ${clockText(state.at)}` : "All saved"}
+      {state.kind === "saved" ? `Saved ${formatTime(state.at)}` : "All saved"}
     </span>
   );
 }
@@ -568,7 +568,7 @@ function ReadingCard({
     >
       {at && (
         <span style={{ fontSize: 12, color: "var(--tt-text-3)" }}>
-          Logged <Clock iso={at} />
+          Logged {formatTime(at)}
         </span>
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -695,11 +695,11 @@ function PhotoTile({
         {label}
       </span>
       <span style={{ position: "relative", fontSize: 12, color: "#C9D6EE" }}>
-        {preview ? (
-          "Saving…"
-        ) : photo?.capturedAt ? (
-          <Clock iso={photo.capturedAt} />
-        ) : null}
+        {preview
+          ? "Saving…"
+          : photo?.capturedAt
+            ? formatTime(photo.capturedAt)
+            : null}
       </span>
     </button>
   );
@@ -748,9 +748,7 @@ function PastTile({
         }}
       >
         {shot && visitedOn ? (
-          <>
-            <Clock iso={visitedOn} format={dayText} /> · after
-          </>
+          <>{formatShortDate(visitedOn)} · after</>
         ) : (
           "No earlier photo"
         )}
