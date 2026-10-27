@@ -3,11 +3,8 @@
 import { usePathname } from "next/navigation";
 import { AppShell } from "@/components/app/AppShell";
 
-/**
- * Capability-link / unauthenticated surfaces — and the mobile field section,
- * which brings its own full-bleed shell — render without app chrome.
- */
-const PUBLIC_PREFIXES = ["/proof", "/landing", "/blog", "/invite", "/field"];
+/** Capability-link / unauthenticated surfaces render without app chrome. */
+const PUBLIC_PREFIXES = ["/proof", "/landing", "/blog", "/invite"];
 
 /** Signed-out entry points: no tab bar before there's an app to navigate. */
 const SIGNED_OUT_PREFIXES = ["/login", "/auth"];

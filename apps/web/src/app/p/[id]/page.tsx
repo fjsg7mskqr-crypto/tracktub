@@ -40,18 +40,6 @@ export default async function PropertyPage({
     p_property: propertyId,
   });
 
-  const { data: draftTurnover } = await supabase
-    .from("turnover")
-    .select("id")
-    .eq("property_id", propertyId)
-    .eq("status", "draft")
-    .eq("submitter_id", user.id)
-    .maybeSingle();
-
-  const captureHref = draftTurnover
-    ? `/p/${propertyId}/new?turnover=${draftTurnover.id}`
-    : `/p/${propertyId}/new`;
-
   const { data: turnovers } = await supabase
     .from("turnover")
     .select(
@@ -110,20 +98,7 @@ export default async function PropertyPage({
             </div>
           )}
         </div>
-        {canCapture && (
-          <Link href={captureHref} className="btn primary">
-            <Icon name={draftTurnover ? "camera" : "plus"} size={15} />{" "}
-            {draftTurnover ? "Resume turnover" : "New turnover"}
-          </Link>
-        )}
       </div>
-
-      {draftTurnover && canCapture && (
-        <Link href={captureHref} className="note" style={{ textDecoration: "none", color: "inherit" }}>
-          Turnover in progress —{" "}
-          <strong style={{ color: "var(--text-hi)" }}>resume →</strong>
-        </Link>
-      )}
 
       <ChemistryAlerts batherLoad={batherLoad} flags={flags} />
 
