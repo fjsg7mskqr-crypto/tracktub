@@ -19,6 +19,7 @@ import {
   CAPTURE_V2_AFTER_SLOTS,
   CAPTURE_V2_BEFORE_SHOT,
   CLEANING_STEPS,
+  LEGACY_DEFAULT_STEPS,
   type CapturePhase,
   type CleaningStepCode,
   type PhotoSlot,
@@ -68,7 +69,7 @@ const STEP_SUBMIT = CAPTURE_STEP_SUBMIT;
 
 function defaultCleaningSteps(steps: CleaningStepCode[] | undefined): CleaningStepCode[] {
   if (steps && steps.length > 0) return steps;
-  return CLEANING_STEPS.map((s) => s.code);
+  return LEGACY_DEFAULT_STEPS;
 }
 
 function guidedPhotoFromDraft(
