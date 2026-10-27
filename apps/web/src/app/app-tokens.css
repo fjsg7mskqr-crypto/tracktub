@@ -1,0 +1,27 @@
+/* Signed-in app design tokens (app rebuild, 2026-10-27).
+   Scoped to `.tt-app` so /landing and /blog keep their own type and colours.
+   Source: docs/superpowers/specs/2026-10-27-app-rebuild-design.md "Visual system".
+   Green (--tt-ok) is for success, locked or in-range ONLY. */
+
+.tt-app {
+  --tt-bg: #08090a;
+  --tt-surface: #131417;
+  --tt-raised: #191b20;
+  --tt-text: #ededef;
+  --tt-text-2: #a1a6af;
+  --tt-text-3: #8a8f98;
+  --tt-action: #2563eb;
+  --tt-brand: #3b82f6;
+  --tt-link: #7fb0ff;
+  --tt-due: #e8a33d;
+  --tt-due-text: #f2b85c;
+  --tt-ok: #34d399;
+  --tt-radius-card: 24px;
+  --tt-radius-tile: 20px;
+  --tt-tap: 44px;
+
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  background: var(--tt-bg);
+  color: var(--tt-text);
+  min-height: 100dvh;
+}

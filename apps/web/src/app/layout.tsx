@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import {
+  Archivo,
+  Inter,
+  JetBrains_Mono,
+  Space_Grotesk,
+} from "next/font/google";
 import "./globals.css";
+import "./app-tokens.css";
 import { Shell } from "@/components/Shell";
 import { Analytics } from "@/components/Analytics";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
@@ -22,6 +28,14 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-space",
+  display: "swap",
+});
+// Signed-in app only — applied via `.tt-app` (app-tokens.css), so /landing and
+// /blog keep their own type.
+const archivo = Archivo({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-archivo",
   display: "swap",
 });
 
@@ -63,7 +77,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jbMono.variable} ${spaceGrotesk.variable}`}
+      className={`${inter.variable} ${jbMono.variable} ${spaceGrotesk.variable} ${archivo.variable}`}
     >
       <body>
         <Analytics />
