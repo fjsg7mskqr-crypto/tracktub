@@ -69,5 +69,20 @@ export async function loadRecordByToken(
   return data ? normalizeRecordRow(data as unknown as RawRow) : null;
 }
 
+/** A tub's locked records, newest first (history report). */
+export async function loadTubRecords(
+  supabase: Client,
+  propertyId: string
+): Promise<RecordRow[]> {
+  const { data } = await supabase
+    .from("turnover")
+    .select(RECORD_SELECT)
+    .eq("property_id", propertyId)
+    .eq("status", "submitted_locked")
+    .order("submitted_at_server", { ascending: false })
+    .limit(200);
+  return ((data ?? []) as unknown as RawRow[]).map(normalizeRecordRow);
+}
+
 export const proofUrl = (origin: string, token: string) =>
   `${origin}/proof/${token}`;

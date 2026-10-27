@@ -62,10 +62,10 @@ describe("RecordView", () => {
     expect(
       screen.getByText("Serviced by Ethan N. · 9:42 – 10:58 AM")
     ).toBeTruthy();
-    expect(screen.getByText("Locked 10:58 AM")).toBeTruthy();
-    expect(screen.getByText("Found 9:45 AM")).toBeTruthy();
-    expect(screen.getByText("Left 10:52 AM")).toBeTruthy();
-    expect(screen.getByText("Before · 9:43 AM")).toBeTruthy();
+    expect(screen.getByText("Locked 10:58")).toBeTruthy();
+    expect(screen.getByText("Found 9:45")).toBeTruthy();
+    expect(screen.getByText("Left 10:52")).toBeTruthy();
+    expect(screen.getByText("Before · 9:43")).toBeTruthy();
     expect(screen.getByText("— Not drained")).toBeTruthy();
     expect(screen.getByText("✓ Cleaned filter")).toBeTruthy();
     expect(screen.getByText(FOOTER)).toBeTruthy();
