@@ -68,7 +68,6 @@ export function nextCare(
     (a, b) => (!a || b.dueOn < a.dueOn ? b : a),
     null
   );
-  return items.reduce((a, b) => (b.dueOn < a.dueOn ? b : a));
 }
 
 export function newestVisit(
