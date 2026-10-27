@@ -8,8 +8,12 @@ import type { Database } from "@/lib/supabase/types";
 import { READING_FIELDS, readingColumn, type ReadingKind } from "@/lib/readings";
 import { CLEANING_STEPS, type CleaningStepCode } from "@/lib/types";
 import {
+  PHOTO_KINDS,
   decodeAdded,
+  encodeAdded,
   photoKindOf,
+  type AddedProduct,
+  type PhotoKind,
   type ReadingValues,
   type VisitPhoto,
   type VisitSnapshot,
@@ -97,7 +101,7 @@ function visitPhotos(rows: PhotoRow[] | null | undefined): VisitPhoto[] {
       id: r.id,
       kind,
       storagePath: r.storage_path,
-      capturedAt: r.captured_at,
+      capturedAt: r.captured_at ? new Date(r.captured_at).toISOString() : null,
       createdAt: r.created_at,
     });
   }
@@ -184,4 +188,184 @@ async function loadPrevious(
     found: readingFrom(one(p.water) as ReadingRow | null, "found"),
     photos: visitPhotos(p.photos),
   };
+}
+
+// --- Writes (draft only) ----------------------------------------------------
+
+/** The draft's tub and org; throws "Visit is locked" once it is locked. */
+async function requireDraft(
+  db: Db,
+  visitId: string
+): Promise<{ propertyId: string; orgId: string }> {
+  const { data, error } = await db
+    .from("turnover")
+    .select("status, property_id, property:property(org_id)")
+    .eq("id", visitId)
+    .maybeSingle();
+  if (error || !data) throw new Error("Visit not found");
+  if (data.status !== "draft") throw new Error("Visit is locked");
+  const orgId = one(data.property)?.org_id;
+  if (!orgId) throw new Error("Visit not found");
+  return { propertyId: data.property_id, orgId };
+}
+
+function fail(what: string, error: { message: string } | null): void {
+  if (error) throw new Error(`Failed to save ${what}: ${error.message}`);
+}
+
+/** Update the visit's single water_reading row, creating it on first write. */
+async function upsertReading(
+  db: Db,
+  visitId: string,
+  propertyId: string,
+  patch: Database["public"]["Tables"]["water_reading"]["Update"],
+  what: string
+): Promise<void> {
+  const { data: existing } = await db
+    .from("water_reading")
+    .select("id")
+    .eq("turnover_id", visitId)
+    .maybeSingle();
+  if (existing) {
+    const { error } = await db
+      .from("water_reading")
+      .update(patch)
+      .eq("id", existing.id);
+    fail(what, error);
+  } else {
+    const { error } = await db
+      .from("water_reading")
+      .insert({ ...patch, turnover_id: visitId, property_id: propertyId });
+    fail(what, error);
+  }
+}
+
+export async function saveWork(
+  db: Db,
+  visitId: string,
+  work: CleaningStepCode[]
+): Promise<void> {
+  await requireDraft(db, visitId);
+  const known = new Set<string>(CLEANING_STEPS.map((s) => s.code));
+  const { error } = await db
+    .from("turnover")
+    .update({ cleaning_steps: [...new Set(work)].filter((c) => known.has(c)) })
+    .eq("id", visitId);
+  fail("work", error);
+}
+
+export async function saveAdded(
+  db: Db,
+  visitId: string,
+  added: AddedProduct[]
+): Promise<void> {
+  const { propertyId } = await requireDraft(db, visitId);
+  const treatments = added
+    .filter((a) => a.product.trim() !== "")
+    .map(encodeAdded);
+  await upsertReading(db, visitId, propertyId, { treatments }, "products");
+}
+
+export async function saveNotes(
+  db: Db,
+  visitId: string,
+  notes: string
+): Promise<void> {
+  await requireDraft(db, visitId);
+  const { error } = await db
+    .from("turnover")
+    .update({ notes: notes.trim() || null })
+    .eq("id", visitId);
+  fail("notes", error);
+}
+
+/**
+ * Log one reading. Writes exactly the four columns of this kind — a null value
+ * stays null (never last visit's number) — and stamps when it was logged.
+ */
+export async function logReading(
+  db: Db,
+  visitId: string,
+  kind: ReadingKind,
+  values: ReadingValues
+): Promise<void> {
+  const { propertyId } = await requireDraft(db, visitId);
+  const patch: Record<string, number | string | null> = {};
+  for (const f of READING_FIELDS) {
+    const v = values[f];
+    patch[readingColumn(f, kind)] =
+      typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+  patch[kind === "found" ? "found_recorded_at" : "left_recorded_at"] =
+    new Date().toISOString();
+  await upsertReading(db, visitId, propertyId, patch, "reading");
+}
+
+/** Store a camera photo for one kind, replacing an earlier shot of that kind. */
+export async function savePhoto(
+  db: Db,
+  visitId: string,
+  kind: PhotoKind,
+  file: Blob,
+  capturedAt: string
+): Promise<void> {
+  const { orgId } = await requireDraft(db, visitId);
+  const { phase, slot } = PHOTO_KINDS[kind];
+  // A fresh path per shot: the bucket is public, so reusing a path would let a
+  // cached copy of the old shot show after a retake.
+  const storagePath = `${orgId}/${visitId}/${phase}/${slot}-${crypto.randomUUID()}.jpg`;
+
+  const { error: upErr } = await db.storage
+    .from("photos")
+    .upload(storagePath, file, { contentType: "image/jpeg" });
+  if (upErr) throw new Error(`Photo upload failed: ${upErr.message}`);
+
+  const { data: existing } = await db
+    .from("photo")
+    .select("id, storage_path")
+    .eq("turnover_id", visitId)
+    .eq("phase", phase)
+    .eq("slot", slot);
+
+  const [keep, ...extra] = existing ?? [];
+  if (keep) {
+    const { error } = await db
+      .from("photo")
+      .update({ storage_path: storagePath, captured_at: capturedAt })
+      .eq("id", keep.id);
+    fail("photo", error);
+  } else {
+    const { error } = await db.from("photo").insert({
+      turnover_id: visitId,
+      storage_path: storagePath,
+      slot,
+      phase,
+      captured_at: capturedAt,
+      confirmed_tags: [],
+    });
+    fail("photo", error);
+  }
+  if (extra.length) {
+    await db
+      .from("photo")
+      .delete()
+      .in(
+        "id",
+        extra.map((p) => p.id)
+      );
+  }
+  const stale = (existing ?? [])
+    .map((p) => p.storage_path)
+    .filter((p): p is string => !!p && p !== storagePath);
+  if (stale.length) await db.storage.from("photos").remove(stale);
+}
+
+/** Lock the visit. Nothing is required; missing parts make it partial. */
+export async function finishVisit(db: Db, visitId: string): Promise<void> {
+  await requireDraft(db, visitId);
+  const { error } = await db
+    .from("turnover")
+    .update({ status: "submitted_locked" })
+    .eq("id", visitId);
+  fail("visit", error);
 }
