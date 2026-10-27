@@ -82,6 +82,41 @@ export type Database = {
           },
         ]
       }
+      client: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment: {
         Row: {
           archived_at: string | null
@@ -600,6 +635,7 @@ export type Database = {
       property: {
         Row: {
           address: string | null
+          client_id: string | null
           created_at: string
           geofence_radius_m: number
           id: string
@@ -612,6 +648,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          client_id?: string | null
           created_at?: string
           geofence_radius_m?: number
           id?: string
@@ -624,6 +661,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          client_id?: string | null
           created_at?: string
           geofence_radius_m?: number
           id?: string
@@ -635,6 +673,13 @@ export type Database = {
           tub_notes?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "property_client_fk"
+            columns: ["client_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id", "org_id"]
+          },
           {
             foreignKeyName: "property_org_id_fkey"
             columns: ["org_id"]
