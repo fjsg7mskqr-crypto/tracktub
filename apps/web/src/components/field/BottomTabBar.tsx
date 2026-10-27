@@ -1,19 +1,23 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/Icon";
 
-export type FieldTab = "today" | "tubs" | "history" | "more";
+export type FieldTab = "today";
 
 type TabDef = { key: FieldTab; label: string; href: string; icon: IconName };
 
+/**
+ * Only routes that EXIST may appear here — `tests/nav-route-coverage.test.ts`
+ * enforces it. Tubs / History / More were advertised from July 2026 with no
+ * routes behind them and 404'd in production for six weeks; they were removed
+ * on 2026-09-03 rather than stubbed, since the whole `/field` section is
+ * replaced in phase 2 of the app surface rebuild.
+ */
 const TABS: TabDef[] = [
   { key: "today", label: "Today", href: "/field/today", icon: "gauge" },
-  { key: "tubs", label: "Tubs", href: "/field/tubs", icon: "droplet" },
-  { key: "history", label: "History", href: "/field/history", icon: "file" },
-  { key: "more", label: "More", href: "/field/more", icon: "grid" },
 ];
 
 /**
- * Fixed bottom-tab navigation for the mobile field section. Four thumb-reachable
+ * Fixed bottom-tab navigation for the mobile field section. Thumb-reachable
  * targets (≥44px), safe-area aware, active tab flagged with aria-current="page".
  * Green is intentionally absent — chrome uses ink/muted/accent only.
  */
