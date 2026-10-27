@@ -14,7 +14,7 @@ import * as Sentry from "@sentry/nextjs";
  * the tap looks ignored. Whatever caused the 2026-09-02 dead tap, failing that
  * way is unacceptable on its own.
  */
-export default function Error({
+export default function RouteError({
   error,
   reset,
 }: {
