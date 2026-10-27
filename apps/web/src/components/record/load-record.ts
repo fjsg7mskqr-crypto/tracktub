@@ -1,14 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import type { RecordRow, WaterRow } from "./record-model";
+import {
+  careFromVisits,
+  nextDueLine,
+  type RecordRow,
+  type WaterRow,
+} from "./record-model";
 
 type Client = SupabaseClient<Database>;
 
 /** Everything the record prints, for one turnover. Works for anon on a locked,
  *  shared turnover (the *_public_proof policies); the client embed stays null
  *  for anon until an anon policy on `client` exists. */
-export const RECORD_SELECT = `id, status, created_at, submitted_at_server, share_token, notes, cleaning_steps,
-  property:property(id, name, address, client:client(name)),
+export const RECORD_SELECT = `id, status, created_at, submitted_at_server, share_token, notes, cleaning_steps, owner_flag,
+  property:property(id, name, address, drain_interval_days, filter_interval_days, client:client(name)),
   submitter:profile(full_name, email),
   photos:photo(slot, phase, storage_path, captured_at, created_at),
   water:water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm,
@@ -82,6 +87,26 @@ export async function loadTubRecords(
     .order("submitted_at_server", { ascending: false })
     .limit(200);
   return ((data ?? []) as unknown as RawRow[]).map(normalizeRecordRow);
+}
+
+/** The footer's next-due line for a record's tub, from its locked visits.
+ *  For anon this sees only the tub's shared records — best effort. */
+export async function loadNextDue(
+  supabase: Client,
+  row: RecordRow
+): Promise<string | null> {
+  if (!row.property) return null;
+  const { data } = await supabase
+    .from("turnover")
+    .select("submitted_at_server, cleaning_steps")
+    .eq("property_id", row.property.id)
+    .eq("status", "submitted_locked");
+  const visits = Array.isArray(data) ? data : [];
+  return nextDueLine({
+    ...careFromVisits(visits),
+    drainDays: row.property.drain_interval_days ?? null,
+    filterDays: row.property.filter_interval_days ?? null,
+  });
 }
 
 export const proofUrl = (origin: string, token: string) =>

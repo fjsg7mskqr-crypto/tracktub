@@ -4,7 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getURL } from "@/lib/url";
 import { RecordView } from "@/components/record/RecordView";
 import { buildRecord } from "@/components/record/record-model";
-import { loadRecordByToken, proofUrl } from "@/components/record/load-record";
+import {
+  loadRecordByToken,
+  loadNextDue,
+  proofUrl,
+} from "@/components/record/load-record";
 
 export const metadata: Metadata = {
   title: "TrackTub record",
@@ -42,6 +46,7 @@ export default async function ProofPage({
   return (
     <RecordView
       visit={buildRecord(row)}
+      nextDue={await loadNextDue(supabase, row)}
       audience="owner"
       shareUrl={proofUrl(getURL(), token)}
     />
