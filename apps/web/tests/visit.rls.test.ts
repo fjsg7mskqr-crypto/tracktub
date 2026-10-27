@@ -22,7 +22,8 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ready = Boolean(url && anon && service);
-if (!ready) console.warn("⚠ Visit integration suite SKIPPED — no Supabase env.");
+if (!ready)
+  console.warn("⚠ Visit integration suite SKIPPED — no Supabase env.");
 
 describe.skipIf(!ready)("visit data", () => {
   let admin!: SupabaseClient<Database>;
@@ -71,7 +72,10 @@ describe.skipIf(!ready)("visit data", () => {
     db = createClient<Database>(url!, anon!, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { error: sErr } = await db.auth.signInWithPassword({ email, password });
+    const { error: sErr } = await db.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (sErr) throw sErr;
   }, 30_000);
 
@@ -158,7 +162,9 @@ describe.skipIf(!ready)("visit data", () => {
     );
   });
   const jpeg = () =>
-    new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: "image/jpeg" });
+    new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], {
+      type: "image/jpeg",
+    });
   const blank: ReadingValues = {
     total_alkalinity: null,
     ph: null,
@@ -197,7 +203,12 @@ describe.skipIf(!ready)("visit data", () => {
     s = await reload();
     expect(s.notes).toBe("Jets weak");
 
-    const left = { total_alkalinity: 100, ph: 7.5, calcium_hardness: 190, sanitizer_ppm: 2 };
+    const left = {
+      total_alkalinity: 100,
+      ph: 7.5,
+      calcium_hardness: 190,
+      sanitizer_ppm: 2,
+    };
     await logReading(db, id, "left", left);
     s = await reload();
     expect(s.left).toEqual(left);
@@ -207,7 +218,11 @@ describe.skipIf(!ready)("visit data", () => {
     await savePhoto(db, id, "after", jpeg(), "2026-10-27T10:50:00.000Z");
     await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:52:00.000Z");
     s = await reload();
-    expect(s.photos.map((p) => p.kind).sort()).toEqual(["after", "before", "cover"]);
+    expect(s.photos.map((p) => p.kind).sort()).toEqual([
+      "after",
+      "before",
+      "cover",
+    ]);
     expect(s.work).toEqual(["wiped", "filter_replaced"]);
     expect(s.added).toEqual([{ product: "pH down", amount: "2 oz" }]);
     expect(s.notes).toBe("Jets weak");
@@ -242,9 +257,14 @@ describe.skipIf(!ready)("visit data", () => {
     const id = await createDraft(db, tub, userId);
     await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:00:00.000Z");
     await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:05:00.000Z");
-    const { data } = await admin.from("photo").select("captured_at").eq("turnover_id", id);
+    const { data } = await admin
+      .from("photo")
+      .select("captured_at")
+      .eq("turnover_id", id);
     expect(data).toHaveLength(1);
-    expect(Date.parse(data![0].captured_at!)).toBe(Date.parse("2026-10-27T10:05:00.000Z"));
+    expect(Date.parse(data![0].captured_at!)).toBe(
+      Date.parse("2026-10-27T10:05:00.000Z")
+    );
   });
 
   it("finish locks an empty visit as partial", async () => {

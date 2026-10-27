@@ -59,7 +59,9 @@ export function ReadingSheet({
   const sheet = sheets[kind];
   const update = (next: SheetState) =>
     setSheets((s) => ({ ...s, [kind]: next }));
-  const hasSuggestion = READING_FIELDS.some((f) => sheet[f].suggestion !== null);
+  const hasSuggestion = READING_FIELDS.some(
+    (f) => sheet[f].suggestion !== null
+  );
 
   async function log() {
     setBusy(true);

@@ -5,7 +5,11 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { READING_FIELDS, readingColumn, type ReadingKind } from "@/lib/readings";
+import {
+  READING_FIELDS,
+  readingColumn,
+  type ReadingKind,
+} from "@/lib/readings";
 import { CLEANING_STEPS, type CleaningStepCode } from "@/lib/types";
 import {
   PHOTO_KINDS,
@@ -143,8 +147,7 @@ export async function loadVisitSnapshot(
     found,
     foundAt: found
       ? ((water?.found_recorded_at ?? water?.recorded_at ?? null) as
-          | string
-          | null)
+          string | null)
       : null,
     left,
     leftAt: left ? ((water?.left_recorded_at ?? null) as string | null) : null,

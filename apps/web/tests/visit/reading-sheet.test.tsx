@@ -56,10 +56,19 @@ describe("reading sheet state", () => {
 
   it("logged values start set; missing ones start unset with the suggestion", () => {
     const s = initSheet(
-      { total_alkalinity: 100, ph: null, calcium_hardness: null, sanitizer_ppm: null },
+      {
+        total_alkalinity: 100,
+        ph: null,
+        calcium_hardness: null,
+        sanitizer_ppm: null,
+      },
       lastFound
     );
-    expect(s.total_alkalinity).toEqual({ value: 100, set: true, suggestion: 90 });
+    expect(s.total_alkalinity).toEqual({
+      value: 100,
+      set: true,
+      suggestion: 90,
+    });
     expect(s.ph).toEqual({ value: null, set: false, suggestion: 8 });
   });
 
@@ -113,7 +122,9 @@ describe("ReadingSheet", () => {
         onClose={() => {}}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Use 90 for Alkalinity" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Use 90 for Alkalinity" })
+    );
     fireEvent.click(screen.getByRole("button", { name: "Log it" }));
     expect(onLog.mock.calls[0][1].total_alkalinity).toBe(90);
     expect(onLog.mock.calls[0][1].ph).toBeNull();
