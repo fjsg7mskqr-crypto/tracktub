@@ -9,6 +9,7 @@ import {
   loadVisitSnapshot,
   logReading,
   saveAdded,
+  saveFlag,
   saveNotes,
   savePhoto,
   saveWork,
@@ -203,6 +204,10 @@ describe.skipIf(!ready)("visit data", () => {
     s = await reload();
     expect(s.notes).toBe("Jets weak");
 
+    await saveFlag(db, id, "Cover strap torn");
+    s = await reload();
+    expect(s.flag).toBe("Cover strap torn");
+
     const left = {
       total_alkalinity: 100,
       ph: 7.5,
@@ -226,6 +231,7 @@ describe.skipIf(!ready)("visit data", () => {
     expect(s.work).toEqual(["wiped", "filter_replaced"]);
     expect(s.added).toEqual([{ product: "pH down", amount: "2 oz" }]);
     expect(s.notes).toBe("Jets weak");
+    expect(s.flag).toBe("Cover strap torn");
     expect(isPartial(s)).toBe(false);
   });
 
@@ -265,6 +271,25 @@ describe.skipIf(!ready)("visit data", () => {
     expect(Date.parse(data![0].captured_at!)).toBe(
       Date.parse("2026-10-27T10:05:00.000Z")
     );
+  });
+
+  it("clearing the flag clears urgent", async () => {
+    const tub = await newTub("Flag");
+    const id = await createDraft(db, tub, userId);
+    await saveFlag(db, id, "Leak by pump");
+    let { data } = await admin
+      .from("turnover")
+      .select("urgent, owner_flag")
+      .eq("id", id)
+      .single();
+    expect(data).toEqual({ urgent: true, owner_flag: "Leak by pump" });
+    await saveFlag(db, id, "  ");
+    ({ data } = await admin
+      .from("turnover")
+      .select("urgent, owner_flag")
+      .eq("id", id)
+      .single());
+    expect(data).toEqual({ urgent: false, owner_flag: null });
   });
 
   it("finish sets a share token on a draft that has none", async () => {
