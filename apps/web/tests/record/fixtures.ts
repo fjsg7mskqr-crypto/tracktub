@@ -69,3 +69,11 @@ export function emptyRow(): RecordRow {
     water: null,
   });
 }
+
+/** D23: words the record must never use, anywhere. */
+export const BANNED_WORDS = [
+  "verified",
+  "tamper-proof",
+  "dispute-grade",
+  "immutable",
+];

@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RecordView } from "@/components/record/RecordView";
 import { buildRecord } from "@/components/record/record-model";
-import { emptyRow, mockupRow } from "./fixtures";
+import { BANNED_WORDS, emptyRow, mockupRow } from "./fixtures";
 
 vi.mock("@/lib/actions/proofEvent", () => ({ recordProofShare: vi.fn() }));
 
@@ -13,14 +13,6 @@ afterEach(cleanup);
 const FOOTER =
   "Photos taken live in the TrackTub camera. Times stamped by TrackTub's server; the record was locked when submitted and can't be edited.";
 const URL = "https://tracktub.com/proof/7Kq2tok";
-
-/** D23: words the record must never use, anywhere. */
-export const BANNED_WORDS = [
-  "verified",
-  "tamper-proof",
-  "dispute-grade",
-  "immutable",
-];
 
 describe("RecordView", () => {
   it("operator view has Send / Copy and the owner-preview note", () => {
