@@ -49,6 +49,34 @@ describe("/records/[id]", () => {
     expect(screen.getByText(/^https?:\/\/.+\/proof\/7Kq2tok$/)).toBeTruthy();
   });
 
+  it("shows next due from the tub's history and the owner flag", async () => {
+    vi.mocked(createClient).mockResolvedValue(
+      fakeSupabase({
+        turnover: [
+          {
+            data: mockupRow({ owner_flag: "Cover strap fraying" }),
+            error: null,
+          },
+          {
+            data: [
+              {
+                submitted_at_server: "2026-10-26T14:58:00Z",
+                cleaning_steps: ["drained_refilled"],
+              },
+            ],
+            error: null,
+          },
+        ],
+      }) as never
+    );
+    render(await RecordPage(params()));
+    expect(
+      screen.getByText(/^Drain & refill due Jan 24 · Record TT-/)
+    ).toBeTruthy();
+    expect(screen.getByText("For the owner")).toBeTruthy();
+    expect(screen.getByText("Cover strap fraying")).toBeTruthy();
+  });
+
   it("no share token", async () => {
     withRow(mockupRow({ share_token: null }));
     render(await RecordPage(params()));

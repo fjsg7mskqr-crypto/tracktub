@@ -3,6 +3,7 @@
 // operator view, the owner view and the history report agree.
 
 import {
+  CARE_DEFAULTS,
   READING_FIELDS,
   READING_TARGETS,
   inRange,
@@ -13,7 +14,7 @@ import {
 import { CLEANING_STEPS, PHOTO_SLOT_LABELS, type PhotoSlot } from "@/lib/types";
 import { treatmentLabel } from "@/lib/chemistry";
 import { photoPublicUrl } from "@/lib/supabase/storage";
-import { formatDate, formatTime } from "@/lib/time";
+import { formatDate, formatShortDate, formatTime } from "@/lib/time";
 
 type ReadingValues = Record<ReadingField, number | null> & {
   left_total_alkalinity: number | null;
@@ -44,6 +45,8 @@ export type RecordRow = {
     id: string;
     name: string;
     address: string | null;
+    drain_interval_days?: number | null;
+    filter_interval_days?: number | null;
     client: { name: string } | null;
   } | null;
   submitter: { full_name: string | null; email: string } | null;
@@ -258,4 +261,57 @@ export function buildRecord(row: RecordRow): RecordModel {
     partial,
     shareToken: row.share_token,
   };
+}
+
+/** When the tub was last drained / had its filter changed, from its visits. */
+export function careFromVisits(
+  visits: {
+    submitted_at_server: string | null;
+    cleaning_steps: string[] | null;
+  }[]
+): { drainedAt: string | null; filterAt: string | null } {
+  const latest = (code: string) =>
+    visits
+      .filter((v) => v.submitted_at_server && v.cleaning_steps?.includes(code))
+      .map((v) => v.submitted_at_server as string)
+      .sort()
+      .at(-1) ?? null;
+  return {
+    drainedAt: latest("drained_refilled"),
+    filterAt: latest("filter_replaced"),
+  };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The record footer's "next due" (spec §9): the earlier of drain & refill and
+ * filter change, projected from the last one plus the tub's interval (or the
+ * care defaults). Null when neither has happened yet.
+ */
+export function nextDueLine(care: {
+  drainedAt: string | null;
+  drainDays: number | null;
+  filterAt: string | null;
+  filterDays: number | null;
+}): string | null {
+  const due = [
+    {
+      label: "Drain & refill due",
+      from: care.drainedAt,
+      days: care.drainDays ?? CARE_DEFAULTS.drainDays,
+    },
+    {
+      label: "Filter change due",
+      from: care.filterAt,
+      days: care.filterDays ?? CARE_DEFAULTS.filterDays,
+    },
+  ]
+    .filter((d) => d.from && !Number.isNaN(Date.parse(d.from)))
+    .map((d) => ({
+      label: d.label,
+      on: new Date(Date.parse(d.from as string) + d.days * DAY_MS),
+    }))
+    .sort((a, b) => a.on.getTime() - b.on.getTime());
+  return due[0] ? `${due[0].label} ${formatShortDate(due[0].on)}` : null;
 }
