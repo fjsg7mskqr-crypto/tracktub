@@ -1866,4 +1866,90 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(await viewsOf(lockedId)).toHaveLength(1);
     });
   });
+
+  describe("water_reading as-left (D27)", () => {
+    const draftWithReading = async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({ property_id: propAssigned, submitter_id: operatorA.id, status: "draft" })
+        .select("id")
+        .single();
+      const { data: r, error } = await operatorA.client
+        .from("water_reading")
+        .insert({ turnover_id: to!.id, property_id: propAssigned, ph: 7.9 })
+        .select("id")
+        .single();
+      if (error || !r) throw error ?? new Error("reading insert failed");
+      return { turnoverId: to!.id, readingId: r.id };
+    };
+
+    it("as-left values save on a draft", async () => {
+      const { readingId } = await draftWithReading();
+      const leftAt = new Date().toISOString();
+      const { error } = await operatorA.client
+        .from("water_reading")
+        .update({
+          left_total_alkalinity: 100,
+          left_ph: 7.5,
+          left_calcium_hardness: 200,
+          left_sanitizer_ppm: 2,
+          left_recorded_at: leftAt,
+        })
+        .eq("id", readingId);
+      expect(error).toBeNull();
+      const { data } = await admin
+        .from("water_reading")
+        .select("ph, left_ph, left_total_alkalinity, left_recorded_at")
+        .eq("id", readingId)
+        .single();
+      // The as-found value is untouched; the as-left reading sits beside it.
+      expect(Number(data?.ph)).toBe(7.9);
+      expect(Number(data?.left_ph)).toBe(7.5);
+      expect(Number(data?.left_total_alkalinity)).toBe(100);
+      expect(data?.left_recorded_at).not.toBeNull();
+    });
+
+    it("as-left blocked once locked", async () => {
+      const { turnoverId, readingId } = await draftWithReading();
+      await admin
+        .from("turnover")
+        .update({ status: "submitted_locked" })
+        .eq("id", turnoverId);
+      // USING denies the update on a locked turnover → 0 rows; value stays null.
+      const { data: updated } = await operatorA.client
+        .from("water_reading")
+        .update({ left_ph: 7.5 })
+        .eq("id", readingId)
+        .select("id");
+      expect(updated ?? []).toHaveLength(0);
+      const { data } = await admin
+        .from("water_reading")
+        .select("left_ph")
+        .eq("id", readingId)
+        .single();
+      expect(data?.left_ph).toBeNull();
+    });
+
+    it("found_recorded_at backfilled", async () => {
+      // Readings that predate this suite (pre-migration rows) carry
+      // found_recorded_at = recorded_at from the migration's backfill.
+      const { data: suiteProps } = await admin
+        .from("property")
+        .select("id")
+        .in("org_id", createdOrgIds);
+      const suite = new Set((suiteProps ?? []).map((p) => p.id));
+      const { data, error } = await admin
+        .from("water_reading")
+        .select("property_id, recorded_at, found_recorded_at");
+      expect(error).toBeNull();
+      const mismatched = (data ?? []).filter(
+        (r) =>
+          !suite.has(r.property_id) &&
+          (r.found_recorded_at === null ||
+            new Date(r.found_recorded_at).getTime() !==
+              new Date(r.recorded_at).getTime()),
+      );
+      expect(mismatched).toEqual([]);
+    });
+  });
 });
