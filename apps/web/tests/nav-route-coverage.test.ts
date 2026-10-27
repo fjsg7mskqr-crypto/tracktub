@@ -14,9 +14,14 @@ import { routeExists } from "@/lib/routes";
 
 const APP_DIR = join(__dirname, "..", "src", "app");
 
-/** Files whose hard-coded hrefs must all resolve. Add new nav components here. */
+/**
+ * Files whose hard-coded hrefs must all resolve. Add new nav components here.
+ * TabBar renders hrefs from app-routes.ts, so the literals live there; TabBar
+ * and Shell stay listed so any href hard-coded into them later is caught too.
+ */
 const NAV_FILES = [
-  "src/components/field/BottomTabBar.tsx",
+  "src/lib/app-routes.ts",
+  "src/components/app/TabBar.tsx",
   "src/components/Shell.tsx",
 ];
 
@@ -31,10 +36,17 @@ describe("nav route coverage", () => {
   for (const file of NAV_FILES) {
     it(`every hard-coded href in ${file} resolves to a route`, () => {
       const hrefs = hrefsIn(file);
-      expect(hrefs.length).toBeGreaterThan(0);
-
       const broken = hrefs.filter((href) => !routeExists(href, APP_DIR));
       expect(broken).toEqual([]);
     });
   }
+
+  it("finds the tab hrefs (guards the extraction regex itself)", () => {
+    expect(hrefsIn("src/lib/app-routes.ts")).toEqual([
+      "/",
+      "/calendar",
+      "/tubs",
+      "/reports",
+    ]);
+  });
 });
