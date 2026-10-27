@@ -2013,4 +2013,28 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(data?.owner_flag).toBeNull();
     });
   });
+
+  describe("property volume", () => {
+    it("volume_gallons: 0 rejected, 450 accepted, null accepted", async () => {
+      const set = (v: number | null) =>
+        operatorA.client
+          .from("property")
+          .update({ volume_gallons: v })
+          .eq("id", propUnassigned)
+          .select("volume_gallons");
+
+      const { error: zero } = await set(0);
+      expect(zero).not.toBeNull();
+      const { error: tooBig } = await set(5001);
+      expect(tooBig).not.toBeNull();
+
+      const { data: fourFifty, error: e450 } = await set(450);
+      expect(e450).toBeNull();
+      expect(fourFifty?.[0]).toEqual({ volume_gallons: 450 });
+
+      const { data: unset, error: eNull } = await set(null);
+      expect(eNull).toBeNull();
+      expect(unset?.[0]).toEqual({ volume_gallons: null });
+    });
+  });
 });

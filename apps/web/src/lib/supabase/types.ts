@@ -647,6 +647,7 @@ export type Database = {
           org_id: string
           sanitizer_type: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes: string | null
+          volume_gallons: number | null
         }
         Insert: {
           address?: string | null
@@ -662,6 +663,7 @@ export type Database = {
           org_id: string
           sanitizer_type?: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes?: string | null
+          volume_gallons?: number | null
         }
         Update: {
           address?: string | null
@@ -677,6 +679,7 @@ export type Database = {
           org_id?: string
           sanitizer_type?: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes?: string | null
+          volume_gallons?: number | null
         }
         Relationships: [
           {
