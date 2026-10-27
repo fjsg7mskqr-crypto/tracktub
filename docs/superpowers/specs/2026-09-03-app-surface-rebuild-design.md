@@ -1,3 +1,5 @@
+> **Superseded** by [`2026-10-27-app-rebuild-design.md`](../specs/2026-10-27-app-rebuild-design.md) (2026-10-27). Kept for history.
+
 # App surface rebuild — design
 
 **Status:** draft for founder review

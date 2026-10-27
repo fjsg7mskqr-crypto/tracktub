@@ -1,3 +1,5 @@
+> **Superseded** by [`2026-10-27-app-rebuild-design.md`](../specs/2026-10-27-app-rebuild-design.md) (2026-10-27). Kept for history.
+
 # App Surface Rebuild — Phase 1: Stop the Silent Failures
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
