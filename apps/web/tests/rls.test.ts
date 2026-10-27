@@ -1626,4 +1626,88 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(mine ?? []).toHaveLength(0); // gate blocked the write
     });
   });
+
+  describe("client", () => {
+    let clientA: string;
+    let clientB: string;
+
+    beforeAll(async () => {
+      const { data: a, error: eA } = await admin
+        .from("client")
+        .insert({ org_id: orgA, name: "Client A" })
+        .select("id")
+        .single();
+      const { data: b, error: eB } = await admin
+        .from("client")
+        .insert({ org_id: orgB, name: "Client B" })
+        .select("id")
+        .single();
+      if (eA || eB || !a || !b) throw eA ?? eB ?? new Error("client insert failed");
+      clientA = a.id;
+      clientB = b.id;
+    });
+
+    it("client: member sees own org's clients only", async () => {
+      const { data, error } = await operatorA.client.from("client").select("id, org_id");
+      expect(error).toBeNull();
+      const ids = (data ?? []).map((c) => c.id);
+      expect(ids).toContain(clientA);
+      expect(ids).not.toContain(clientB);
+      expect((data ?? []).every((c) => c.org_id === orgA)).toBe(true);
+    });
+
+    it("client: cannot insert into another org", async () => {
+      const { error } = await operatorA.client
+        .from("client")
+        .insert({ org_id: orgB, name: "Spoof" });
+      expect(error).not.toBeNull();
+    });
+
+    it("client: operator can create, rename and delete their org's client", async () => {
+      const { data: c, error } = await operatorA.client
+        .from("client")
+        .insert({ org_id: orgA, name: "New client" })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+      const { data: renamed } = await operatorA.client
+        .from("client")
+        .update({ name: "Renamed" })
+        .eq("id", c!.id)
+        .select("name");
+      expect(renamed?.[0]?.name).toBe("Renamed");
+      const { error: delErr } = await operatorA.client
+        .from("client")
+        .delete()
+        .eq("id", c!.id);
+      expect(delErr).toBeNull();
+    });
+
+    it("property can link to its own org's client, not another org's", async () => {
+      const { error: ok } = await operatorA.client
+        .from("property")
+        .update({ client_id: clientA })
+        .eq("id", propUnassigned);
+      expect(ok).toBeNull();
+      const { error: spoof } = await operatorA.client
+        .from("property")
+        .update({ client_id: clientB })
+        .eq("id", propUnassigned);
+      expect(spoof).not.toBeNull();
+    });
+
+    it("property.client_id backfilled", async () => {
+      // Every property that predates this suite (seeded / pre-migration rows)
+      // was assigned its org's client by the migration's backfill.
+      const { data, error } = await admin
+        .from("property")
+        .select("id, org_id")
+        .is("client_id", null);
+      expect(error).toBeNull();
+      const preexisting = (data ?? []).filter(
+        (p) => !createdOrgIds.includes(p.org_id),
+      );
+      expect(preexisting).toEqual([]);
+    });
+  });
 });
