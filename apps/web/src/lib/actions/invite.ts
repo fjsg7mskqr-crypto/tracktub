@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { getCurrentMembership } from "@/lib/auth";
 
 export type CreateInviteResult =
@@ -83,6 +84,7 @@ export async function revokeInviteAction(
   // RLS (invite_operator_all) scopes the delete to the operator's own org.
   const { error } = await supabase.from("invite").delete().eq("id", inviteId);
   if (error) return { ok: false, error: error.message };
+  revalidatePath("/people");
   return { ok: true };
 }
 

@@ -114,13 +114,16 @@ export default async function Home() {
           {first ? `, ${first}` : ""}
         </h1>
       </div>
-      <span
-        aria-hidden="true"
+      <Link
+        href="/people"
+        aria-label="People and account"
         style={{
           width: 44,
           height: 44,
           borderRadius: 999,
           background: "var(--tt-raised)",
+          color: "var(--tt-text)",
+          textDecoration: "none",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -130,7 +133,7 @@ export default async function Home() {
         }}
       >
         {initials(fullName, membership.email)}
-      </span>
+      </Link>
     </div>
   );
 
