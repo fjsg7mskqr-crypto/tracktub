@@ -11,7 +11,7 @@ type Client = SupabaseClient<Database>;
 
 /** Everything the record prints, for one turnover. Works for anon on a locked,
  *  shared turnover (the *_public_proof policies); the client embed stays null
- *  for anon until an anon policy on `client` exists. */
+ *  for anon — /proof/[token] fills it via the proof_client_name() function. */
 export const RECORD_SELECT = `id, status, created_at, submitted_at_server, share_token, notes, cleaning_steps, owner_flag,
   property:property(id, name, address, drain_interval_days, filter_interval_days, client:client(name)),
   submitter:profile(full_name, email),

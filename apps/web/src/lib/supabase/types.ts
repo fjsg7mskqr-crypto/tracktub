@@ -1184,6 +1184,7 @@ export type Database = {
         Args: { p_threshold?: string }
         Returns: number
       }
+      proof_client_name: { Args: { p_token: string }; Returns: string }
       record_proof_open: { Args: { p_share_token: string }; Returns: undefined }
       record_share_view: { Args: { p_token: string }; Returns: undefined }
     }
