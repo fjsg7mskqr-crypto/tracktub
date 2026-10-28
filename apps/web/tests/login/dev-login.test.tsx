@@ -37,19 +37,14 @@ describe("/dev/login", () => {
     expect(signInWithPassword).not.toHaveBeenCalled();
   });
 
-  it("signs in as the demo host — even when asked for the cleaner", async () => {
+  it("signs in as the demo host", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("DEMO_PASSWORD", "pw");
-    for (const url of [
-      "http://localhost:3001/dev/login",
-      "http://localhost:3001/dev/login?as=cleaner",
-    ]) {
-      const { signInWithPassword } = await get(url);
-      expect(signInWithPassword).toHaveBeenCalledWith({
-        email: "demo-host@tracktub.test",
-        password: "pw",
-      });
-    }
+    const { signInWithPassword } = await get("http://localhost:3001/dev/login");
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: "demo-host@tracktub.test",
+      password: "pw",
+    });
   });
 
   it("redirects home on the LAN host the phone used", async () => {

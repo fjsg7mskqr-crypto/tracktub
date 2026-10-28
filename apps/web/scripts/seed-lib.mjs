@@ -189,8 +189,6 @@ export async function seedWorkspace({
   operatorClient,
   orgId,
   operatorId,
-  cleanerId = null,
-  cleanerClient = null,
   propertyCount = 3,
   includeMaintenance = false,
 }) {
@@ -209,17 +207,6 @@ export async function seedWorkspace({
     .select("id, name");
   if (propErr || !props) throw new Error(`property insert: ${propErr?.message}`);
   const byName = Object.fromEntries(props.map((p) => [p.name, p.id]));
-
-  if (cleanerId) {
-    const { error: cmErr } = await admin
-      .from("membership")
-      .insert({ user_id: cleanerId, org_id: orgId, role: "staff" });
-    if (cmErr && cmErr.code !== "23505") throw new Error(`cleaner membership: ${cmErr.message}`);
-    const { error: saErr } = await admin
-      .from("staff_assignment")
-      .insert({ property_id: byName["Ridgeline A-Frame"], staff_user_id: cleanerId });
-    if (saErr && saErr.code !== "23505") throw new Error(`staff_assignment: ${saErr.message}`);
-  }
 
   const equipment = [
     { name: "Ridgeline A-Frame", type: "pump", make_model: "Balboa BP6013G1", installed_at: "2023-04-12", warranty_until: "2028-04-12" },
@@ -349,24 +336,21 @@ export async function seedWorkspace({
     });
   }
 
-  if (cleanerClient && cleanerId) {
-    await makeTurnover(cleanerClient, {
-      propertyId: byName["Ridgeline A-Frame"],
-      orgId,
-      actorId: cleanerId,
-      notify: true,
-      notes: "Quick turn between guests — looks good.",
-      water: {
-        total_alkalinity: 105,
-        ph: 7.5,
-        calcium_hardness: 190,
-        sanitizer_ppm: 4,
-        temp_f: 100,
-        treatments: ["sanitizer"],
-        balanced: true,
-      },
-    });
-  }
+  await makeTurnover(client, {
+    propertyId: byName["Ridgeline A-Frame"],
+    orgId,
+    actorId: operatorId,
+    notes: "Quick turn between guests — looks good.",
+    water: {
+      total_alkalinity: 105,
+      ph: 7.5,
+      calcium_hardness: 190,
+      sanitizer_ppm: 4,
+      temp_f: 100,
+      treatments: ["sanitizer"],
+      balanced: true,
+    },
+  });
 
   await histTurnover(admin, {
     propertyId: byName["Ridgeline A-Frame"],
@@ -507,7 +491,7 @@ export async function seedWorkspace({
       title: "Turnover",
       scheduled_for: fromToday(1),
       status: "scheduled",
-      assignee: "cleaner",
+      assignee: "operator",
     },
     {
       name: "Lakeview Cabin 4",
@@ -515,7 +499,7 @@ export async function seedWorkspace({
       title: "Turnover",
       scheduled_for: fromToday(2),
       status: "scheduled",
-      assignee: "cleaner",
+      assignee: "operator",
       notes: "Before Saturday check-in — recheck sanitizer after shock.",
     },
     {
@@ -524,7 +508,7 @@ export async function seedWorkspace({
       title: "Turnover",
       scheduled_for: fromToday(5),
       status: "scheduled",
-      assignee: "cleaner",
+      assignee: "operator",
     },
     {
       name: "Lakeview Cabin 4",
@@ -532,7 +516,7 @@ export async function seedWorkspace({
       title: "Replace filter cartridge",
       scheduled_for: fromToday(3),
       status: "scheduled",
-      assignee: "cleaner",
+      assignee: "operator",
       notes: "Pleatco PWW50 — reorder from Big Bear Spa & Pool.",
     },
     {
@@ -555,7 +539,7 @@ export async function seedWorkspace({
       title: "Turnover",
       scheduled_for: fromToday(14),
       status: "scheduled",
-      assignee: "cleaner",
+      assignee: "operator",
     },
     {
       name: "Pine Chalet",
@@ -564,7 +548,7 @@ export async function seedWorkspace({
       scheduled_for: fromToday(-2),
       status: "done",
       done_at: ago(2 * DAY),
-      assignee: "cleaner",
+      assignee: "operator",
     },
     {
       name: "Ridgeline A-Frame",
@@ -589,8 +573,7 @@ export async function seedWorkspace({
       org_id: orgId,
       property_id: byName[name],
       source: "manual",
-      assignee_user_id:
-        assignee === "cleaner" ? cleanerId : assignee === "operator" ? operatorId : null,
+      assignee_user_id: assignee === "operator" ? operatorId : null,
       ...(done_at ? { done_at } : {}),
       ...rest,
     }));
