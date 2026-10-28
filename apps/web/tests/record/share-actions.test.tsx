@@ -14,12 +14,18 @@ vi.mock("@/lib/actions/proofEvent", () => ({ recordProofShare: vi.fn() }));
 
 const URL = "https://tracktub.com/proof/tok";
 const writeText = vi.fn();
+const execCommand = vi.fn();
 
 beforeEach(() => {
   vi.mocked(recordProofShare).mockReset();
   writeText.mockReset().mockResolvedValue(undefined);
+  execCommand.mockReset().mockReturnValue(false);
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText },
+    configurable: true,
+  });
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
     configurable: true,
   });
 });
@@ -77,6 +83,36 @@ describe("RecordShareActions", () => {
     expect(recordProofShare).toHaveBeenCalledWith("t1");
   });
 
+  it("without the Clipboard API (plain http) copies via a textarea", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: undefined,
+      configurable: true,
+    });
+    let copied: string | null = null;
+    execCommand.mockImplementation((cmd: string) => {
+      const el = document.activeElement as HTMLTextAreaElement | null;
+      copied = el?.value.slice(el.selectionStart, el.selectionEnd) ?? null;
+      return cmd === "copy";
+    });
+    renderActions();
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(await screen.findByText("Link copied")).toBeTruthy();
+    expect(execCommand).toHaveBeenCalledWith("copy");
+    expect(copied).toBe(URL);
+    expect(recordProofShare).toHaveBeenCalledWith("t1");
+    expect(document.querySelector("textarea")).toBeNull();
+  });
+
+  it("a rejected clipboard write falls back to the textarea copy", async () => {
+    writeText.mockRejectedValue(new Error("denied"));
+    execCommand.mockReturnValue(true);
+    renderActions();
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(await screen.findByText("Link copied")).toBeTruthy();
+    expect(execCommand).toHaveBeenCalledWith("copy");
+    expect(recordProofShare).toHaveBeenCalledWith("t1");
+  });
+
   it("a failed copy says so and records nothing", async () => {
     writeText.mockRejectedValue(new Error("denied"));
     renderActions();
@@ -84,6 +120,7 @@ describe("RecordShareActions", () => {
     expect(
       await screen.findByText("Couldn't copy — press and hold the link below")
     ).toBeTruthy();
+    expect(execCommand).toHaveBeenCalledWith("copy");
     expect(recordProofShare).not.toHaveBeenCalled();
   });
 

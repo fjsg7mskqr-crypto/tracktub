@@ -51,7 +51,10 @@ function careTile(
 
 function phTile(visits: readonly HistoryVisit[]): BriefTile {
   const { lo, hi } = READING_TARGETS.ph;
-  const ph = newestVisit(visits)?.found?.ph ?? null;
+  // A visit with no as-found pH says nothing about arrival pH: read the
+  // newest visit that has one, and count the streak across those only.
+  const read = visits.filter((v) => (v.found?.ph ?? null) !== null);
+  const ph = newestVisit(read)?.found?.ph ?? null;
   const tile: BriefTile = {
     value: ph === null ? EMPTY : ph.toFixed(1),
     label: "pH on arrival",
@@ -61,7 +64,7 @@ function phTile(visits: readonly HistoryVisit[]): BriefTile {
   if (ph === null || (ph >= lo && ph <= hi)) return tile;
 
   const dir = ph > hi ? "High" : "Low";
-  const streak = foundStreak(visits, "ph");
+  const streak = foundStreak(read, "ph");
   return {
     ...tile,
     tone: "due",

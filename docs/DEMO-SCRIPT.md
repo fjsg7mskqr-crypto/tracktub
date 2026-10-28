@@ -17,9 +17,9 @@ bash apps/web/scripts/tt-demo.sh reset
 This wipes the local DB, re-applies migrations, re-seeds, and serves at
 **http://localhost:3001**. Wait for `✓ Demo ready`. Open the URL.
 
-> Sign-in uses the **"Local demo"** buttons on `/login` (`Host` / `Cleaner`) —
-> no Google needed. They post to `/dev/login?as=host|cleaner` with the
-> generated demo password (dev-only).
+> Sign-in uses the **"Sign in to demo"** button on `/login` — no Google
+> needed. It opens `/dev/login`, which signs in as the demo host with the
+> generated demo password (dev-only). The cleaner demo login was removed.
 
 ## 1 · The cleaner does a turnover
 

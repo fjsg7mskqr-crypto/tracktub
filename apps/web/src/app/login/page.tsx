@@ -99,40 +99,21 @@ export default function LoginPage() {
           >
             Local demo — no Google needed
           </span>
-          <div style={{ display: "flex", gap: 8 }}>
-            <a
-              href="/dev/login?as=host"
-              style={{
-                flex: 1,
-                textAlign: "center",
-                padding: "9px 12px",
-                borderRadius: 8,
-                border: "1px solid rgba(59,130,246,0.32)",
-                background: "rgba(59,130,246,0.13)",
-                color: "#60a5fa",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              Sign in as host
-            </a>
-            <a
-              href="/dev/login?as=cleaner"
-              style={{
-                flex: 1,
-                textAlign: "center",
-                padding: "9px 12px",
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,0.14)",
-                background: "#191b20",
-                color: "#ededef",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              Sign in as cleaner
-            </a>
-          </div>
+          <a
+            href="/dev/login"
+            style={{
+              textAlign: "center",
+              padding: "9px 12px",
+              borderRadius: 8,
+              border: "1px solid rgba(59,130,246,0.32)",
+              background: "rgba(59,130,246,0.13)",
+              color: "#60a5fa",
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            Sign in to demo
+          </a>
         </div>
       )}
     </main>
