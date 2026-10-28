@@ -159,7 +159,7 @@ export function attentionList(
         title: `${t.name} — ${what} ${when}`,
         detail:
           d.kind === "visit"
-            ? `${plural(since, "day")} since the last visit, you usually go ~${d.everyDays}`
+            ? `${since === 0 ? "Visited today" : `${plural(since, "day")} since the last visit`}, you usually go every ~${d.everyDays}`
             : `${plural(since, "day")}, you usually go ${d.everyDays}`,
         tone: inDays <= 0 ? "due" : "upcoming",
         severity: inDays,
