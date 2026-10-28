@@ -5,7 +5,7 @@
 #   tt-demo reset   wipe + re-apply migrations + re-seed fresh, then run dev
 #   tt-demo stop    stop the local stack and revert dev back to prod (.env.local)
 #
-# Opens at http://localhost:3001 — use the "Local demo" sign-in buttons on /login.
+# Opens at http://localhost:3001 — use the "Sign in to demo" button on /login.
 set -euo pipefail
 
 WEB="$(cd "$(dirname "$0")/.." && pwd)"   # apps/web
@@ -55,6 +55,6 @@ EOF
 
 echo ""
 echo "✓ Demo ready → http://localhost:3001"
-echo "  On /login use the 'Local demo' buttons (host or cleaner)."
+echo "  On /login use the 'Sign in to demo' button."
 echo ""
 exec npm run dev -- -p 3001

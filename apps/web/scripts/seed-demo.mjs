@@ -1,6 +1,6 @@
 // Seed a populated demo workspace into the LOCAL Supabase stack.
 //
-// Creates a demo host (operator) + cleaner (staff), an org, properties, and
+// Creates one demo host (operator), an org, properties, and
 // several completed (submitted_locked) turnovers with real sample photos,
 // an urgent flag, an open issue, and shared proof links — so the app opens
 // into a fully walkable cockpit.
@@ -34,7 +34,6 @@ if (!DEMO_PASSWORD) {
   process.exit(1);
 }
 const HOST = { email: "demo-host@tracktub.test", password: DEMO_PASSWORD, name: "Ethan (demo host)" };
-const CLEANER = { email: "demo-cleaner@tracktub.test", password: DEMO_PASSWORD, name: "Maria R. (demo cleaner)" };
 
 const admin = createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
 
@@ -61,7 +60,6 @@ async function authed({ email, password }) {
 
 async function main() {
   const host = await ensureUser(HOST);
-  const cleaner = await ensureUser(CLEANER);
 
   const hc = await authed(HOST);
   const { data: mem, error: memErr } = await hc
@@ -79,29 +77,24 @@ async function main() {
     return;
   }
 
-  const cc = await authed(CLEANER);
   await seedWorkspace({
     admin,
     operatorClient: hc,
     orgId,
     operatorId: host.id,
-    cleanerId: cleaner.id,
-    cleanerClient: cc,
     propertyCount: 3,
     includeMaintenance: false,
   });
 
   console.log("Seeded demo workspace 'Cascade Stays':");
-  console.log(`  host:    ${HOST.email}`);
-  console.log(`  cleaner: ${CLEANER.email}`);
-  console.log("  Sign in via the Local demo buttons on /login (tt-demo prints the password).");
+  console.log(`  host: ${HOST.email}`);
+  console.log("  Sign in with the 'Sign in to demo' button on /login.");
   console.log("  3 properties; chemistry: Lakeview = shock due + low sanitizer,");
   console.log("  Pine Chalet = low sanitizer dip, Ridgeline = healthy (multi-point trends).");
   console.log("  before/after photo sets, shared proof links + recipient opens,");
   console.log("  equipment per property (Ridgeline heater out-of-warranty) + a shared note,");
   console.log("  supplies per property (Ridgeline 1 low, Lakeview 2 low, Pine all stocked),");
-  console.log("  schedule calendar (upcoming turnovers + custom tasks, some assigned to Maria),");
-  console.log("  and an unread 'turnover ready' notification waiting for the host.");
+  console.log("  and a schedule calendar (upcoming turnovers + custom tasks).");
 }
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
