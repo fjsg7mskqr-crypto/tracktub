@@ -400,9 +400,23 @@ describe.skipIf(!ready)("RLS isolation", () => {
         .from("membership")
         .insert({ user_id: proofOperator.id, org_id: proofOrgId, role: "operator" });
 
+      const { data: client } = await admin
+        .from("client")
+        .insert({
+          org_id: proofOrgId,
+          name: "Proof Test Client",
+          contact_email: "owner@example.com",
+        })
+        .select("id")
+        .single();
+
       const { data: prop } = await admin
         .from("property")
-        .insert({ org_id: proofOrgId, name: "Proof Test Property" })
+        .insert({
+          org_id: proofOrgId,
+          name: "Proof Test Property",
+          client_id: client!.id,
+        })
         .select("id")
         .single();
 
@@ -499,6 +513,28 @@ describe.skipIf(!ready)("RLS isolation", () => {
         .select("tag")
         .eq("turnover_id", proofTurnoverDraftId);
       expect(data).toHaveLength(0);
+    });
+
+    // ── proof_client_name: client name on the owner record, token-checked ──
+    it("anon gets the client name with the right share token", async () => {
+      const { data, error } = await anonClient.rpc("proof_client_name", {
+        p_token: proofShareToken,
+      });
+      expect(error).toBeNull();
+      expect(data).toBe("Proof Test Client");
+    });
+
+    it("anon gets null with a wrong share token", async () => {
+      const { data, error } = await anonClient.rpc("proof_client_name", {
+        p_token: randomUUID(),
+      });
+      expect(error).toBeNull();
+      expect(data).toBeNull();
+    });
+
+    it("anon still cannot read the client table directly", async () => {
+      const { data } = await anonClient.from("client").select("*");
+      expect(data ?? []).toHaveLength(0);
     });
 
     // ── proof_event: share/open tracking (PRD §16 wedge signal) ─────────────

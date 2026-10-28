@@ -24,18 +24,22 @@ export function getCspReportUri(dsn?: string): string | undefined {
   }
 }
 
+/** The Supabase origin (scheme + host only), or undefined if unset/malformed. */
+function supabaseOrigin(supabaseUrl?: string): string | undefined {
+  const url = supabaseUrl ?? cleanEnv("NEXT_PUBLIC_SUPABASE_URL");
+  if (!url) return undefined;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Build the connect-src value: 'self' + Supabase https/wss + ws: in dev. */
 function connectSrc(supabaseUrl?: string): string {
   const sources = ["'self'"];
-  const url = supabaseUrl ?? cleanEnv("NEXT_PUBLIC_SUPABASE_URL");
-  if (url) {
-    try {
-      const { origin } = new URL(url);
-      sources.push(origin, origin.replace(/^https:/, "wss:"));
-    } catch {
-      // Malformed URL: same-origin only.
-    }
-  }
+  const origin = supabaseOrigin(supabaseUrl);
+  if (origin) sources.push(origin, origin.replace(/^https:/, "wss:"));
   // Webpack HMR in `next dev` uses a websocket to the dev server.
   if (process.env.NODE_ENV === "development") sources.push("ws:");
   return sources.join(" ");
@@ -44,7 +48,7 @@ function connectSrc(supabaseUrl?: string): string {
 export interface BuildCspOptions {
   /** Overrides the env-derived Sentry report-uri. Pass undefined to omit. */
   reportUri?: string | null;
-  /** Override the Supabase URL for connect-src (defaults to env var). */
+  /** Override the Supabase URL for connect-src/img-src (defaults to env var). */
   supabaseUrl?: string;
   /** Force dev relaxations (unsafe-eval, ws:) regardless of NODE_ENV. */
   isDev?: boolean;
@@ -61,12 +65,14 @@ export function buildCsp(nonce: string, opts: BuildCspOptions = {}): string {
   const isDev = opts.isDev ?? process.env.NODE_ENV === "development";
   const reportUri =
     "reportUri" in opts ? opts.reportUri : getCspReportUri();
+  const imgOrigin = supabaseOrigin(opts.supabaseUrl);
 
   const directives = [
     "default-src 'self'",
     `script-src 'nonce-${nonce}' 'strict-dynamic' 'self'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    // Photos render straight from Supabase Storage public URLs.
+    `img-src 'self' data: blob:${imgOrigin ? ` ${imgOrigin}` : ""}`,
     "font-src 'self'",
     // Sentry session replay records via a worker created from a blob: URL.
     "worker-src 'self' blob:",

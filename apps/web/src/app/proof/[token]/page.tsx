@@ -17,7 +17,8 @@ export const metadata: Metadata = {
 
 // The record, owner view (screen 9): what the share link opens, no login.
 // Anon reads work through the *_public_proof RLS policies on a locked,
-// shared turnover. Dynamic: it reads per-request data and records the open.
+// shared turnover; the client name through proof_client_name(). Dynamic: it
+// reads per-request data and records the open.
 export default async function ProofPage({
   params,
 }: {
@@ -43,9 +44,21 @@ export default async function ProofPage({
     /* non-critical — legacy proof_event signal */
   }
 
+  // Anon can't read `client` (no anon policy, on purpose), so the name comes
+  // from a token-checked function. Without it the record renders nameless.
+  const visit = buildRecord(row);
+  try {
+    const { data } = await supabase.rpc("proof_client_name", {
+      p_token: token,
+    });
+    if (data) visit.client = data;
+  } catch {
+    /* non-critical */
+  }
+
   return (
     <RecordView
-      visit={buildRecord(row)}
+      visit={visit}
       nextDue={await loadNextDue(supabase, row)}
       audience="owner"
       shareUrl={proofUrl(getURL(), token)}
