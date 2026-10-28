@@ -5,30 +5,27 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getCurrentMembership } from "@/lib/auth";
 
-export type InviteRole = "staff" | "owner";
-
 export type CreateInviteResult =
-  | { ok: true; inviteId: string; token: string }
-  | { ok: false; error: string };
+  { ok: true; inviteId: string; token: string } | { ok: false; error: string };
 
 /**
- * Operator-only: mint a one-time invite link for a helper (cleaner/viewer),
- * scoped to specific properties. The `invite_operator_all` RLS policy is the
- * real guard — a non-operator insert is rejected even if this check is bypassed.
- * Returns the token; the caller composes `${origin}/invite/${token}`.
+ * Admin-only: mint a one-time invite link for a new login (D29: a staff
+ * membership that sees every property unless narrowed to `propertyIds`). The
+ * `invite_operator_all` RLS policy is the real guard — a non-operator insert is
+ * rejected even if this check is bypassed. Returns the token; the caller
+ * composes `${origin}/invite/${token}`.
  */
 export async function createInviteAction(input: {
-  role: InviteRole;
+  email: string | null;
+  allProperties: boolean;
   propertyIds: string[];
-  email?: string | null;
 }): Promise<CreateInviteResult> {
   const membership = await getCurrentMembership();
   if (!membership) return { ok: false, error: "Not signed in." };
   if (membership.role !== "operator") {
-    return { ok: false, error: "Only the host can invite people." };
+    return { ok: false, error: "Only the admin can invite people." };
   }
 
-  const role: InviteRole = input.role === "owner" ? "owner" : "staff";
   const email = (input.email ?? "").trim() || null;
   const token = randomUUID();
 
@@ -37,8 +34,9 @@ export async function createInviteAction(input: {
     .from("invite")
     .insert({
       org_id: membership.orgId,
-      role,
-      property_ids: input.propertyIds,
+      role: "staff",
+      all_properties: input.allProperties,
+      property_ids: input.allProperties ? [] : input.propertyIds,
       email,
       token,
       invited_by: membership.userId,
@@ -79,7 +77,7 @@ export async function revokeInviteAction(
 ): Promise<{ ok: boolean; error?: string }> {
   const membership = await getCurrentMembership();
   if (membership?.role !== "operator") {
-    return { ok: false, error: "Only the host can revoke invites." };
+    return { ok: false, error: "Only the admin can cancel invites." };
   }
   const supabase = await createClient();
   // RLS (invite_operator_all) scopes the delete to the operator's own org.
@@ -89,8 +87,7 @@ export async function revokeInviteAction(
 }
 
 export type ResendInviteResult =
-  | { ok: true; token: string }
-  | { ok: false; error: string };
+  { ok: true; token: string } | { ok: false; error: string };
 
 /** Operator-only: regenerate a pending invite's token + bump its expiry. */
 export async function resendInviteAction(
@@ -98,7 +95,7 @@ export async function resendInviteAction(
 ): Promise<ResendInviteResult> {
   const membership = await getCurrentMembership();
   if (membership?.role !== "operator") {
-    return { ok: false, error: "Only the host can resend invites." };
+    return { ok: false, error: "Only the admin can resend invites." };
   }
   const supabase = await createClient();
   const token = randomUUID();
