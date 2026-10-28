@@ -98,7 +98,7 @@ describe("buildBrief", () => {
     expect(low[3].note).toBe("Not opened yet");
   });
 
-  it("last visit without pH → —", () => {
+  it("no visit with a pH → —", () => {
     expect(
       buildBrief({
         tub: TUB,
@@ -107,6 +107,31 @@ describe("buildBrief", () => {
         now: NOW,
       })[1].value
     ).toBe("—");
+  });
+
+  it("last visit without pH falls back to the newest visit that has one", () => {
+    const tiles = buildBrief({
+      tub: TUB,
+      visits: [v(20, 7.4), v(2, null), v(9, 8.1)],
+      lastVisitOpened: null,
+      now: NOW,
+    });
+    expect(tiles[1]).toMatchObject({
+      value: "8.1",
+      note: "High on arrival",
+      tone: "due",
+    });
+  });
+
+  it("a visit without pH doesn't break the arrival streak", () => {
+    expect(
+      buildBrief({
+        tub: TUB,
+        visits: [v(2, null), v(9, 8.1), v(18, 8.0)],
+        lastVisitOpened: null,
+        now: NOW,
+      })[1].note
+    ).toBe("High 2 visits running");
   });
 
   it("uses the tub's own interval", () => {

@@ -210,8 +210,10 @@ export function PrimaryLink({
 }
 
 /**
- * Log (spec §5.3), oldest at the top: locked visits one line each → record;
- * then the open visit's entries + Continue visit, or Start visit.
+ * Log (spec §5.3), newest at the top: the open visit's entries + Continue
+ * visit (or Start visit) pinned first, then locked visits one line each →
+ * record, newest first. Phone testing: oldest-first buried the latest visit at
+ * the bottom of a long page.
  */
 export function TubLog({
   tubId,
@@ -219,11 +221,13 @@ export function TubLog({
   now,
 }: {
   tubId: string;
-  /** Oldest first. */
+  /** Any order; the Log sorts them. */
   visits: readonly LogVisit[];
   now: Date;
 }) {
-  const past = visits.filter((v) => v.status === "submitted_locked");
+  const past = visits
+    .filter((v) => v.status === "submitted_locked")
+    .sort((a, b) => b.at.getTime() - a.at.getTime());
   const open = [...visits].reverse().find((v) => v.status === "draft") ?? null;
 
   return (
@@ -242,14 +246,16 @@ export function TubLog({
           No visits yet
         </p>
       )}
+      <div style={{ marginBottom: past.length > 0 ? 24 : 0 }}>
+        {open ? (
+          <OpenVisit v={open} now={now} />
+        ) : (
+          <StartVisitButton tubId={tubId} />
+        )}
+      </div>
       {past.map((v) => (
         <PastVisit key={v.id} v={v} />
       ))}
-      {open ? (
-        <OpenVisit v={open} now={now} />
-      ) : (
-        <StartVisitButton tubId={tubId} />
-      )}
     </section>
   );
 }

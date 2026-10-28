@@ -35,20 +35,25 @@ describe("TubLog", () => {
     expect(container.textContent).not.toMatch(/NaN|Invalid Date/);
   });
 
-  it("past visits link to their record, oldest first", () => {
+  it("past visits link to their record, newest first", () => {
     render(
       <TubLog
         tubId="t1"
-        visits={[lv("a", {}), lv("b", { photos: [] })]}
+        visits={[
+          lv("oct6", { at: new Date("2026-10-06T18:00:00Z") }),
+          lv("oct20", { at: new Date("2026-10-20T18:00:00Z"), photos: [] }),
+          lv("oct28", { at: new Date("2026-10-28T18:00:00Z") }),
+        ]}
         now={NOW}
       />
     );
     const links = screen.getAllByRole("link");
     expect(links.map((l) => l.getAttribute("href"))).toEqual([
-      "/records/a",
-      "/records/b",
+      "/records/oct28",
+      "/records/oct20",
+      "/records/oct6",
     ]);
-    expect(screen.getByText("locked")).toBeTruthy();
+    expect(screen.getAllByText("locked")).toHaveLength(2);
     expect(screen.getByText("partial")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Start visit" })).toBeTruthy();
   });
@@ -80,5 +85,25 @@ describe("TubLog", () => {
       screen.getByRole("link", { name: "Continue visit" }).getAttribute("href")
     ).toBe("/visits/d");
     expect(screen.queryByRole("button", { name: "Start visit" })).toBeNull();
+  });
+
+  it("the open visit stays pinned above past visits", () => {
+    render(
+      <TubLog
+        tubId="t1"
+        visits={[
+          lv("a", { at: new Date("2026-10-20T18:00:00Z") }),
+          lv("d", {
+            status: "draft",
+            at: new Date("2026-10-27T13:42:00Z"),
+            photos: [],
+          }),
+        ]}
+        now={NOW}
+      />
+    );
+    expect(
+      screen.getAllByRole("link").map((l) => l.getAttribute("href"))
+    ).toEqual(["/visits/d", "/records/a"]);
   });
 });
