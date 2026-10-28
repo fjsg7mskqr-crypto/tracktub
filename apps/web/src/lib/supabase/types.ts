@@ -173,6 +173,7 @@ export type Database = {
       }
       invite: {
         Row: {
+          all_properties: boolean
           accepted_at: string | null
           created_at: string
           email: string | null
@@ -185,6 +186,7 @@ export type Database = {
           token: string
         }
         Insert: {
+          all_properties?: boolean
           accepted_at?: string | null
           created_at?: string
           email?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           token: string
         }
         Update: {
+          all_properties?: boolean
           accepted_at?: string | null
           created_at?: string
           email?: string | null
@@ -377,6 +380,7 @@ export type Database = {
       }
       membership: {
         Row: {
+          all_properties: boolean
           created_at: string
           id: string
           org_id: string
@@ -384,6 +388,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          all_properties?: boolean
           created_at?: string
           id?: string
           org_id: string
@@ -391,6 +396,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          all_properties?: boolean
           created_at?: string
           id?: string
           org_id?: string
@@ -1139,6 +1145,10 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: string }
+      app_is_team: {
+        Args: { p_org: string }
+        Returns: boolean
+      }
       app_can_capture_property: {
         Args: { p_property: string }
         Returns: boolean

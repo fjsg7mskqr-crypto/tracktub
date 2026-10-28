@@ -98,9 +98,10 @@ describe.skipIf(!ready)("RLS isolation", () => {
     createdOrgIds.push(orgA, orgB);
 
     const { error: mErr } = await admin.from("membership").insert([
-      { user_id: operatorA.id, org_id: orgA, role: "operator" },
-      { user_id: staffA.id, org_id: orgA, role: "staff" },
-      { user_id: operatorB.id, org_id: orgB, role: "operator" },
+      { user_id: operatorA.id, org_id: orgA, role: "operator", all_properties: true },
+      // Narrowed to assigned properties (D29); the default is every property.
+      { user_id: staffA.id, org_id: orgA, role: "staff", all_properties: false },
+      { user_id: operatorB.id, org_id: orgB, role: "operator", all_properties: true },
     ]);
     if (mErr) throw mErr;
 
@@ -618,12 +619,14 @@ describe.skipIf(!ready)("RLS isolation", () => {
       role: "staff" | "owner";
       propertyIds: string[];
       expired?: boolean;
+      allProperties?: boolean;
     }): Promise<string> {
       const token = randomUUID();
       const { error } = await admin.from("invite").insert({
         org_id: orgA,
         role: opts.role,
         property_ids: opts.propertyIds,
+        all_properties: opts.allProperties ?? opts.propertyIds.length === 0,
         token,
         invited_by: operatorA.id,
         email: null,
@@ -1348,7 +1351,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(error).not.toBeNull();
     });
 
-    it("org member (staff) can read org_note but not write", async () => {
+    it("staff can read and write org_note (D29)", async () => {
       await admin.from("org_note").upsert({ org_id: orgA, body: "Shared ref" });
       const { data: read, error: readErr } = await staffA.client
         .from("org_note")
@@ -1362,7 +1365,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
         org_id: orgA,
         body: "Staff edit",
       });
-      expect(writeErr).not.toBeNull();
+      expect(writeErr).toBeNull();
     });
   });
 
@@ -2071,6 +2074,225 @@ describe.skipIf(!ready)("RLS isolation", () => {
       const { data: unset, error: eNull } = await set(null);
       expect(eNull).toBeNull();
       expect(unset?.[0]).toEqual({ volume_gallons: null });
+    });
+  });
+
+  // ── Logins and property access (D29) ───────────────────────────────────────
+  describe("Logins and property access (D29)", () => {
+    let staffAll: AuthedUser;
+
+    beforeAll(async () => {
+      staffAll = await makeUser("staff-all");
+      // No all_properties given: the column default (every property) applies.
+      const { error } = await admin
+        .from("membership")
+        .insert({ user_id: staffAll.id, org_id: orgA, role: "staff" });
+      if (error) throw error;
+    });
+
+    it("staff with all properties sees and can run visits on every org property", async () => {
+      const { data: props } = await staffAll.client.from("property").select("id");
+      const ids = (props ?? []).map((p) => p.id);
+      expect(ids).toEqual(expect.arrayContaining([propAssigned, propUnassigned]));
+      expect(ids).not.toContain(propB);
+
+      for (const p of [propAssigned, propUnassigned]) {
+        const { data: can } = await staffAll.client.rpc("app_can_capture_property", {
+          p_property: p,
+        });
+        expect(can).toBe(true);
+      }
+      const { error } = await staffAll.client.from("turnover").insert({
+        property_id: propUnassigned,
+        submitter_id: staffAll.id,
+        status: "draft",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("narrowed staff sees only assigned properties", async () => {
+      const { data: props } = await staffA.client.from("property").select("id");
+      const ids = (props ?? []).map((p) => p.id);
+      expect(ids).toContain(propAssigned);
+      expect(ids).not.toContain(propUnassigned);
+    });
+
+    it("staff can add a tub and a client", async () => {
+      const { data: c, error: cErr } = await staffAll.client
+        .from("client")
+        .insert({ org_id: orgA, name: "Staff client" })
+        .select("id")
+        .single();
+      expect(cErr).toBeNull();
+      const { data: p, error: pErr } = await staffAll.client
+        .from("property")
+        .insert({ org_id: orgA, name: "Staff tub", client_id: c!.id })
+        .select("id")
+        .single();
+      expect(pErr).toBeNull();
+      const { error: renameErr } = await staffAll.client
+        .from("property")
+        .update({ name: "Staff tub renamed" })
+        .eq("id", p!.id);
+      expect(renameErr).toBeNull();
+    });
+
+    it("narrowed staff adds a tub and then sees it", async () => {
+      const id = randomUUID();
+      const { error } = await staffA.client
+        .from("property")
+        .insert({ id, org_id: orgA, name: "Narrowed staff tub" });
+      expect(error).toBeNull();
+      const { data } = await staffA.client.from("property").select("id").eq("id", id);
+      expect(data ?? []).toHaveLength(1);
+    });
+
+    it("staff can edit a task on a property they see, not one they don't", async () => {
+      const { error: ok } = await staffA.client
+        .from("task")
+        .insert({ property_id: propAssigned, title: "Check cover" });
+      expect(ok).toBeNull();
+      const { error: blocked } = await staffA.client
+        .from("task")
+        .insert({ property_id: propUnassigned, title: "Check cover" });
+      expect(blocked).not.toBeNull();
+    });
+
+    it("staff cannot insert an invite or a membership", async () => {
+      const { error: invErr } = await staffAll.client.from("invite").insert({
+        org_id: orgA,
+        role: "staff",
+        token: randomUUID(),
+        invited_by: staffAll.id,
+      });
+      expect(invErr).not.toBeNull();
+
+      const stranger = await makeUser("staff-adds-member");
+      const { error: memErr } = await staffAll.client
+        .from("membership")
+        .insert({ user_id: stranger.id, org_id: orgA, role: "staff" });
+      expect(memErr).not.toBeNull();
+    });
+
+    it("staff cannot widen their own access", async () => {
+      await staffA.client
+        .from("membership")
+        .update({ all_properties: true })
+        .eq("user_id", staffA.id)
+        .eq("org_id", orgA);
+      const { data } = await admin
+        .from("membership")
+        .select("all_properties")
+        .eq("user_id", staffA.id)
+        .eq("org_id", orgA)
+        .single();
+      expect(data?.all_properties).toBe(false);
+    });
+
+    it("staff of org A sees nothing in org B", async () => {
+      const { data: props } = await staffAll.client
+        .from("property")
+        .select("id")
+        .eq("org_id", orgB);
+      expect(props ?? []).toHaveLength(0);
+      const { data: clients } = await staffAll.client
+        .from("client")
+        .select("id")
+        .eq("org_id", orgB);
+      expect(clients ?? []).toHaveLength(0);
+      const { error } = await staffAll.client
+        .from("property")
+        .insert({ org_id: orgB, name: "Spoof" });
+      expect(error).not.toBeNull();
+      const { error: cErr } = await staffAll.client
+        .from("client")
+        .insert({ org_id: orgB, name: "Spoof" });
+      expect(cErr).not.toBeNull();
+    });
+
+    async function invite(allProperties: boolean, propertyIds: string[]) {
+      const token = randomUUID();
+      const { error } = await admin.from("invite").insert({
+        org_id: orgA,
+        role: "staff",
+        all_properties: allProperties,
+        property_ids: propertyIds,
+        token,
+        invited_by: operatorA.id,
+      });
+      if (error) throw error;
+      return token;
+    }
+
+    it("accept_invite, all properties: flag copied, no assignments, sees every property", async () => {
+      const invitee = await makeUser("invitee-all");
+      const token = await invite(true, []);
+      const { data: preview } = await invitee.client.rpc("get_invite_preview", {
+        p_token: token,
+      });
+      expect((preview as { all_properties: boolean }).all_properties).toBe(true);
+
+      const { error } = await invitee.client.rpc("accept_invite", { p_token: token });
+      expect(error).toBeNull();
+
+      const { data: m } = await admin
+        .from("membership")
+        .select("role, all_properties")
+        .eq("user_id", invitee.id)
+        .eq("org_id", orgA)
+        .single();
+      expect(m).toEqual({ role: "staff", all_properties: true });
+      const { data: sa } = await admin
+        .from("staff_assignment")
+        .select("property_id")
+        .eq("staff_user_id", invitee.id);
+      expect(sa ?? []).toHaveLength(0);
+
+      const { data: props } = await invitee.client.from("property").select("id");
+      expect((props ?? []).map((p) => p.id)).toEqual(
+        expect.arrayContaining([propAssigned, propUnassigned]),
+      );
+    });
+
+    it("accept_invite, narrowed: flag copied and only chosen properties assigned", async () => {
+      const invitee = await makeUser("invitee-narrow");
+      const token = await invite(false, [propAssigned]);
+      const { data: preview } = await invitee.client.rpc("get_invite_preview", {
+        p_token: token,
+      });
+      expect((preview as { all_properties: boolean }).all_properties).toBe(false);
+
+      const { error } = await invitee.client.rpc("accept_invite", { p_token: token });
+      expect(error).toBeNull();
+
+      const { data: m } = await admin
+        .from("membership")
+        .select("all_properties")
+        .eq("user_id", invitee.id)
+        .eq("org_id", orgA)
+        .single();
+      expect(m?.all_properties).toBe(false);
+      const { data: props } = await invitee.client.from("property").select("id");
+      const ids = (props ?? []).map((p) => p.id);
+      expect(ids).toContain(propAssigned);
+      expect(ids).not.toContain(propUnassigned);
+    });
+
+    it("operator is unaffected: sees and captures every org property, manages logins", async () => {
+      for (const p of [propAssigned, propUnassigned]) {
+        const { data: can } = await operatorA.client.rpc("app_can_capture_property", {
+          p_property: p,
+        });
+        expect(can).toBe(true);
+      }
+      const { error } = await operatorA.client
+        .from("membership")
+        .update({ all_properties: true })
+        .eq("user_id", staffAll.id)
+        .eq("org_id", orgA)
+        .select("id")
+        .single();
+      expect(error).toBeNull();
     });
   });
 });
