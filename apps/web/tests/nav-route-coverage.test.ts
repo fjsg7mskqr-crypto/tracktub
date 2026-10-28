@@ -23,6 +23,7 @@ const NAV_FILES = [
   "src/lib/app-routes.ts",
   "src/components/app/TabBar.tsx",
   "src/components/Shell.tsx",
+  "src/app/page.tsx",
 ];
 
 /** Pull `href: "/x"` and `href="/x"` literals; ignore template strings. */

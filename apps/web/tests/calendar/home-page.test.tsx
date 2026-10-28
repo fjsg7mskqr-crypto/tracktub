@@ -94,6 +94,11 @@ describe("Home", () => {
     expect(
       screen.getByRole("link", { name: "Add tub" }).getAttribute("href")
     ).toBe("/tubs/new");
+    expect(
+      screen
+        .getByRole("link", { name: "People and account" })
+        .getAttribute("href")
+    ).toBe("/people");
   });
 
   it("tubs with no visits: nothing due, zeros, no NaN", async () => {

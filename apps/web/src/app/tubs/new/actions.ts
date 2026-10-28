@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentMembership } from "@/lib/auth";
@@ -38,19 +39,20 @@ export async function createTubAction(
     clientId = client.id;
   }
 
-  const { data: tub, error } = await supabase
-    .from("property")
-    .insert({
-      org_id: membership.orgId,
-      name: input.name,
-      address: input.address,
-      client_id: clientId,
-      volume_gallons: input.volumeGallons,
-    })
-    .select("id")
-    .single();
-  if (error || !tub) return { error: "Couldn't save the tub. Try again." };
+  // The id is minted here and the insert skips RETURNING: a login narrowed to
+  // chosen properties (D29) can't read the row back inside the same statement
+  // (its access is granted by an AFTER INSERT trigger).
+  const id = randomUUID();
+  const { error } = await supabase.from("property").insert({
+    id,
+    org_id: membership.orgId,
+    name: input.name,
+    address: input.address,
+    client_id: clientId,
+    volume_gallons: input.volumeGallons,
+  });
+  if (error) return { error: "Couldn't save the tub. Try again." };
 
   revalidatePath("/tubs");
-  redirect(tubPath(tub.id));
+  redirect(tubPath(id));
 }
