@@ -20,7 +20,10 @@ export type CleaningStepCode =
   | "wiped"
   | "debris_removed"
   | "filters_cleaned"
-  | "reassembled";
+  | "reassembled"
+  | "filter_replaced"
+  | "drained_refilled"
+  | "cover_cleaned";
 
 export const CLEANING_STEPS: { code: CleaningStepCode; label: string }[] = [
   { code: "water_topped", label: "Water topped off" },
@@ -28,6 +31,9 @@ export const CLEANING_STEPS: { code: CleaningStepCode; label: string }[] = [
   { code: "debris_removed", label: "Debris removed" },
   { code: "filters_cleaned", label: "Filters cleaned" },
   { code: "reassembled", label: "Reassembled" },
+  { code: "filter_replaced", label: "Replaced filter" },
+  { code: "drained_refilled", label: "Drained & refilled" },
+  { code: "cover_cleaned", label: "Cleaned cover" },
 ];
 
 /** Human-readable labels for every photo_slot enum value (legacy + capture v2). */

@@ -12,13 +12,11 @@
 //   SERVICE_ROLE_KEY          prod service-role key
 //   ANON_KEY                  prod anon key (for RPC calls if needed)
 //   FOUNDER_EMAIL             optional; defaults to ethan@nhs-llc.com
-//   STAFF_DEMO_PASSWORD       optional; random if unset (staff login not needed)
 //
 // Usage:
 //   SUPABASE_URL=... SERVICE_ROLE_KEY=... ANON_KEY=... CONFIRM_PROD=yes \
 //     node scripts/seed-prod.mjs --prod-i-mean-it
 import { createClient } from "@supabase/supabase-js";
-import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { seedWorkspace } from "./seed-lib.mjs";
 
@@ -28,11 +26,6 @@ const URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE = process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANON = process.env.ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const FOUNDER_EMAIL = (process.env.FOUNDER_EMAIL || "ethan@nhs-llc.com").trim().toLowerCase();
-const STAFF = {
-  email: "maria-cleaner@tracktub.live",
-  password: process.env.STAFF_DEMO_PASSWORD || `seed-${randomBytes(16).toString("hex")}`,
-  name: "Maria R. (demo cleaner)",
-};
 
 if (!PROD_FLAG) {
   console.error("Refusing to run without --prod-i-mean-it.");
@@ -61,27 +54,6 @@ async function findUserByEmail(email) {
   const user = data?.users?.find((u) => u.email?.toLowerCase() === email);
   if (!user) throw new Error(`No auth user found for ${email}. Sign in to prod once first.`);
   return user;
-}
-
-async function ensureStaffUser() {
-  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  const existing = data?.users?.find((u) => u.email === STAFF.email);
-  if (existing) return existing;
-  const { data: created, error } = await admin.auth.admin.createUser({
-    email: STAFF.email,
-    password: STAFF.password,
-    email_confirm: true,
-    user_metadata: { full_name: STAFF.name },
-  });
-  if (error) throw error;
-  return created.user;
-}
-
-async function authed({ email, password }) {
-  const c = createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { error } = await c.auth.signInWithPassword({ email, password });
-  if (error) throw new Error(`sign-in failed for ${email}: ${error.message}`);
-  return c;
 }
 
 async function main() {
@@ -121,16 +93,11 @@ async function main() {
     return;
   }
 
-  const staff = await ensureStaffUser();
-  const staffClient = await authed(STAFF);
-
   await seedWorkspace({
     admin,
     operatorClient: admin,
     orgId,
     operatorId: founder.id,
-    cleanerId: staff.id,
-    cleanerClient: staffClient,
     propertyCount: 4,
     includeMaintenance: true,
   });
@@ -138,7 +105,6 @@ async function main() {
   console.log("");
   console.log("✓ Seeded prod demo workspace 'Cascade Stays' into the founder org.");
   console.log(`  operator: ${FOUNDER_EMAIL} (your Google login — unchanged)`);
-  console.log(`  staff:    ${STAFF.email} (demo team member — login not required)`);
   console.log("  4 properties; chemistry story + maintenance due/overdue + schedule calendar populated.");
   console.log("  Verify at https://tracktub.com — dashboard, /chemistry, /operations/*, Team, proof links.");
   console.log("");
