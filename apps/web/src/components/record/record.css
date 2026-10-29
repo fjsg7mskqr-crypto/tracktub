@@ -1,0 +1,263 @@
+/* The record (spec §9): white and printable for every holder. Colours are the
+   on-white set from the Lane 4 plan; green (#0A7A55) only for locked/in-range. */
+
+.tt-record-page {
+  min-height: 100dvh;
+  background: #ffffff;
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+
+.tt-record-operator {
+  background: #08090a;
+  color: #ededef;
+  padding: 24px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tt-record-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: #7fb0ff;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.tt-record-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.tt-record-actions button {
+  height: 48px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tt-record-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.tt-record-send {
+  background: #2563eb;
+  color: #ffffff;
+}
+.tt-record-copy {
+  background: #191b20;
+  color: #ededef;
+}
+.tt-record-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #8a8f98;
+  overflow-wrap: anywhere;
+}
+.tt-record-toast {
+  margin: 0;
+  font-size: 14px;
+  color: #ededef;
+}
+
+.tt-record {
+  background: #ffffff;
+  color: #08090a;
+  padding: 28px 20px 40px;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  font-family: var(--font-archivo), system-ui, sans-serif;
+}
+.tt-record a {
+  color: #1d4ed8;
+}
+.tt-record-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.tt-record-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tt-record-mast {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.tt-record-mast span {
+  color: #1d4ed8;
+}
+.tt-record h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.tt-record-sub {
+  margin: 0;
+  font-size: 14px;
+  color: #5a5f6a;
+}
+.tt-record-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.tt-record-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tt-record-badge.locked {
+  color: #0a7a55;
+  background: #e6f6ef;
+}
+.tt-record-badge.draft {
+  color: #2b2f36;
+  background: #eceef1;
+}
+.tt-record-badge.partial {
+  color: #7a4a00;
+  background: #fdf3e1;
+}
+
+.tt-record section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tt-record h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5a5f6a;
+}
+.tt-record-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #2b2f36;
+  white-space: pre-line;
+}
+.tt-record-muted {
+  color: #5a5f6a;
+}
+
+.tt-record-water {
+  border-radius: 18px;
+  background: #f6f7f8;
+  padding: 6px 14px;
+}
+.tt-record-water-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  min-height: 40px;
+  align-items: center;
+  font-size: 16px;
+}
+.tt-record-water-row > :not(:first-child) {
+  text-align: right;
+}
+.tt-record-water-row.head {
+  min-height: 36px;
+  font-size: 12px;
+  color: #5a5f6a;
+}
+.tt-record-water .left {
+  font-weight: 700;
+}
+.tt-record-water .target {
+  font-size: 13px;
+  color: #5a5f6a;
+}
+.tt-record .out {
+  color: #9a5b00;
+}
+.tt-record .tick {
+  color: #0a7a55;
+}
+
+.tt-record-photos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.tt-record-photos figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tt-record-photos img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 14px;
+  background: #c9d6ee;
+}
+.tt-record-photos figcaption {
+  font-size: 12px;
+  color: #2b2f36;
+}
+
+.tt-record .tt-record-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.tt-record-panel {
+  border-radius: 18px;
+  background: #fdf3e1;
+  padding: 16px;
+}
+.tt-record-panel h2 {
+  color: #7a4a00;
+}
+
+.tt-record footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #5a5f6a;
+}
+
+@media print {
+  .tt-record-operator,
+  nav[aria-label="App navigation"] {
+    display: none !important;
+  }
+  .tt-app,
+  body {
+    background: #ffffff !important;
+  }
+}
+
+.tt-record .tt-record-history-row {
+  gap: 4px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eceef1;
+}
+.tt-record-history-row a {
+  text-decoration: none;
+}

@@ -9,6 +9,7 @@ import { AcceptButton } from "./AcceptButton";
 interface InvitePreview {
   role: "staff" | "owner";
   org_name: string;
+  all_properties: boolean;
   inviter_name: string;
   property_names: string[];
   expires_at: string;
@@ -33,17 +34,17 @@ export default async function InvitePage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isCleaner = preview.role === "staff";
-  const roleLabel = isCleaner ? "a cleaner / tech" : "a viewer (read-only)";
-  const can = isCleaner
-    ? [
-        "Take turnover photos",
-        "Log a quick water check (pH / sanitizer / temp)",
-      ]
-    : ["View turnover proof for the properties below"];
-  const cannot = isCleaner
-    ? "No billing, analytics, or other people."
-    : "No capturing, billing, analytics, or other people.";
+  // D29: a team login can do everything except manage logins. Owners have no
+  // login in the app today; their branch is kept for old invite links.
+  const isTeam = preview.role === "staff";
+  const allProperties = isTeam && preview.all_properties;
+  const roleLabel = isTeam ? "a team login" : "a viewer (read-only)";
+  const can = isTeam
+    ? ["See the tubs and run visits", "Send records to owners"]
+    : ["View records for the properties below"];
+  const cannot = isTeam
+    ? `Only ${preview.inviter_name} adds or removes people.`
+    : "No visits, billing or other people.";
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
@@ -88,11 +89,15 @@ export default async function InvitePage({
             <Badge variant="brand">{roleLabel}</Badge>
           </div>
 
-          {preview.property_names.length > 0 && (
+          {allProperties && (
+            <p className="small" style={{ margin: 0 }}>
+              You&apos;ll see every property on {preview.org_name}.
+            </p>
+          )}
+
+          {!allProperties && preview.property_names.length > 0 && (
             <div>
-              <div className="label">
-                {isCleaner ? "Tubs you'll capture" : "Properties you'll see"}
-              </div>
+              <div className="label">Properties you&apos;ll see</div>
               <div className="stack" style={{ gap: 6, marginTop: 6 }}>
                 {preview.property_names.map((name) => (
                   <div
@@ -134,10 +139,14 @@ export default async function InvitePage({
           )}
         </div>
 
-        <p className="tiny dim" style={{ textAlign: "center", marginTop: 16 }}>
-          You only get access to the properties listed above. You can leave at
-          any time.
-        </p>
+        {!allProperties && (
+          <p
+            className="tiny dim"
+            style={{ textAlign: "center", marginTop: 16 }}
+          >
+            You&apos;ll see the properties listed above.
+          </p>
+        )}
       </div>
     </div>
   );

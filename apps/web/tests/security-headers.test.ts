@@ -85,6 +85,20 @@ describe("enforcing nonce-based CSP (built per-request by middleware)", () => {
   it("stays same-origin when Supabase env is missing or malformed", () => {
     const csp = buildCsp(TEST_NONCE, { supabaseUrl: "not a url", isDev: false });
     expect(csp).toContain("connect-src 'self';");
+    expect(csp).toContain("img-src 'self' data: blob:;");
+  });
+
+  it("allowlists the Supabase origin (only) in img-src for Storage photos", () => {
+    const csp = buildCsp(TEST_NONCE, {
+      supabaseUrl: "https://x.supabase.co/storage/v1/object/public/photos/a.jpg",
+      isDev: false,
+    });
+    expect(csp).toContain("img-src 'self' data: blob: https://x.supabase.co;");
+    // script-src is untouched by the Supabase origin.
+    const scriptSrc = csp
+      .split(";")
+      .find((d) => d.trim().startsWith("script-src"));
+    expect(scriptSrc).not.toContain("supabase.co");
   });
 
   it("keeps report-uri + report-to in the enforcing policy (Sentry)", () => {

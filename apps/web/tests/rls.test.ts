@@ -98,9 +98,10 @@ describe.skipIf(!ready)("RLS isolation", () => {
     createdOrgIds.push(orgA, orgB);
 
     const { error: mErr } = await admin.from("membership").insert([
-      { user_id: operatorA.id, org_id: orgA, role: "operator" },
-      { user_id: staffA.id, org_id: orgA, role: "staff" },
-      { user_id: operatorB.id, org_id: orgB, role: "operator" },
+      { user_id: operatorA.id, org_id: orgA, role: "operator", all_properties: true },
+      // Narrowed to assigned properties (D29); the default is every property.
+      { user_id: staffA.id, org_id: orgA, role: "staff", all_properties: false },
+      { user_id: operatorB.id, org_id: orgB, role: "operator", all_properties: true },
     ]);
     if (mErr) throw mErr;
 
@@ -400,9 +401,23 @@ describe.skipIf(!ready)("RLS isolation", () => {
         .from("membership")
         .insert({ user_id: proofOperator.id, org_id: proofOrgId, role: "operator" });
 
+      const { data: client } = await admin
+        .from("client")
+        .insert({
+          org_id: proofOrgId,
+          name: "Proof Test Client",
+          contact_email: "owner@example.com",
+        })
+        .select("id")
+        .single();
+
       const { data: prop } = await admin
         .from("property")
-        .insert({ org_id: proofOrgId, name: "Proof Test Property" })
+        .insert({
+          org_id: proofOrgId,
+          name: "Proof Test Property",
+          client_id: client!.id,
+        })
         .select("id")
         .single();
 
@@ -501,6 +516,28 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(data).toHaveLength(0);
     });
 
+    // ── proof_client_name: client name on the owner record, token-checked ──
+    it("anon gets the client name with the right share token", async () => {
+      const { data, error } = await anonClient.rpc("proof_client_name", {
+        p_token: proofShareToken,
+      });
+      expect(error).toBeNull();
+      expect(data).toBe("Proof Test Client");
+    });
+
+    it("anon gets null with a wrong share token", async () => {
+      const { data, error } = await anonClient.rpc("proof_client_name", {
+        p_token: randomUUID(),
+      });
+      expect(error).toBeNull();
+      expect(data).toBeNull();
+    });
+
+    it("anon still cannot read the client table directly", async () => {
+      const { data } = await anonClient.from("client").select("*");
+      expect(data ?? []).toHaveLength(0);
+    });
+
     // ── proof_event: share/open tracking (PRD §16 wedge signal) ─────────────
     describe("proof_event", () => {
       it("org member can insert share_copied as themselves on a locked turnover", async () => {
@@ -582,12 +619,14 @@ describe.skipIf(!ready)("RLS isolation", () => {
       role: "staff" | "owner";
       propertyIds: string[];
       expired?: boolean;
+      allProperties?: boolean;
     }): Promise<string> {
       const token = randomUUID();
       const { error } = await admin.from("invite").insert({
         org_id: orgA,
         role: opts.role,
         property_ids: opts.propertyIds,
+        all_properties: opts.allProperties ?? opts.propertyIds.length === 0,
         token,
         invited_by: operatorA.id,
         email: null,
@@ -1312,7 +1351,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(error).not.toBeNull();
     });
 
-    it("org member (staff) can read org_note but not write", async () => {
+    it("staff can read and write org_note (D29)", async () => {
       await admin.from("org_note").upsert({ org_id: orgA, body: "Shared ref" });
       const { data: read, error: readErr } = await staffA.client
         .from("org_note")
@@ -1326,7 +1365,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
         org_id: orgA,
         body: "Staff edit",
       });
-      expect(writeErr).not.toBeNull();
+      expect(writeErr).toBeNull();
     });
   });
 
@@ -1624,6 +1663,636 @@ describe.skipIf(!ready)("RLS isolation", () => {
         .select("id")
         .eq("scheduled_item_id", si!.id);
       expect(mine ?? []).toHaveLength(0); // gate blocked the write
+    });
+  });
+
+  describe("client", () => {
+    let clientA: string;
+    let clientB: string;
+
+    beforeAll(async () => {
+      const { data: a, error: eA } = await admin
+        .from("client")
+        .insert({ org_id: orgA, name: "Client A" })
+        .select("id")
+        .single();
+      const { data: b, error: eB } = await admin
+        .from("client")
+        .insert({ org_id: orgB, name: "Client B" })
+        .select("id")
+        .single();
+      if (eA || eB || !a || !b) throw eA ?? eB ?? new Error("client insert failed");
+      clientA = a.id;
+      clientB = b.id;
+    });
+
+    it("client: member sees own org's clients only", async () => {
+      const { data, error } = await operatorA.client.from("client").select("id, org_id");
+      expect(error).toBeNull();
+      const ids = (data ?? []).map((c) => c.id);
+      expect(ids).toContain(clientA);
+      expect(ids).not.toContain(clientB);
+      expect((data ?? []).every((c) => c.org_id === orgA)).toBe(true);
+    });
+
+    it("client: cannot insert into another org", async () => {
+      const { error } = await operatorA.client
+        .from("client")
+        .insert({ org_id: orgB, name: "Spoof" });
+      expect(error).not.toBeNull();
+    });
+
+    it("client: operator can create, rename and delete their org's client", async () => {
+      const { data: c, error } = await operatorA.client
+        .from("client")
+        .insert({ org_id: orgA, name: "New client" })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+      const { data: renamed } = await operatorA.client
+        .from("client")
+        .update({ name: "Renamed" })
+        .eq("id", c!.id)
+        .select("name");
+      expect(renamed?.[0]?.name).toBe("Renamed");
+      const { error: delErr } = await operatorA.client
+        .from("client")
+        .delete()
+        .eq("id", c!.id);
+      expect(delErr).toBeNull();
+    });
+
+    it("property can link to its own org's client, not another org's", async () => {
+      const { error: ok } = await operatorA.client
+        .from("property")
+        .update({ client_id: clientA })
+        .eq("id", propUnassigned);
+      expect(ok).toBeNull();
+      const { error: spoof } = await operatorA.client
+        .from("property")
+        .update({ client_id: clientB })
+        .eq("id", propUnassigned);
+      expect(spoof).not.toBeNull();
+    });
+
+    it("property.client_id backfilled", async () => {
+      // Every property that predates this suite (seeded / pre-migration rows)
+      // was assigned its org's client by the migration's backfill.
+      const { data, error } = await admin
+        .from("property")
+        .select("id, org_id")
+        .is("client_id", null);
+      expect(error).toBeNull();
+      const preexisting = (data ?? []).filter(
+        (p) => !createdOrgIds.includes(p.org_id),
+      );
+      expect(preexisting).toEqual([]);
+    });
+  });
+
+  describe("property care intervals", () => {
+    it("property care intervals: 0 rejected, 90 accepted, null accepted", async () => {
+      const set = (v: number | null) =>
+        operatorA.client
+          .from("property")
+          .update({ drain_interval_days: v, filter_interval_days: v })
+          .eq("id", propUnassigned)
+          .select("drain_interval_days, filter_interval_days");
+
+      const { error: zero } = await set(0);
+      expect(zero).not.toBeNull();
+      const { error: tooLong } = await set(731);
+      expect(tooLong).not.toBeNull();
+
+      const { data: ninety, error: e90 } = await set(90);
+      expect(e90).toBeNull();
+      expect(ninety?.[0]).toEqual({ drain_interval_days: 90, filter_interval_days: 90 });
+
+      const { data: unset, error: eNull } = await set(null);
+      expect(eNull).toBeNull();
+      expect(unset?.[0]).toEqual({ drain_interval_days: null, filter_interval_days: null });
+    });
+  });
+
+  describe("share_view", () => {
+    const anonClient = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as ReturnType<typeof createClient<Database>>);
+
+    let lockedId: string;
+    let lockedToken: string;
+    let draftId: string;
+    let draftToken: string;
+
+    beforeAll(async () => {
+      lockedToken = randomUUID();
+      const { data: t, error } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "draft",
+          share_token: lockedToken,
+          urgent: false,
+          notes: "",
+        })
+        .select("id")
+        .single();
+      if (error || !t) throw error ?? new Error("turnover insert failed");
+      lockedId = t.id;
+      // Lock it: from here turnover_lock_guard rejects any update to the row.
+      const { error: lockErr } = await admin
+        .from("turnover")
+        .update({ status: "submitted_locked" })
+        .eq("id", lockedId);
+      if (lockErr) throw lockErr;
+
+      draftToken = randomUUID();
+      const { data: d, error: dErr } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "draft",
+          share_token: draftToken,
+          urgent: false,
+          notes: "",
+        })
+        .select("id")
+        .single();
+      if (dErr || !d) throw dErr ?? new Error("draft insert failed");
+      draftId = d.id;
+    });
+
+    const viewsOf = async (turnoverId: string) => {
+      const { data, error } = await admin
+        .from("share_view")
+        .select("id, opened_at")
+        .eq("turnover_id", turnoverId);
+      if (error) throw error;
+      return data ?? [];
+    };
+
+    it("record_share_view on a locked turnover succeeds", async () => {
+      const { error } = await anonClient.rpc("record_share_view", {
+        p_token: lockedToken,
+      });
+      expect(error).toBeNull();
+      expect(await viewsOf(lockedId)).toHaveLength(1);
+
+      // A reload within the minute collapses into the same open.
+      await anonClient.rpc("record_share_view", { p_token: lockedToken });
+      expect(await viewsOf(lockedId)).toHaveLength(1);
+    });
+
+    it("unknown token is a no-op", async () => {
+      const { count: before } = await admin
+        .from("share_view")
+        .select("id", { count: "exact", head: true });
+      const { error } = await anonClient.rpc("record_share_view", {
+        p_token: randomUUID(),
+      });
+      expect(error).toBeNull();
+      const { count: after } = await admin
+        .from("share_view")
+        .select("id", { count: "exact", head: true });
+      expect(after).toBe(before);
+    });
+
+    it("a draft's token records nothing (anon can't open a draft)", async () => {
+      const { error } = await anonClient.rpc("record_share_view", {
+        p_token: draftToken,
+      });
+      expect(error).toBeNull();
+      expect(await viewsOf(draftId)).toHaveLength(0);
+    });
+
+    it("share_view not readable by anon", async () => {
+      const { data } = await anonClient
+        .from("share_view")
+        .select("id")
+        .eq("turnover_id", lockedId);
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it("share_view readable by the owning org, not by another org", async () => {
+      const { data: mine, error } = await operatorA.client
+        .from("share_view")
+        .select("id")
+        .eq("turnover_id", lockedId);
+      expect(error).toBeNull();
+      expect(mine ?? []).toHaveLength(1);
+
+      const { data: theirs } = await operatorB.client
+        .from("share_view")
+        .select("id")
+        .eq("turnover_id", lockedId);
+      expect(theirs ?? []).toHaveLength(0);
+    });
+
+    it("nobody can write share_view directly", async () => {
+      const { error: anonIns } = await anonClient
+        .from("share_view")
+        .insert({ turnover_id: lockedId });
+      expect(anonIns).not.toBeNull();
+      const { error: opIns } = await operatorA.client
+        .from("share_view")
+        .insert({ turnover_id: lockedId });
+      expect(opIns).not.toBeNull();
+      await operatorA.client.from("share_view").delete().eq("turnover_id", lockedId);
+      expect(await viewsOf(lockedId)).toHaveLength(1);
+    });
+  });
+
+  describe("water_reading as-left (D27)", () => {
+    const draftWithReading = async () => {
+      const { data: to } = await admin
+        .from("turnover")
+        .insert({ property_id: propAssigned, submitter_id: operatorA.id, status: "draft" })
+        .select("id")
+        .single();
+      const { data: r, error } = await operatorA.client
+        .from("water_reading")
+        .insert({ turnover_id: to!.id, property_id: propAssigned, ph: 7.9 })
+        .select("id")
+        .single();
+      if (error || !r) throw error ?? new Error("reading insert failed");
+      return { turnoverId: to!.id, readingId: r.id };
+    };
+
+    it("as-left values save on a draft", async () => {
+      const { readingId } = await draftWithReading();
+      const leftAt = new Date().toISOString();
+      const { error } = await operatorA.client
+        .from("water_reading")
+        .update({
+          left_total_alkalinity: 100,
+          left_ph: 7.5,
+          left_calcium_hardness: 200,
+          left_sanitizer_ppm: 2,
+          left_recorded_at: leftAt,
+        })
+        .eq("id", readingId);
+      expect(error).toBeNull();
+      const { data } = await admin
+        .from("water_reading")
+        .select("ph, left_ph, left_total_alkalinity, left_recorded_at")
+        .eq("id", readingId)
+        .single();
+      // The as-found value is untouched; the as-left reading sits beside it.
+      expect(Number(data?.ph)).toBe(7.9);
+      expect(Number(data?.left_ph)).toBe(7.5);
+      expect(Number(data?.left_total_alkalinity)).toBe(100);
+      expect(data?.left_recorded_at).not.toBeNull();
+    });
+
+    it("as-left blocked once locked", async () => {
+      const { turnoverId, readingId } = await draftWithReading();
+      await admin
+        .from("turnover")
+        .update({ status: "submitted_locked" })
+        .eq("id", turnoverId);
+      // USING denies the update on a locked turnover → 0 rows; value stays null.
+      const { data: updated } = await operatorA.client
+        .from("water_reading")
+        .update({ left_ph: 7.5 })
+        .eq("id", readingId)
+        .select("id");
+      expect(updated ?? []).toHaveLength(0);
+      const { data } = await admin
+        .from("water_reading")
+        .select("left_ph")
+        .eq("id", readingId)
+        .single();
+      expect(data?.left_ph).toBeNull();
+    });
+
+    it("found_recorded_at backfilled", async () => {
+      // Readings that predate this suite (pre-migration rows) carry
+      // found_recorded_at = recorded_at from the migration's backfill.
+      const { data: suiteProps } = await admin
+        .from("property")
+        .select("id")
+        .in("org_id", createdOrgIds);
+      const suite = new Set((suiteProps ?? []).map((p) => p.id));
+      const { data, error } = await admin
+        .from("water_reading")
+        .select("property_id, recorded_at, found_recorded_at");
+      expect(error).toBeNull();
+      const mismatched = (data ?? []).filter(
+        (r) =>
+          !suite.has(r.property_id) &&
+          (r.found_recorded_at === null ||
+            new Date(r.found_recorded_at).getTime() !==
+              new Date(r.recorded_at).getTime()),
+      );
+      expect(mismatched).toEqual([]);
+    });
+  });
+
+  describe("turnover owner_flag", () => {
+    const draftTurnover = async () => {
+      const { data: to, error } = await admin
+        .from("turnover")
+        .insert({
+          property_id: propAssigned,
+          submitter_id: operatorA.id,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      if (error || !to) throw error ?? new Error("turnover insert failed");
+      return to.id;
+    };
+
+    it("owner_flag saves on a draft", async () => {
+      const id = await draftTurnover();
+      const { error } = await operatorA.client
+        .from("turnover")
+        .update({ owner_flag: "Cover strap is fraying — worth replacing." })
+        .eq("id", id);
+      expect(error).toBeNull();
+      const { data } = await admin
+        .from("turnover")
+        .select("owner_flag")
+        .eq("id", id)
+        .single();
+      expect(data?.owner_flag).toBe(
+        "Cover strap is fraying — worth replacing."
+      );
+    });
+
+    it("owner_flag blocked once locked", async () => {
+      const id = await draftTurnover();
+      const { error: lockErr } = await admin
+        .from("turnover")
+        .update({ status: "submitted_locked" })
+        .eq("id", id);
+      expect(lockErr).toBeNull();
+      // turnover_update_draft's USING denies the operator → 0 rows.
+      const { data: updated } = await operatorA.client
+        .from("turnover")
+        .update({ owner_flag: "tampered" })
+        .eq("id", id)
+        .select("id");
+      expect(updated ?? []).toHaveLength(0);
+      // turnover_lock_guard rejects even the service role (bypasses RLS).
+      const { error: guardErr } = await admin
+        .from("turnover")
+        .update({ owner_flag: "tampered" })
+        .eq("id", id);
+      expect(guardErr?.message).toMatch(/locked/);
+      const { data } = await admin
+        .from("turnover")
+        .select("owner_flag")
+        .eq("id", id)
+        .single();
+      expect(data?.owner_flag).toBeNull();
+    });
+  });
+
+  describe("property volume", () => {
+    it("volume_gallons: 0 rejected, 450 accepted, null accepted", async () => {
+      const set = (v: number | null) =>
+        operatorA.client
+          .from("property")
+          .update({ volume_gallons: v })
+          .eq("id", propUnassigned)
+          .select("volume_gallons");
+
+      const { error: zero } = await set(0);
+      expect(zero).not.toBeNull();
+      const { error: tooBig } = await set(5001);
+      expect(tooBig).not.toBeNull();
+
+      const { data: fourFifty, error: e450 } = await set(450);
+      expect(e450).toBeNull();
+      expect(fourFifty?.[0]).toEqual({ volume_gallons: 450 });
+
+      const { data: unset, error: eNull } = await set(null);
+      expect(eNull).toBeNull();
+      expect(unset?.[0]).toEqual({ volume_gallons: null });
+    });
+  });
+
+  // ── Logins and property access (D29) ───────────────────────────────────────
+  describe("Logins and property access (D29)", () => {
+    let staffAll: AuthedUser;
+
+    beforeAll(async () => {
+      staffAll = await makeUser("staff-all");
+      // No all_properties given: the column default (every property) applies.
+      const { error } = await admin
+        .from("membership")
+        .insert({ user_id: staffAll.id, org_id: orgA, role: "staff" });
+      if (error) throw error;
+    });
+
+    it("staff with all properties sees and can run visits on every org property", async () => {
+      const { data: props } = await staffAll.client.from("property").select("id");
+      const ids = (props ?? []).map((p) => p.id);
+      expect(ids).toEqual(expect.arrayContaining([propAssigned, propUnassigned]));
+      expect(ids).not.toContain(propB);
+
+      for (const p of [propAssigned, propUnassigned]) {
+        const { data: can } = await staffAll.client.rpc("app_can_capture_property", {
+          p_property: p,
+        });
+        expect(can).toBe(true);
+      }
+      const { error } = await staffAll.client.from("turnover").insert({
+        property_id: propUnassigned,
+        submitter_id: staffAll.id,
+        status: "draft",
+      });
+      expect(error).toBeNull();
+    });
+
+    it("narrowed staff sees only assigned properties", async () => {
+      const { data: props } = await staffA.client.from("property").select("id");
+      const ids = (props ?? []).map((p) => p.id);
+      expect(ids).toContain(propAssigned);
+      expect(ids).not.toContain(propUnassigned);
+    });
+
+    it("staff can add a tub and a client", async () => {
+      const { data: c, error: cErr } = await staffAll.client
+        .from("client")
+        .insert({ org_id: orgA, name: "Staff client" })
+        .select("id")
+        .single();
+      expect(cErr).toBeNull();
+      const { data: p, error: pErr } = await staffAll.client
+        .from("property")
+        .insert({ org_id: orgA, name: "Staff tub", client_id: c!.id })
+        .select("id")
+        .single();
+      expect(pErr).toBeNull();
+      const { error: renameErr } = await staffAll.client
+        .from("property")
+        .update({ name: "Staff tub renamed" })
+        .eq("id", p!.id);
+      expect(renameErr).toBeNull();
+    });
+
+    it("narrowed staff adds a tub and then sees it", async () => {
+      const id = randomUUID();
+      const { error } = await staffA.client
+        .from("property")
+        .insert({ id, org_id: orgA, name: "Narrowed staff tub" });
+      expect(error).toBeNull();
+      const { data } = await staffA.client.from("property").select("id").eq("id", id);
+      expect(data ?? []).toHaveLength(1);
+    });
+
+    it("staff can edit a task on a property they see, not one they don't", async () => {
+      const { error: ok } = await staffA.client
+        .from("task")
+        .insert({ property_id: propAssigned, title: "Check cover" });
+      expect(ok).toBeNull();
+      const { error: blocked } = await staffA.client
+        .from("task")
+        .insert({ property_id: propUnassigned, title: "Check cover" });
+      expect(blocked).not.toBeNull();
+    });
+
+    it("staff cannot insert an invite or a membership", async () => {
+      const { error: invErr } = await staffAll.client.from("invite").insert({
+        org_id: orgA,
+        role: "staff",
+        token: randomUUID(),
+        invited_by: staffAll.id,
+      });
+      expect(invErr).not.toBeNull();
+
+      const stranger = await makeUser("staff-adds-member");
+      const { error: memErr } = await staffAll.client
+        .from("membership")
+        .insert({ user_id: stranger.id, org_id: orgA, role: "staff" });
+      expect(memErr).not.toBeNull();
+    });
+
+    it("staff cannot widen their own access", async () => {
+      await staffA.client
+        .from("membership")
+        .update({ all_properties: true })
+        .eq("user_id", staffA.id)
+        .eq("org_id", orgA);
+      const { data } = await admin
+        .from("membership")
+        .select("all_properties")
+        .eq("user_id", staffA.id)
+        .eq("org_id", orgA)
+        .single();
+      expect(data?.all_properties).toBe(false);
+    });
+
+    it("staff of org A sees nothing in org B", async () => {
+      const { data: props } = await staffAll.client
+        .from("property")
+        .select("id")
+        .eq("org_id", orgB);
+      expect(props ?? []).toHaveLength(0);
+      const { data: clients } = await staffAll.client
+        .from("client")
+        .select("id")
+        .eq("org_id", orgB);
+      expect(clients ?? []).toHaveLength(0);
+      const { error } = await staffAll.client
+        .from("property")
+        .insert({ org_id: orgB, name: "Spoof" });
+      expect(error).not.toBeNull();
+      const { error: cErr } = await staffAll.client
+        .from("client")
+        .insert({ org_id: orgB, name: "Spoof" });
+      expect(cErr).not.toBeNull();
+    });
+
+    async function invite(allProperties: boolean, propertyIds: string[]) {
+      const token = randomUUID();
+      const { error } = await admin.from("invite").insert({
+        org_id: orgA,
+        role: "staff",
+        all_properties: allProperties,
+        property_ids: propertyIds,
+        token,
+        invited_by: operatorA.id,
+      });
+      if (error) throw error;
+      return token;
+    }
+
+    it("accept_invite, all properties: flag copied, no assignments, sees every property", async () => {
+      const invitee = await makeUser("invitee-all");
+      const token = await invite(true, []);
+      const { data: preview } = await invitee.client.rpc("get_invite_preview", {
+        p_token: token,
+      });
+      expect((preview as { all_properties: boolean }).all_properties).toBe(true);
+
+      const { error } = await invitee.client.rpc("accept_invite", { p_token: token });
+      expect(error).toBeNull();
+
+      const { data: m } = await admin
+        .from("membership")
+        .select("role, all_properties")
+        .eq("user_id", invitee.id)
+        .eq("org_id", orgA)
+        .single();
+      expect(m).toEqual({ role: "staff", all_properties: true });
+      const { data: sa } = await admin
+        .from("staff_assignment")
+        .select("property_id")
+        .eq("staff_user_id", invitee.id);
+      expect(sa ?? []).toHaveLength(0);
+
+      const { data: props } = await invitee.client.from("property").select("id");
+      expect((props ?? []).map((p) => p.id)).toEqual(
+        expect.arrayContaining([propAssigned, propUnassigned]),
+      );
+    });
+
+    it("accept_invite, narrowed: flag copied and only chosen properties assigned", async () => {
+      const invitee = await makeUser("invitee-narrow");
+      const token = await invite(false, [propAssigned]);
+      const { data: preview } = await invitee.client.rpc("get_invite_preview", {
+        p_token: token,
+      });
+      expect((preview as { all_properties: boolean }).all_properties).toBe(false);
+
+      const { error } = await invitee.client.rpc("accept_invite", { p_token: token });
+      expect(error).toBeNull();
+
+      const { data: m } = await admin
+        .from("membership")
+        .select("all_properties")
+        .eq("user_id", invitee.id)
+        .eq("org_id", orgA)
+        .single();
+      expect(m?.all_properties).toBe(false);
+      const { data: props } = await invitee.client.from("property").select("id");
+      const ids = (props ?? []).map((p) => p.id);
+      expect(ids).toContain(propAssigned);
+      expect(ids).not.toContain(propUnassigned);
+    });
+
+    it("operator is unaffected: sees and captures every org property, manages logins", async () => {
+      for (const p of [propAssigned, propUnassigned]) {
+        const { data: can } = await operatorA.client.rpc("app_can_capture_property", {
+          p_property: p,
+        });
+        expect(can).toBe(true);
+      }
+      const { error } = await operatorA.client
+        .from("membership")
+        .update({ all_properties: true })
+        .eq("user_id", staffAll.id)
+        .eq("org_id", orgA)
+        .select("id")
+        .single();
+      expect(error).toBeNull();
     });
   });
 });

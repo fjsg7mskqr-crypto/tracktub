@@ -1,239 +1,447 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Icon } from "@/components/Icon";
-import { timeAgo } from "@/lib/format";
+import { redirect } from "next/navigation";
 import { getCurrentMembership } from "@/lib/auth";
-import { CleanerHome } from "./CleanerHome";
-import { ChemReadout } from "@/components/ChemReadout";
+import { createClient } from "@/lib/supabase/server";
+import { APP_TIME_ZONE } from "@/lib/time";
+import { tubPath } from "@/lib/app-routes";
+import { SectionLabel } from "@/components/tub/SectionLabel";
+import { HomeStartVisit } from "@/components/calendar/HomeStartVisit";
 import {
-  batherLoadActive,
-  clarityFlag,
-  type TurnoverChem,
-} from "@/lib/chemistry-rules";
-import { asSanitizerType } from "@/lib/chemistry";
-import { pickTurnoverThumbnail } from "@/lib/turnover-display";
+  attentionList,
+  calendarItems,
+  weekCounts,
+  type CalItem,
+} from "@/components/calendar/calendar-model";
+import {
+  addDays,
+  dayKey,
+  dayParts,
+  weekStart,
+} from "@/components/calendar/days";
+import { loadCareData, loadShareActivity } from "@/components/calendar/load";
 
-type Tone = "ready" | "warn" | "urgent" | "neutral";
+const card: React.CSSProperties = {
+  background: "var(--tt-surface)",
+  color: "var(--tt-text)",
+  textDecoration: "none",
+};
 
+function greeting(now: Date): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: APP_TIME_ZONE,
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(now)
+  );
+  return hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
+}
+
+function initials(name: string | null, email: string | null): string {
+  const src = name?.trim() || email?.split("@")[0] || "";
+  const parts = src.split(/\s+/).filter(Boolean);
+  return (
+    (parts.length > 1
+      ? parts[0][0] + parts[parts.length - 1][0]
+      : src.slice(0, 2)) || "·"
+  ).toUpperCase();
+}
+
+const Dot = ({ color, size = 6 }: { color: string; size?: number }) => (
+  <span
+    aria-hidden="true"
+    style={{
+      width: size,
+      height: size,
+      borderRadius: 999,
+      background: color,
+      flex: "none",
+    }}
+  />
+);
+
+// Screen 2 (spec §2): today's strip, what needs attention, and this week.
+// Stays dynamic: getCurrentMembership() reads the session cookie (CSP nonce).
 export default async function Home() {
   const membership = await getCurrentMembership();
   if (!membership) redirect("/login");
 
-  // Cleaners get the stripped capture-only home.
-  if (membership.role === "staff") {
-    const firstName = membership.email?.split("@")[0] ?? null;
-    return <CleanerHome name={firstName} />;
-  }
-
-  const canAdd = membership.role === "operator";
   const supabase = await createClient();
+  const now = new Date();
+  const today = dayKey(now);
+  // A day of margin; weekCounts trims to the zone's Monday.
+  const since = new Date(
+    Date.parse(`${addDays(weekStart(today), -1)}T00:00:00Z`)
+  ).toISOString();
 
-  const { data: properties } = await supabase
-    .from("property")
-    .select(
-      `id, name, address, sanitizer_type,
-       turnover(
-         id, submitted_at_server, status, urgent, submitter_id,
-         photo(slot, storage_path, phase),
-         issue_tag(tag, confirmed_at),
-         water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm)
-       )`
-    )
-    .order("created_at");
-
-  const submitterIds = [
-    ...new Set(
-      (properties ?? [])
-        .flatMap((p) => (p.turnover ?? []).map((t) => t.submitter_id))
-        .filter(Boolean)
-    ),
-  ] as string[];
-  const { data: profiles } = submitterIds.length
-    ? await supabase
+  const [{ tubs, visits, drafts }, activity, { data: profile }] =
+    await Promise.all([
+      loadCareData(supabase),
+      loadShareActivity(supabase, since),
+      supabase
         .from("profile")
-        .select("id, full_name, email")
-        .in("id", submitterIds)
-    : { data: [] as { id: string; full_name: string | null; email: string }[] };
-  const nameById = new Map(
-    (profiles ?? []).map((p) => [
-      p.id,
-      p.full_name || p.email?.split("@")[0] || "Unknown",
-    ])
+        .select("full_name")
+        .eq("id", membership.userId)
+        .maybeSingle(),
+    ]);
+
+  const fullName = profile?.full_name ?? null;
+  const first = fullName?.trim().split(/\s+/)[0];
+  const p = dayParts(today);
+
+  const header = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: 12,
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <p style={{ margin: 0, fontSize: 14, color: "var(--tt-text-3)" }}>
+          {p.weekday}, {p.month} {p.num}
+        </p>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 28,
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {greeting(now)}
+          {first ? `, ${first}` : ""}
+        </h1>
+      </div>
+      <Link
+        href="/people"
+        aria-label="People and account"
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 999,
+          background: "var(--tt-raised)",
+          color: "var(--tt-text)",
+          textDecoration: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 16,
+          fontWeight: 700,
+          flex: "none",
+        }}
+      >
+        {initials(fullName, membership.email)}
+      </Link>
+    </div>
   );
 
-  // eslint-disable-next-line react-hooks/purity -- async RSC; Date.now() is request-scoped on the server
-  const now = Date.now();
-  const rows = (properties ?? []).map((p) => {
-    const locked = (p.turnover ?? [])
-      .filter((t) => t.status === "submitted_locked")
-      .sort((a, b) =>
-        (b.submitted_at_server ?? "").localeCompare(a.submitted_at_server ?? "")
-      );
-    const last = locked[0] ?? null;
-    const openIssues = last
-      ? (last.issue_tag ?? []).filter((i) => !i.confirmed_at).length
-      : 0;
-    const chem: TurnoverChem[] = locked.map((t) => ({
-      at: t.submitted_at_server,
-      sanitizerPpm:
-        (Array.isArray(t.water_reading) ? t.water_reading[0] : t.water_reading)
-          ?.sanitizer_ppm ?? null,
-      cloudy: (t.issue_tag ?? []).some(
-        (i) => i.tag === "water_cloudy" && !i.confirmed_at
-      ),
-    }));
-    const sanitizerType = asSanitizerType(p.sanitizer_type);
-    const batherLoad = batherLoadActive(chem, now, sanitizerType);
-    const flag = chem.length ? clarityFlag(chem[0], sanitizerType) : null;
-    const reading = last
-      ? Array.isArray(last.water_reading)
-        ? last.water_reading[0]
-        : last.water_reading
-      : null;
+  const main: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 26,
+    padding: "32px 20px 24px",
+    maxWidth: 560,
+    margin: "0 auto",
+  };
 
-    const badges: { cls: string; label: string }[] = [];
-    let tone: Tone = "neutral";
-    const worse = (t: Tone) => {
-      if (tone === "urgent") return;
-      if (t === "urgent" || tone === "neutral") tone = t;
-    };
-    if (!last) {
-      badges.push({ cls: "", label: "No turnovers" });
-    } else {
-      if (last.urgent) {
-        tone = "urgent";
-        badges.push({ cls: "urgent", label: "Urgent" });
-      }
-      if (batherLoad) {
-        worse("warn");
-        badges.push({ cls: "warn", label: "Shock due" });
-      }
-      if (flag?.reason === "low_sanitizer") {
-        worse("warn");
-        badges.push({ cls: "warn", label: "Low sanitizer" });
-      }
-      if (flag?.reason === "cloudy") {
-        worse("warn");
-        badges.push({ cls: "warn", label: "Cloudy water" });
-      }
-      if (openIssues > 0) {
-        worse("warn");
-        badges.push({
-          cls: "warn",
-          label: `${openIssues} issue${openIssues > 1 ? "s" : ""}`,
-        });
-      }
-      if (badges.length === 0) {
-        tone = "ready";
-        badges.push({ cls: "ready", label: "Guest-ready" });
-      }
-    }
+  if (tubs.length === 0)
+    return (
+      <main style={main}>
+        {header}
+        <section
+          style={{
+            ...card,
+            borderRadius: "var(--tt-radius-card)",
+            padding: 18,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+            No tubs yet
+          </h2>
+          <p style={{ margin: 0, fontSize: 15, color: "var(--tt-text-2)" }}>
+            Add your first tub to start logging visits. Care due and your week
+            show up here once you have.
+          </p>
+          <Link
+            href="/tubs/new"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: 48,
+              borderRadius: 999,
+              background: "var(--tt-action)",
+              color: "#FFFFFF",
+              fontSize: 16,
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            Add tub
+          </Link>
+        </section>
+      </main>
+    );
 
-    return {
-      id: p.id,
-      name: p.name,
-      address: p.address as string | null,
-      last,
-      thumbnail: last ? pickTurnoverThumbnail(last.photo ?? []) : null,
-      reading,
-      sanitizerType,
-      submitter: last ? nameById.get(last.submitter_id) ?? "Unknown" : null,
-      tone: tone as Tone,
-      badges,
-    };
-  });
-
-  const ready = rows.filter((r) => r.tone === "ready").length;
-  const needYou = rows.filter((r) => r.tone === "urgent" || r.tone === "warn").length;
+  const byDay = calendarItems(tubs, visits, now);
+  const strip = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  // One line per tub with something today; a logged visit wins over care due.
+  const todayLines = new Map<string, CalItem>();
+  for (const it of byDay.get(today) ?? []) {
+    const seen = todayLines.get(it.tubId);
+    if (!seen || (seen.kind === "due" && it.kind === "logged"))
+      todayLines.set(it.tubId, it);
+  }
+  const attention = attentionList(tubs, visits, now);
+  const week = weekCounts({ visits, ...activity }, now);
 
   return (
-    <div className="stack">
-      <div className="dashhead">
-        <div className="spread">
-          <h1>Your hot tubs</h1>
-          {canAdd && (
-            <Link href="/add-property" className="btn primary">
-              <Icon name="plus" size={15} /> Add property
-            </Link>
-          )}
-        </div>
-        {rows.length > 0 && (
-          <div className="row">
-            <span className="sub">
-              <b>{ready}</b> guest-ready
-              {needYou > 0 && (
-                <>
-                  {" · "}
-                  <b className="t-urgent">{needYou}</b> need you
-                </>
-              )}
-            </span>
-          </div>
-        )}
-      </div>
+    <main style={main}>
+      {header}
 
-      {rows.length === 0 ? (
+      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div
-          className="card pad stack"
-          style={{ textAlign: "center", padding: "40px 24px" }}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
-          <p className="muted">
-            {canAdd
-              ? "No properties yet. Add your first to start logging turnovers."
-              : "No properties shared with you yet."}
-          </p>
-          {canAdd && (
-            <Link
-              href="/add-property"
-              className="btn primary"
-              style={{ alignSelf: "center" }}
-            >
-              Add your first property →
-            </Link>
-          )}
+          <SectionLabel>Today</SectionLabel>
+          <Link
+            href="/calendar"
+            style={{
+              minHeight: "var(--tt-tap)",
+              display: "flex",
+              alignItems: "center",
+              fontSize: 14,
+              fontWeight: 600,
+              color: "var(--tt-link)",
+              textDecoration: "none",
+            }}
+          >
+            Calendar
+          </Link>
         </div>
-      ) : (
-        <div className="dlist">
-          {rows.map((r) => (
-            <Link key={r.id} href={`/p/${r.id}`} className={`drow2 t-${r.tone}`}>
-              <div className="nmwrap">
-                {r.thumbnail ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- turnover thumbnail
-                  <img src={r.thumbnail} alt="" className="dthumb" />
-                ) : (
-                  <span className={`sdot t-${r.tone}`} />
-                )}
-                <div>
-                  <div className="nm">{r.name}</div>
-                  {r.address && <div className="ad">{r.address}</div>}
-                </div>
-              </div>
-              <div className="when">
-                {r.last ? (
-                  <>
-                    {timeAgo(r.last.submitted_at_server)}{" "}
-                    <span className="who">· {r.submitter}</span>
-                    <ChemReadout
-                      reading={r.reading}
-                      sanitizerType={r.sanitizerType}
-                    />
-                  </>
-                ) : (
-                  <span className="who">No turnovers yet</span>
-                )}
-              </div>
-              <div className="badges">
-                {r.badges.map((b, i) => (
-                  <span key={i} className={`spill ${b.cls}`}>
-                    {b.label}
+        <Link
+          href="/calendar"
+          aria-label="Open the calendar"
+          style={{
+            ...card,
+            borderRadius: "var(--tt-radius-card)",
+            padding: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <span
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+              gap: 4,
+              textAlign: "center",
+            }}
+          >
+            {strip.map((k) => {
+              const d = dayParts(k);
+              const items = byDay.get(k) ?? [];
+              const isToday = k === today;
+              return (
+                <span
+                  key={k}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    padding: "6px 0",
+                    borderRadius: 12,
+                    background: isToday ? "#13233F" : undefined,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: isToday ? "#A9C9FF" : "var(--tt-text-3)",
+                    }}
+                  >
+                    {d.dow}
                   </span>
-                ))}
+                  <span
+                    style={{ fontSize: 15, fontWeight: isToday ? 700 : 400 }}
+                  >
+                    {d.num}
+                  </span>
+                  <span
+                    style={{
+                      display: "flex",
+                      gap: 3,
+                      justifyContent: "center",
+                      minHeight: 6,
+                    }}
+                  >
+                    {items.some((i) => i.kind === "logged") && (
+                      <Dot color="var(--tt-brand)" />
+                    )}
+                    {items.some((i) => i.kind === "due") && (
+                      <Dot color="var(--tt-due)" />
+                    )}
+                  </span>
+                </span>
+              );
+            })}
+          </span>
+          <span style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {todayLines.size === 0 ? (
+              <span style={{ fontSize: 15, color: "var(--tt-text-2)" }}>
+                Nothing logged or due today
+              </span>
+            ) : (
+              [...todayLines.values()].map((it) => (
+                <span
+                  key={it.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    fontSize: 15,
+                  }}
+                >
+                  <span>{it.tubName}</span>
+                  <span
+                    style={{
+                      color:
+                        it.kind === "due"
+                          ? "var(--tt-due-text)"
+                          : it.sent
+                            ? "var(--tt-ok)"
+                            : "var(--tt-text-2)",
+                      textAlign: "right",
+                    }}
+                  >
+                    {it.short}
+                  </span>
+                </span>
+              ))
+            )}
+          </span>
+        </Link>
+      </section>
+
+      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <SectionLabel>Needs attention</SectionLabel>
+        {attention.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 15, color: "var(--tt-text-2)" }}>
+            Nothing due this week.
+          </p>
+        ) : (
+          attention.map((a) => (
+            <div
+              key={a.id}
+              style={{
+                ...card,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                minHeight: 60,
+                borderRadius: "var(--tt-radius-tile)",
+                padding: "8px 8px 8px 14px",
+              }}
+            >
+              <Link
+                href={tubPath(a.tubId)}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  minHeight: "var(--tt-tap)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  color: "var(--tt-text)",
+                  textDecoration: "none",
+                }}
+              >
+                <Dot
+                  size={10}
+                  color={a.tone === "due" ? "var(--tt-due)" : "#3A3F48"}
+                />
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    minWidth: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 16, fontWeight: 600 }}>
+                    {a.title}
+                  </span>
+                  <span style={{ fontSize: 13, color: "var(--tt-text-2)" }}>
+                    {a.detail}
+                  </span>
+                </span>
+              </Link>
+              {a.tone === "due" && (
+                <HomeStartVisit
+                  tubId={a.tubId}
+                  tubName={tubs.find((t) => t.id === a.tubId)?.name ?? ""}
+                  draftId={drafts.get(a.tubId) ?? null}
+                />
+              )}
+            </div>
+          ))
+        )}
+      </section>
+
+      <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <SectionLabel>This week</SectionLabel>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 10,
+          }}
+        >
+          {(
+            [
+              [week.logged, "visits logged", null],
+              [week.sent, "records sent", "/reports"],
+              [week.opened, "opened by owners", "/reports"],
+            ] as const
+          ).map(([count, label, href]) => {
+            const body = (
+              <>
+                <span style={{ fontSize: 26, fontWeight: 700 }}>{count}</span>
+                <span style={{ fontSize: 13, color: "var(--tt-text-2)" }}>
+                  {label}
+                </span>
+              </>
+            );
+            const style: React.CSSProperties = {
+              ...card,
+              borderRadius: "var(--tt-radius-tile)",
+              padding: "14px 12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            };
+            return href ? (
+              <Link key={label} href={href} style={style}>
+                {body}
+              </Link>
+            ) : (
+              <div key={label} style={style}>
+                {body}
               </div>
-            </Link>
-          ))}
+            );
+          })}
         </div>
-      )}
-    </div>
+      </section>
+    </main>
   );
 }

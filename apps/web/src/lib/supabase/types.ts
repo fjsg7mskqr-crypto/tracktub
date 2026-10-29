@@ -82,6 +82,41 @@ export type Database = {
           },
         ]
       }
+      client: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment: {
         Row: {
           archived_at: string | null
@@ -138,6 +173,7 @@ export type Database = {
       }
       invite: {
         Row: {
+          all_properties: boolean
           accepted_at: string | null
           created_at: string
           email: string | null
@@ -150,6 +186,7 @@ export type Database = {
           token: string
         }
         Insert: {
+          all_properties?: boolean
           accepted_at?: string | null
           created_at?: string
           email?: string | null
@@ -162,6 +199,7 @@ export type Database = {
           token: string
         }
         Update: {
+          all_properties?: boolean
           accepted_at?: string | null
           created_at?: string
           email?: string | null
@@ -342,6 +380,7 @@ export type Database = {
       }
       membership: {
         Row: {
+          all_properties: boolean
           created_at: string
           id: string
           org_id: string
@@ -349,6 +388,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          all_properties?: boolean
           created_at?: string
           id?: string
           org_id: string
@@ -356,6 +396,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          all_properties?: boolean
           created_at?: string
           id?: string
           org_id?: string
@@ -600,7 +641,10 @@ export type Database = {
       property: {
         Row: {
           address: string | null
+          client_id: string | null
           created_at: string
+          drain_interval_days: number | null
+          filter_interval_days: number | null
           geofence_radius_m: number
           id: string
           lat: number | null
@@ -609,10 +653,14 @@ export type Database = {
           org_id: string
           sanitizer_type: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes: string | null
+          volume_gallons: number | null
         }
         Insert: {
           address?: string | null
+          client_id?: string | null
           created_at?: string
+          drain_interval_days?: number | null
+          filter_interval_days?: number | null
           geofence_radius_m?: number
           id?: string
           lat?: number | null
@@ -621,10 +669,14 @@ export type Database = {
           org_id: string
           sanitizer_type?: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes?: string | null
+          volume_gallons?: number | null
         }
         Update: {
           address?: string | null
+          client_id?: string | null
           created_at?: string
+          drain_interval_days?: number | null
+          filter_interval_days?: number | null
           geofence_radius_m?: number
           id?: string
           lat?: number | null
@@ -633,8 +685,16 @@ export type Database = {
           org_id?: string
           sanitizer_type?: Database["public"]["Enums"]["sanitizer_type"]
           tub_notes?: string | null
+          volume_gallons?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "property_client_fk"
+            columns: ["client_id", "org_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id", "org_id"]
+          },
           {
             foreignKeyName: "property_org_id_fkey"
             columns: ["org_id"]
@@ -750,6 +810,32 @@ export type Database = {
           },
           {
             foreignKeyName: "scheduled_item_turnover_id_fkey"
+            columns: ["turnover_id"]
+            isOneToOne: false
+            referencedRelation: "turnover"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      share_view: {
+        Row: {
+          id: string
+          opened_at: string
+          turnover_id: string
+        }
+        Insert: {
+          id?: string
+          opened_at?: string
+          turnover_id: string
+        }
+        Update: {
+          id?: string
+          opened_at?: string
+          turnover_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_view_turnover_id_fkey"
             columns: ["turnover_id"]
             isOneToOne: false
             referencedRelation: "turnover"
@@ -891,6 +977,7 @@ export type Database = {
           geofence_ok: boolean | null
           id: string
           notes: string | null
+          owner_flag: string | null
           property_id: string
           share_token: string | null
           status: Database["public"]["Enums"]["turnover_status"]
@@ -907,6 +994,7 @@ export type Database = {
           geofence_ok?: boolean | null
           id?: string
           notes?: string | null
+          owner_flag?: string | null
           property_id: string
           share_token?: string | null
           status?: Database["public"]["Enums"]["turnover_status"]
@@ -923,6 +1011,7 @@ export type Database = {
           geofence_ok?: boolean | null
           id?: string
           notes?: string | null
+          owner_flag?: string | null
           property_id?: string
           share_token?: string | null
           status?: Database["public"]["Enums"]["turnover_status"]
@@ -974,7 +1063,13 @@ export type Database = {
           balanced: boolean
           calcium_hardness: number | null
           created_at: string
+          found_recorded_at: string | null
           id: string
+          left_calcium_hardness: number | null
+          left_ph: number | null
+          left_recorded_at: string | null
+          left_sanitizer_ppm: number | null
+          left_total_alkalinity: number | null
           ph: number | null
           property_id: string
           recorded_at: string
@@ -989,7 +1084,13 @@ export type Database = {
           balanced?: boolean
           calcium_hardness?: number | null
           created_at?: string
+          found_recorded_at?: string | null
           id?: string
+          left_calcium_hardness?: number | null
+          left_ph?: number | null
+          left_recorded_at?: string | null
+          left_sanitizer_ppm?: number | null
+          left_total_alkalinity?: number | null
           ph?: number | null
           property_id: string
           recorded_at?: string
@@ -1004,7 +1105,13 @@ export type Database = {
           balanced?: boolean
           calcium_hardness?: number | null
           created_at?: string
+          found_recorded_at?: string | null
           id?: string
+          left_calcium_hardness?: number | null
+          left_ph?: number | null
+          left_recorded_at?: string | null
+          left_sanitizer_ppm?: number | null
+          left_total_alkalinity?: number | null
           ph?: number | null
           property_id?: string
           recorded_at?: string
@@ -1038,6 +1145,10 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: string }
+      app_is_team: {
+        Args: { p_org: string }
+        Returns: boolean
+      }
       app_can_capture_property: {
         Args: { p_property: string }
         Returns: boolean
@@ -1083,7 +1194,9 @@ export type Database = {
         Args: { p_threshold?: string }
         Returns: number
       }
+      proof_client_name: { Args: { p_token: string }; Returns: string }
       record_proof_open: { Args: { p_share_token: string }; Returns: undefined }
+      record_share_view: { Args: { p_token: string }; Returns: undefined }
     }
     Enums: {
       capture_phase: "before" | "after"
