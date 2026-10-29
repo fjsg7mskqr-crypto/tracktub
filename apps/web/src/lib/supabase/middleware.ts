@@ -108,11 +108,15 @@ export async function updateSession(
       },
     });
 
-    // IMPORTANT: do nothing between creating the client and getUser() — it keeps
-    // the session in sync. getUser() revalidates the token with the auth server.
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // IMPORTANT: do nothing between creating the client and getClaims() — it
+    // keeps the session in sync (an expired access token is refreshed here and
+    // the new cookies written through setAll). getClaims() verifies the token's
+    // signature: against the project's cached JWKS for an asymmetric key (prod
+    // signs with ES256, so no network call per request), or via the auth server
+    // for a legacy HS256 token. A missing, expired or forged token yields no
+    // claims, so the gate below only ever sees verified identity.
+    const { data } = await supabase.auth.getClaims();
+    const claims = data?.claims ?? null;
 
     const path = request.nextUrl.pathname;
     const isPublic =
@@ -127,8 +131,8 @@ export async function updateSession(
     const decision = appAccessDecision({
       path,
       isPublic,
-      hasUser: Boolean(user),
-      isAdmin: isAdminEmail(user?.email),
+      hasUser: Boolean(claims?.sub),
+      isAdmin: isAdminEmail(claims?.email),
       enforceAdmin: process.env.NODE_ENV === "production",
     });
 

@@ -58,9 +58,6 @@ export default async function CalendarPage({
 }: {
   searchParams: Promise<{ view?: string; d?: string }>;
 }) {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-
   const q = await searchParams;
   const now = new Date();
   const today = dayKey(now);
@@ -68,7 +65,11 @@ export default async function CalendarPage({
   const isMonth = range.view === "month";
 
   const supabase = await createClient();
-  const { tubs, visits } = await loadCareData(supabase);
+  const [membership, { tubs, visits }] = await Promise.all([
+    getCurrentMembership(),
+    loadCareData(supabase),
+  ]);
+  if (!membership) redirect("/login");
   const byDay = calendarItems(tubs, visits, now);
   const shown = range.cells.flatMap((k) => (k ? (byDay.get(k) ?? []) : []));
 

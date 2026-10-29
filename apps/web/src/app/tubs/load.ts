@@ -40,32 +40,29 @@ export async function loadTubs(supabase: Supabase): Promise<TubRowData[]> {
   }));
 }
 
-/** Locked visits per tub, as history. */
+/** Locked visits per tub, as history: every tub the caller can see (RLS), so it
+ *  runs alongside {@link loadTubs} instead of waiting for its ids. */
 export async function loadTubHistories(
-  supabase: Supabase,
-  propertyIds: string[]
+  supabase: Supabase
 ): Promise<Map<string, HistoryVisit[]>> {
-  const out = new Map<string, HistoryVisit[]>(
-    propertyIds.map((id) => [id, []])
-  );
-  if (propertyIds.length === 0) return out;
-
   const { data, error } = await supabase
     .from("turnover")
     .select(
       `property_id, submitted_at_server, cleaning_steps,
        water:water_reading(${FOUND_COLUMNS})`
     )
-    .in("property_id", propertyIds)
     .eq("status", "submitted_locked");
   if (error) throw new Error(`Failed to load visits: ${error.message}`);
 
+  const out = new Map<string, HistoryVisit[]>();
   for (const t of data ?? []) {
-    out.get(t.property_id)?.push({
+    const list = out.get(t.property_id) ?? [];
+    list.push({
       at: new Date(t.submitted_at_server),
       cleaningSteps: t.cleaning_steps ?? [],
       found: one(t.water),
     });
+    out.set(t.property_id, list);
   }
   return out;
 }
@@ -116,6 +113,8 @@ export async function loadTubVisits(
   supabase: Supabase,
   propertyId: string
 ): Promise<TubVisitRow[]> {
+  // Runs alongside loadTub, so it sees the raw route param.
+  if (!UUID.test(propertyId)) return [];
   const { data, error } = await supabase
     .from("turnover")
     .select(

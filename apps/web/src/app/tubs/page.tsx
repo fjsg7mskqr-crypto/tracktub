@@ -14,15 +14,13 @@ import { loadTubHistories, loadTubs } from "./load";
 // Screen 4 (spec §4): every tub grouped by client. Stays dynamic:
 // getCurrentMembership() reads the session cookie (CSP nonce per request).
 export default async function TubsPage() {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-
   const supabase = await createClient();
-  const tubs = await loadTubs(supabase);
-  const histories = await loadTubHistories(
-    supabase,
-    tubs.map((t) => t.id)
-  );
+  const [membership, tubs, histories] = await Promise.all([
+    getCurrentMembership(),
+    loadTubs(supabase),
+    loadTubHistories(supabase),
+  ]);
+  if (!membership) redirect("/login");
   const now = new Date();
   const groups = groupTubsByClient(tubs);
 

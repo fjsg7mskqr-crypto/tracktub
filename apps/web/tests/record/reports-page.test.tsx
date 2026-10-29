@@ -64,10 +64,10 @@ describe("/reports", () => {
                 name: "Cedar Cabin",
                 client: { name: "Lakeview Rentals" },
               },
+              views: [{ turnover_id: "t1" }],
             },
           },
         ]),
-        share_view: ok([{ turnover_id: "t1" }]),
       }) as never
     );
     render(await ReportsPage(sp({ tub: "prop-2", period: "season" })));

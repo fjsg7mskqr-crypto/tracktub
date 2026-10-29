@@ -13,12 +13,14 @@ export default async function VisitPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
   const { id } = await params;
 
   const db = await createClient();
-  const snapshot = await loadVisitSnapshot(db, id).catch(() => null);
+  const [membership, snapshot] = await Promise.all([
+    getCurrentMembership(),
+    loadVisitSnapshot(db, id).catch(() => null),
+  ]);
+  if (!membership) redirect("/login");
   if (!snapshot) notFound();
   // A locked visit can't be edited; show its record instead.
   if (snapshot.status !== "draft") redirect(recordPath(id));

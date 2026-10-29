@@ -19,27 +19,27 @@ export default async function HistoryPage({
 }: {
   searchParams: Promise<{ tub?: string; period?: string }>;
 }) {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-
   const q = await searchParams;
   const period = parsePeriod(q.period);
   if (!q.tub) notFound();
   const supabase = await createClient();
 
-  const { data: tub } = await supabase
-    .from("property")
-    .select("id, name, client:client(name)")
-    .eq("id", q.tub)
-    .maybeSingle();
+  // loadTubRecords reads by the same id, so it needn't wait for the tub row
+  // (a bad id just finds no records, and the tub lookup 404s).
+  const [membership, { data: tub }, tubRecords] = await Promise.all([
+    getCurrentMembership(),
+    supabase
+      .from("property")
+      .select("id, name, client:client(name)")
+      .eq("id", q.tub)
+      .maybeSingle(),
+    loadTubRecords(supabase, q.tub),
+  ]);
+  if (!membership) redirect("/login");
   if (!tub) notFound();
   const client = Array.isArray(tub.client) ? tub.client[0] : tub.client;
 
-  const rows = historyVisits(
-    await loadTubRecords(supabase, tub.id),
-    period,
-    new Date()
-  );
+  const rows = historyVisits(tubRecords, period, new Date());
   const records = rows.map(buildRecord);
 
   return (

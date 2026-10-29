@@ -17,12 +17,13 @@ export default async function RecordPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-
   const { id } = await params;
   const supabase = await createClient();
-  const row = await loadRecordById(supabase, id);
+  const [membership, row] = await Promise.all([
+    getCurrentMembership(),
+    loadRecordById(supabase, id),
+  ]);
+  if (!membership) redirect("/login");
   if (!row) notFound();
 
   return (
