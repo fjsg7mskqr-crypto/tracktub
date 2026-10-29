@@ -2,13 +2,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentMembership } from "@/lib/auth";
-import Home from "@/app/page";
+import { getCurrentMembership, getSessionUser } from "@/lib/auth";
+import Home from "@/app/(home)/page";
 import { fakeSupabase } from "../record/fake-supabase";
 import { BANNED_WORDS } from "../record/fixtures";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/lib/auth", () => ({ getCurrentMembership: vi.fn() }));
+vi.mock("@/lib/auth", () => ({
+  getCurrentMembership: vi.fn(),
+  getSessionUser: vi.fn(),
+}));
 vi.mock("@/lib/actions/visit", () => ({ startVisit: vi.fn() }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(() => {
@@ -78,6 +81,7 @@ beforeEach(() => {
     orgId: "o1",
     role: "operator",
   });
+  vi.mocked(getSessionUser).mockResolvedValue({ id: "u1", email: "e@x.com" });
 });
 afterEach(() => {
   cleanup();

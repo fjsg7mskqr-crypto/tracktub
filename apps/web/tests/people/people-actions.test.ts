@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentMembership } from "@/lib/auth";
+import { getVerifiedMembership } from "@/lib/auth";
 import {
   addPersonAction,
   removePersonAction,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/actions/people";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/lib/auth", () => ({ getCurrentMembership: vi.fn() }));
+vi.mock("@/lib/auth", () => ({ getVerifiedMembership: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const admin = {
@@ -40,13 +40,13 @@ function fd(fields: Record<string, string>, props: string[] = []): FormData {
 const empty = { error: null, link: null };
 
 beforeEach(() => {
-  vi.mocked(getCurrentMembership).mockResolvedValue(admin);
+  vi.mocked(getVerifiedMembership).mockResolvedValue(admin);
 });
 afterEach(() => vi.clearAllMocks());
 
 describe("people actions", () => {
   it("a non-admin can't add, edit or remove", async () => {
-    vi.mocked(getCurrentMembership).mockResolvedValue({
+    vi.mocked(getVerifiedMembership).mockResolvedValue({
       ...admin,
       role: "staff",
     });

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentMembership } from "@/lib/auth";
+import { getCurrentMembership, getSessionUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { APP_TIME_ZONE } from "@/lib/time";
 import { tubPath } from "@/lib/app-routes";
@@ -60,12 +60,23 @@ const Dot = ({ color, size = 6 }: { color: string; size?: number }) => (
   />
 );
 
+/** The signed-in user's own name, if they set one. */
+async function loadProfileName(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<string | null> {
+  const user = await getSessionUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("profile")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  return data?.full_name ?? null;
+}
+
 // Screen 2 (spec §2): today's strip, what needs attention, and this week.
 // Stays dynamic: getCurrentMembership() reads the session cookie (CSP nonce).
 export default async function Home() {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-
   const supabase = await createClient();
   const now = new Date();
   const today = dayKey(now);
@@ -74,18 +85,17 @@ export default async function Home() {
     Date.parse(`${addDays(weekStart(today), -1)}T00:00:00Z`)
   ).toISOString();
 
-  const [{ tubs, visits, drafts }, activity, { data: profile }] =
+  // The membership check and every read run together (the reads are RLS-
+  // scoped); the profile row is found by the same verified user id.
+  const [membership, { tubs, visits, drafts }, activity, fullName] =
     await Promise.all([
+      getCurrentMembership(),
       loadCareData(supabase),
       loadShareActivity(supabase, since),
-      supabase
-        .from("profile")
-        .select("full_name")
-        .eq("id", membership.userId)
-        .maybeSingle(),
+      loadProfileName(supabase),
     ]);
+  if (!membership) redirect("/login");
 
-  const fullName = profile?.full_name ?? null;
   const first = fullName?.trim().split(/\s+/)[0];
   const p = dayParts(today);
 

@@ -23,7 +23,7 @@ const NAV_FILES = [
   "src/lib/app-routes.ts",
   "src/components/app/TabBar.tsx",
   "src/components/Shell.tsx",
-  "src/app/page.tsx",
+  "src/app/(home)/page.tsx",
 ];
 
 /** Pull `href: "/x"` and `href="/x"` literals; ignore template strings. */
@@ -41,6 +41,12 @@ describe("nav route coverage", () => {
       expect(broken).toEqual([]);
     });
   }
+
+  it("looks through route groups: / lives in (home)", () => {
+    expect(routeExists("/", APP_DIR)).toBe(true);
+    expect(routeExists("/tubs/abc", APP_DIR)).toBe(true);
+    expect(routeExists("/home", APP_DIR)).toBe(false);
+  });
 
   it("finds the tab hrefs (guards the extraction regex itself)", () => {
     expect(hrefsIn("src/lib/app-routes.ts")).toEqual([

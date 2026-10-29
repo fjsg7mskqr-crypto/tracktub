@@ -25,3 +25,18 @@
   color: var(--tt-text);
   min-height: 100dvh;
 }
+
+/* Loading placeholders (components/app/Skeleton.tsx): a slow, quiet pulse. */
+.tt-bone {
+  animation: tt-bone-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tt-bone-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tt-bone {
+    animation: none;
+  }
+}

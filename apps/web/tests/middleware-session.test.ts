@@ -2,13 +2,21 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+// The gate reads verified token claims (getClaims), never the auth server.
+const noAuthServerCall = async () => {
+  throw new Error("middleware must not call getUser()");
+};
+
 // Drive the auth-gating path with a stub Supabase client that always resolves to
 // an anonymous (no user) session, so we exercise PUBLIC_PATHS routing without a
 // live backend. createServerClient is only constructed once env is valid.
 function stubAnonSupabase() {
   vi.doMock("@supabase/ssr", () => ({
     createServerClient: () => ({
-      auth: { getUser: async () => ({ data: { user: null } }) },
+      auth: {
+        getClaims: async () => ({ data: null, error: null }),
+        getUser: noAuthServerCall,
+      },
     }),
   }));
 }
@@ -18,9 +26,8 @@ async function anonRequest(url: string) {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "stub-anon-key");
   stubAnonSupabase();
   vi.resetModules();
-  const { updateSession: freshUpdateSession } = await import(
-    "@/lib/supabase/middleware"
-  );
+  const { updateSession: freshUpdateSession } =
+    await import("@/lib/supabase/middleware");
   return freshUpdateSession(new NextRequest(url));
 }
 
@@ -29,7 +36,13 @@ async function anonRequest(url: string) {
 function stubUserSupabase(email: string) {
   vi.doMock("@supabase/ssr", () => ({
     createServerClient: () => ({
-      auth: { getUser: async () => ({ data: { user: { email } } }) },
+      auth: {
+        getClaims: async () => ({
+          data: { claims: { sub: "user-1", email } },
+          error: null,
+        }),
+        getUser: noAuthServerCall,
+      },
     }),
   }));
 }
@@ -37,7 +50,7 @@ function stubUserSupabase(email: string) {
 async function userRequest(
   url: string,
   email: string,
-  opts: { nodeEnv?: string; adminEmails?: string } = {},
+  opts: { nodeEnv?: string; adminEmails?: string } = {}
 ) {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://stub.supabase.co");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "stub-anon-key");
@@ -45,9 +58,8 @@ async function userRequest(
   vi.stubEnv("ADMIN_EMAILS", opts.adminEmails ?? "ethan@nhs-llc.com");
   stubUserSupabase(email);
   vi.resetModules();
-  const { updateSession: freshUpdateSession } = await import(
-    "@/lib/supabase/middleware"
-  );
+  const { updateSession: freshUpdateSession } =
+    await import("@/lib/supabase/middleware");
   return freshUpdateSession(new NextRequest(url));
 }
 
@@ -64,7 +76,7 @@ describe("updateSession pre-launch admin lockdown", () => {
   it("bounces a signed-in NON-admin off a protected route to /landing (prod)", async () => {
     const response = await userRequest(
       "https://tracktub.vercel.app/team",
-      "stranger@gmail.com",
+      "stranger@gmail.com"
     );
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain("/landing");
@@ -73,7 +85,7 @@ describe("updateSession pre-launch admin lockdown", () => {
   it("lets a signed-in admin through to a protected route (prod)", async () => {
     const response = await userRequest(
       "https://tracktub.vercel.app/team",
-      "ethan@nhs-llc.com",
+      "ethan@nhs-llc.com"
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
@@ -83,7 +95,7 @@ describe("updateSession pre-launch admin lockdown", () => {
     const response = await userRequest(
       "https://localhost:3000/team",
       "stranger@gmail.com",
-      { nodeEnv: "development" },
+      { nodeEnv: "development" }
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
@@ -92,7 +104,7 @@ describe("updateSession pre-launch admin lockdown", () => {
   it("keeps the marketing surface (/blog) public even for a non-admin", async () => {
     const response = await userRequest(
       "https://tracktub.vercel.app/blog",
-      "stranger@gmail.com",
+      "stranger@gmail.com"
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
@@ -103,6 +115,41 @@ describe("updateSession pre-launch admin lockdown", () => {
 // anonymous recipient (no login). The proof page reads via anon `share_token`
 // RLS policies and records the open — but middleware was gating it, redirecting
 // recipients to /login and making the PRD wedge metric unmeasurable.
+// A token that fails verification (bad signature, expired) yields no claims, so
+// the gate treats the request as signed out — the claims are never trusted raw.
+describe("updateSession with an unverifiable token", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock("@supabase/ssr");
+    vi.resetModules();
+  });
+
+  it("sends a request whose token fails verification to /login", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://stub.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "stub-anon-key");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ADMIN_EMAILS", "ethan@nhs-llc.com");
+    vi.doMock("@supabase/ssr", () => ({
+      createServerClient: () => ({
+        auth: {
+          getClaims: async () => ({
+            data: null,
+            error: new Error("Invalid JWT signature"),
+          }),
+          getUser: noAuthServerCall,
+        },
+      }),
+    }));
+    vi.resetModules();
+    const { updateSession: fresh } = await import("@/lib/supabase/middleware");
+    const response = await fresh(
+      new NextRequest("https://tracktub.vercel.app/tubs")
+    );
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/login");
+  });
+});
+
 describe("updateSession public proof links (anonymous recipients)", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -112,7 +159,7 @@ describe("updateSession public proof links (anonymous recipients)", () => {
 
   it("lets an anonymous request to /proof/<token> through (no /login redirect)", async () => {
     const response = await anonRequest(
-      "https://tracktub.vercel.app/proof/abc-123-token",
+      "https://tracktub.vercel.app/proof/abc-123-token"
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();

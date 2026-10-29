@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCurrentMembership } from "@/lib/auth";
+import { getVerifiedMembership } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createInviteAction } from "@/lib/actions/invite";
 import { parseAccess } from "@/lib/people";
@@ -19,7 +19,7 @@ export async function addPersonAction(
   _prev: AddPersonState,
   fd: FormData
 ): Promise<AddPersonState> {
-  const membership = await getCurrentMembership();
+  const membership = await getVerifiedMembership();
   if (membership?.role !== "operator")
     return { error: "Only the admin can add people.", link: null };
 
@@ -77,7 +77,7 @@ export async function updateAccessAction(
   _prev: ActionState,
   fd: FormData
 ): Promise<ActionState> {
-  const membership = await getCurrentMembership();
+  const membership = await getVerifiedMembership();
   if (membership?.role !== "operator")
     return { error: "Only the admin can change access.", done: false };
 
@@ -125,7 +125,7 @@ export async function updateAccessAction(
 export async function removePersonAction(
   userId: string
 ): Promise<{ error: string | null }> {
-  const membership = await getCurrentMembership();
+  const membership = await getVerifiedMembership();
   if (membership?.role !== "operator")
     return { error: "Only the admin can remove people." };
   if (userId === membership.userId)
