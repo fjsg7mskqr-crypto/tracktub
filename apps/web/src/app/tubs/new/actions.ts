@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getCurrentMembership } from "@/lib/auth";
+import { getVerifiedMembership } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { tubPath } from "@/lib/app-routes";
 import { parseAddTub } from "@/components/tub/add-tub";
@@ -19,7 +19,7 @@ export async function createTubAction(
   _prev: AddTubState,
   fd: FormData
 ): Promise<AddTubState> {
-  const membership = await getCurrentMembership();
+  const membership = await getVerifiedMembership();
   if (!membership) redirect("/login");
 
   const parsed = parseAddTub(fd);

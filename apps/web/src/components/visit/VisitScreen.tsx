@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   finishVisit,
+  leaveOpenItem,
   logReading,
   saveAdded,
+  setOpenItemStatus,
   saveFlag,
   saveNotes,
   savePhoto,
@@ -33,11 +35,15 @@ import {
   type VisitPhoto,
   type VisitSnapshot,
 } from "@/lib/visit";
+import {
+  recheckSuggestions,
+  type OpenItemKind,
+} from "@/components/home/open-items";
 import { AddedList } from "./AddedList";
 import { CameraSheet, compressPhoto } from "./CameraSheet";
+import { LeaveForNext, LeftOpen } from "./OpenItems";
 import { OwnerFlag } from "./OwnerFlag";
 import { ReadingSheet } from "./ReadingSheet";
-
 
 const CHIP_LABEL: Record<ReadingField, string> = {
   total_alkalinity: "Alk",
@@ -109,6 +115,25 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
     void run(() => saveFlag(id, flag));
   }
 
+  function setItem(taskId: string, status: "settled" | "open" | "dismissed") {
+    setSnap((s) => ({
+      ...s,
+      openItems:
+        status === "dismissed"
+          ? s.openItems.filter((i) => i.id !== taskId)
+          : s.openItems.map((i) =>
+              i.id === taskId
+                ? { ...i, status: status === "open" ? "open" : "settled" }
+                : i
+            ),
+    }));
+    void run(() => setOpenItemStatus(id, taskId, status));
+  }
+
+  function leave(kind: OpenItemKind, text: string, note: string) {
+    void run(() => leaveOpenItem(id, kind, text, note));
+  }
+
   function flushNotes() {
     if (notes === savedNotes.current) return;
     const value = notes;
@@ -166,6 +191,10 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   const lastShot = (k: PhotoKind) =>
     snap.previous?.photos.find((p) => p.kind === k) ?? null;
   const missing = missingParts(snap);
+  const earlier = snap.openItems.filter((i) => i.openedVisitId !== id);
+  const leftHere = snap.openItems.filter(
+    (i) => i.openedVisitId === id && i.status === "open"
+  );
 
   return (
     <main
@@ -231,6 +260,8 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
           everything saves as you go.
         </p>
       </div>
+
+      <LeftOpen items={earlier} onSetStatus={setItem} />
 
       <Section n={1} title="Before you touch it">
         <div style={grid2}>
@@ -342,6 +373,13 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
           />
         </div>
       </Section>
+
+      <LeaveForNext
+        left={leftHere}
+        suggestions={recheckSuggestions(snap.left, snap.openItems)}
+        onLeave={leave}
+        onSetStatus={setItem}
+      />
 
       <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <label

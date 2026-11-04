@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getCurrentMembership } from "@/lib/auth";
+import { getVerifiedMembership } from "@/lib/auth";
 
 export type CreateInviteResult =
   { ok: true; inviteId: string; token: string } | { ok: false; error: string };
@@ -21,7 +21,7 @@ export async function createInviteAction(input: {
   allProperties: boolean;
   propertyIds: string[];
 }): Promise<CreateInviteResult> {
-  const membership = await getCurrentMembership();
+  const membership = await getVerifiedMembership();
   if (!membership) return { ok: false, error: "Not signed in." };
   if (membership.role !== "operator") {
     return { ok: false, error: "Only the admin can invite people." };
@@ -76,7 +76,7 @@ export async function acceptInviteAction(
 export async function revokeInviteAction(
   inviteId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const membership = await getCurrentMembership();
+  const membership = await getVerifiedMembership();
   if (membership?.role !== "operator") {
     return { ok: false, error: "Only the admin can cancel invites." };
   }
@@ -95,7 +95,7 @@ export type ResendInviteResult =
 export async function resendInviteAction(
   inviteId: string
 ): Promise<ResendInviteResult> {
-  const membership = await getCurrentMembership();
+  const membership = await getVerifiedMembership();
   if (membership?.role !== "operator") {
     return { ok: false, error: "Only the admin can resend invites." };
   }

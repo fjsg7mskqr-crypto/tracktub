@@ -33,38 +33,38 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ tub?: string; period?: string }>;
 }) {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-
   const q = await searchParams;
   const period = parsePeriod(q.period);
   const supabase = await createClient();
 
-  const [{ data: tubs }, { data: events }] = await Promise.all([
+  // One round: the membership check, the tubs, and the sent records with their
+  // opens embedded (no second query keyed on the sent ids).
+  const [membership, { data: tubs }, { data: events }] = await Promise.all([
+    getCurrentMembership(),
     supabase.from("property").select("id, name").order("name"),
     supabase
       .from("proof_event")
       .select(
         `turnover_id, occurred_at,
-         turnover:turnover(submitted_at_server, property:property(name, client:client(name)))`
+         turnover:turnover(submitted_at_server, property:property(name, client:client(name)),
+           views:share_view(turnover_id))`
       )
       .eq("kind", "share_copied")
       .order("occurred_at", { ascending: false })
       .limit(200),
   ]);
+  if (!membership) redirect("/login");
   const tubList = tubs ?? [];
   const tub = tubList.find((t) => t.id === q.tub) ?? tubList[0] ?? null;
 
-  const sentRows = (events ?? []) as unknown as SentEventRow[];
-  const ids = [...new Set(sentRows.map((e) => e.turnover_id))];
-  let opened = new Set<string>();
-  if (ids.length > 0) {
-    const { data: views } = await supabase
-      .from("share_view")
-      .select("turnover_id")
-      .in("turnover_id", ids);
-    opened = new Set((views ?? []).map((v) => v.turnover_id));
-  }
+  const sentRows = (events ?? []) as unknown as (SentEventRow & {
+    turnover: { views?: { turnover_id: string }[] | null } | null;
+  })[];
+  const opened = new Set(
+    sentRows
+      .filter((e) => (e.turnover?.views ?? []).length > 0)
+      .map((e) => e.turnover_id)
+  );
   const sent = buildSentList(sentRows, opened);
 
   return (
