@@ -22,6 +22,8 @@ const TOKENS: Record<string, string> = {
   "--tt-due": "#E8A33D",
   "--tt-due-text": "#F2B85C",
   "--tt-ok": "#34D399",
+  "--tt-alert": "#F2665E",
+  "--tt-alert-text": "#FF8A80",
   "--tt-radius-card": "24px",
   "--tt-radius-tile": "20px",
   "--tt-tap": "44px",

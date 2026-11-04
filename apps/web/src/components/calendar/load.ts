@@ -54,25 +54,3 @@ export async function loadCareData(supabase: Supabase): Promise<CareData> {
   }
   return { tubs, visits, drafts };
 }
-
-/** Share and open events since `sinceIso`, for This week. */
-export async function loadShareActivity(
-  supabase: Supabase,
-  sinceIso: string
-): Promise<{
-  sent: { turnover_id: string; occurred_at: string }[];
-  opened: { turnover_id: string; opened_at: string }[];
-}> {
-  const [{ data: sent }, { data: opened }] = await Promise.all([
-    supabase
-      .from("proof_event")
-      .select("turnover_id, occurred_at")
-      .eq("kind", "share_copied")
-      .gte("occurred_at", sinceIso),
-    supabase
-      .from("share_view")
-      .select("turnover_id, opened_at")
-      .gte("opened_at", sinceIso),
-  ]);
-  return { sent: sent ?? [], opened: opened ?? [] };
-}
