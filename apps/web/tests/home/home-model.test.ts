@@ -172,6 +172,16 @@ describe("tubProblem", () => {
     });
   });
 
+  it("a reading a week old or more names its date, not a weekday", () => {
+    const p = tubProblem(
+      CEDAR,
+      [visit("cedar", ago(7), { found: { ...OK, ph: 7.9 } })],
+      NOW,
+      TZ
+    );
+    expect(p?.chipWithDay).toBe("pH 7.9 Oct 28");
+  });
+
   it("falls back to as-found when nothing was logged as left", () => {
     const p = tubProblem(
       CEDAR,

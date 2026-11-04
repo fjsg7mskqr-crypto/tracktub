@@ -4,7 +4,7 @@
 
 import { careDue } from "@/lib/care-due";
 import { READING_FIELDS, READING_TARGETS } from "@/lib/readings";
-import { APP_TIME_ZONE, formatTime } from "@/lib/time";
+import { APP_TIME_ZONE, formatShortDate, formatTime } from "@/lib/time";
 import { readingLogged, type PhotoKind } from "@/lib/visit";
 import {
   DUE_SOON_DAYS,
@@ -163,7 +163,10 @@ export function tubProblem(
         kind: "reading",
         chip,
         chipWithDay:
-          day === dayKey(now, tz) ? chip : `${chip} ${dayParts(day).dow}`,
+          day === dayKey(now, tz)
+            ? chip
+            : // Within the week a weekday reads naturally; older, the date.
+              `${chip} ${daysBetween(day, dayKey(now, tz)) < 7 ? dayParts(day).dow : formatShortDate(last.at, tz)}`,
       };
     }
     if (last.ownerFlag?.trim())
