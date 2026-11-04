@@ -173,8 +173,8 @@ export type Database = {
       }
       invite: {
         Row: {
-          all_properties: boolean
           accepted_at: string | null
+          all_properties: boolean
           created_at: string
           email: string | null
           expires_at: string
@@ -186,8 +186,8 @@ export type Database = {
           token: string
         }
         Insert: {
-          all_properties?: boolean
           accepted_at?: string | null
+          all_properties?: boolean
           created_at?: string
           email?: string | null
           expires_at?: string
@@ -199,8 +199,8 @@ export type Database = {
           token: string
         }
         Update: {
-          all_properties?: boolean
           accepted_at?: string | null
+          all_properties?: boolean
           created_at?: string
           email?: string | null
           expires_at?: string
@@ -734,6 +734,48 @@ export type Database = {
           },
         ]
       }
+      route_stop: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day: string
+          id: string
+          org_id: string
+          property_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day: string
+          id?: string
+          org_id: string
+          property_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day?: string
+          id?: string
+          org_id?: string
+          property_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_stop_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_stop_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_item: {
         Row: {
           archived_at: string | null
@@ -933,37 +975,69 @@ export type Database = {
       task: {
         Row: {
           created_at: string
+          created_by: string | null
           due_at: string | null
           id: string
+          kind: string | null
+          note: string | null
+          opened_visit_id: string | null
           property_id: string
           recurrence: string | null
+          settled_at: string | null
+          settled_visit_id: string | null
           status: string
           title: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           due_at?: string | null
           id?: string
+          kind?: string | null
+          note?: string | null
+          opened_visit_id?: string | null
           property_id: string
           recurrence?: string | null
+          settled_at?: string | null
+          settled_visit_id?: string | null
           status?: string
           title: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           due_at?: string | null
           id?: string
+          kind?: string | null
+          note?: string | null
+          opened_visit_id?: string | null
           property_id?: string
           recurrence?: string | null
+          settled_at?: string | null
+          settled_visit_id?: string | null
           status?: string
           title?: string
         }
         Relationships: [
           {
+            foreignKeyName: "task_opened_visit_id_fkey"
+            columns: ["opened_visit_id"]
+            isOneToOne: false
+            referencedRelation: "turnover"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "task_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "property"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_settled_visit_id_fkey"
+            columns: ["settled_visit_id"]
+            isOneToOne: false
+            referencedRelation: "turnover"
             referencedColumns: ["id"]
           },
         ]
@@ -1145,10 +1219,6 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: string }
-      app_is_team: {
-        Args: { p_org: string }
-        Returns: boolean
-      }
       app_can_capture_property: {
         Args: { p_property: string }
         Returns: boolean
@@ -1161,7 +1231,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      app_is_assigned: { Args: { p_property: string }; Returns: boolean }
       app_is_member: { Args: { p_org: string }; Returns: boolean }
+      app_is_team: { Args: { p_org: string }; Returns: boolean }
+      app_sees_all_properties: { Args: { p_org: string }; Returns: boolean }
       app_shares_org: { Args: { p_user: string }; Returns: boolean }
       complete_maintenance_occurrence: {
         Args: {

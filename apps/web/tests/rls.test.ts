@@ -2077,6 +2077,140 @@ describe.skipIf(!ready)("RLS isolation", () => {
     });
   });
 
+  // ── Home status board: open items (task) + route_stop ──────────────────────
+  describe("open items and route_stop (Home board)", () => {
+    const anonClient = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as ReturnType<typeof createClient<Database>>);
+    const day = "2026-11-04";
+    let itemId: string;
+    let visitId: string;
+
+    beforeAll(async () => {
+      const { data, error } = await admin
+        .from("turnover")
+        .insert({ property_id: propAssigned, submitter_id: operatorA.id, status: "draft" })
+        .select("id")
+        .single();
+      if (error || !data) throw error ?? new Error("turnover insert failed");
+      visitId = data.id;
+    });
+
+    it("a team member leaves an open item at a visit and reads it back", async () => {
+      const { data, error } = await staffA.client
+        .from("task")
+        .insert({
+          property_id: propAssigned,
+          title: "Filters soaking",
+          kind: "filter_soak",
+          note: "Swap back in",
+          opened_visit_id: visitId,
+        })
+        .select("id, created_by, status")
+        .single();
+      expect(error).toBeNull();
+      expect(data?.created_by).toBe(staffA.id);
+      expect(data?.status).toBe("open");
+      itemId = data!.id;
+
+      const { data: seen } = await operatorA.client
+        .from("task")
+        .select("id, kind, note")
+        .eq("status", "open");
+      expect((seen ?? []).map((t) => t.id)).toContain(itemId);
+    });
+
+    it("a team member settles it", async () => {
+      const { data, error } = await operatorA.client
+        .from("task")
+        .update({
+          status: "settled",
+          settled_at: new Date().toISOString(),
+          settled_visit_id: visitId,
+        })
+        .eq("id", itemId)
+        .select("id");
+      expect(error).toBeNull();
+      expect(data ?? []).toHaveLength(1);
+    });
+
+    it("another org can't read, add or settle open items", async () => {
+      const { data } = await operatorB.client.from("task").select("id").eq("id", itemId);
+      expect(data ?? []).toHaveLength(0);
+      const { error } = await operatorB.client
+        .from("task")
+        .insert({ property_id: propAssigned, title: "Sneaky", kind: "other" });
+      expect(error).not.toBeNull();
+      const { data: upd } = await operatorB.client
+        .from("task")
+        .update({ status: "dismissed" })
+        .eq("id", itemId)
+        .select("id");
+      expect(upd ?? []).toHaveLength(0);
+    });
+
+    it("anon can't read or add open items", async () => {
+      const { data } = await anonClient.from("task").select("id").eq("id", itemId);
+      expect(data ?? []).toHaveLength(0);
+      const { error } = await anonClient
+        .from("task")
+        .insert({ property_id: propAssigned, title: "Anon", kind: "other" });
+      expect(error).not.toBeNull();
+    });
+
+    it("a team member adds a tub to today's route, reads it and removes it", async () => {
+      const { error } = await staffA.client
+        .from("route_stop")
+        .insert({ org_id: orgA, property_id: propAssigned, day });
+      expect(error).toBeNull();
+      const { data: rows } = await operatorA.client
+        .from("route_stop")
+        .select("property_id, created_by")
+        .eq("day", day);
+      expect(rows).toEqual([{ property_id: propAssigned, created_by: staffA.id }]);
+      const { data: gone, error: delErr } = await staffA.client
+        .from("route_stop")
+        .delete()
+        .eq("property_id", propAssigned)
+        .eq("day", day)
+        .select("id");
+      expect(delErr).toBeNull();
+      expect(gone ?? []).toHaveLength(1);
+    });
+
+    it("narrowed staff can't route a tub they aren't assigned to", async () => {
+      const { error } = await staffA.client
+        .from("route_stop")
+        .insert({ org_id: orgA, property_id: propUnassigned, day });
+      expect(error).not.toBeNull();
+    });
+
+    it("another org can't read or add route stops; org_id can't be spoofed", async () => {
+      await admin.from("route_stop").insert({ org_id: orgA, property_id: propAssigned, day });
+      const { data } = await operatorB.client.from("route_stop").select("id").eq("day", day);
+      expect(data ?? []).toHaveLength(0);
+      const { error } = await operatorB.client
+        .from("route_stop")
+        .insert({ org_id: orgB, property_id: propAssigned, day: "2026-11-05" });
+      expect(error).not.toBeNull();
+      const { error: spoof } = await operatorA.client
+        .from("route_stop")
+        .insert({ org_id: orgB, property_id: propUnassigned, day });
+      expect(spoof).not.toBeNull();
+    });
+
+    it("anon can't read or add route stops", async () => {
+      const { data } = await anonClient.from("route_stop").select("id");
+      expect(data ?? []).toHaveLength(0);
+      const { error } = await anonClient
+        .from("route_stop")
+        .insert({ org_id: orgA, property_id: propAssigned, day: "2026-11-06" });
+      expect(error).not.toBeNull();
+    });
+  });
+
   // ── Logins and property access (D29) ───────────────────────────────────────
   describe("Logins and property access (D29)", () => {
     let staffAll: AuthedUser;

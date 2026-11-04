@@ -5,6 +5,7 @@
 import type { ReadingField } from "@/lib/readings";
 import { READING_FIELDS } from "@/lib/readings";
 import type { CleaningStepCode } from "@/lib/types";
+import type { OpenItem } from "@/components/home/open-items";
 
 /** The three photos a visit asks for (spec §8). Extras are never prompted. */
 export type PhotoKind = "before" | "after" | "cover";
@@ -39,6 +40,9 @@ export type VisitPhoto = {
   capturedAt: string | null;
 };
 
+/** An open item on the visit screen: still open, or settled at this visit. */
+export type VisitOpenItem = OpenItem & { status: "open" | "settled" };
+
 export type VisitSnapshot = {
   visitId: string;
   propertyId: string;
@@ -56,6 +60,8 @@ export type VisitSnapshot = {
   notes: string;
   /** Text flagged for the owner; null when nothing is flagged. */
   flag: string | null;
+  /** The tub's open items, plus any settled at this visit (oldest first). */
+  openItems: VisitOpenItem[];
   /** The tub's last locked visit, for suggestions and framing. */
   previous: {
     visitId: string;

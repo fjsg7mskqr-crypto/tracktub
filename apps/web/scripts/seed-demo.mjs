@@ -10,8 +10,10 @@
 //
 // Env: SUPABASE_URL, SERVICE_ROLE_KEY, ANON_KEY (from `supabase status -o env`).
 import { createClient } from "@supabase/supabase-js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { seedWorkspace } from "./seed-lib.mjs";
+import { BEFORE_IMG, IMG_DIR, seedWorkspace } from "./seed-lib.mjs";
 
 const URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE = process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -73,7 +75,8 @@ async function main() {
 
   const { count } = await hc.from("property").select("id", { count: "exact", head: true }).eq("org_id", orgId);
   if ((count ?? 0) > 0 && !FORCE) {
-    console.log("Demo data already present — skipping (use --force to re-seed a fresh DB).");
+    console.log("Demo data already present — skipping the workspace (use --force to re-seed a fresh DB).");
+    await seedHomeBoard({ orgId, operatorId: host.id });
     return;
   }
 
@@ -95,6 +98,222 @@ async function main() {
   console.log("  equipment per property (Ridgeline heater out-of-warranty) + a shared note,");
   console.log("  supplies per property (Ridgeline 1 low, Lakeview 2 low, Pine all stocked),");
   console.log("  and a schedule calendar (upcoming turnovers + custom tasks).");
+  await seedHomeBoard({ orgId, operatorId: host.id });
+}
+
+// ── Home status board (2026-11-04) ───────────────────────────────────────────
+// Idempotent: safe to run on every start. Gives the local demo every Home
+// state — a tub with a problem, open items (incl. "Filters soaking"), a stop
+// added to today by hand, a visit in progress, a visit done today, calm tubs,
+// and drain / filter history so the care rings fill. Each piece is added only
+// when missing, so re-runs never duplicate (a settled item stays settled).
+const BOARD_MARK = "Demo care history (home board)";
+
+async function seedHomeBoard({ orgId, operatorId }) {
+  const TZ = process.env.TRACKTUB_TIME_ZONE ?? "America/Detroit";
+  const dayOf = (d) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  const today = dayOf(new Date());
+  const DAY = 86_400_000;
+  const ago = (days) => new Date(Date.now() - days * DAY).toISOString();
+  const must = (what, { error }) => {
+    if (error) throw new Error(`home board ${what}: ${error.message}`);
+  };
+  const reading = (r, at, left = null) => ({
+    total_alkalinity: r[0],
+    ph: r[1],
+    calcium_hardness: r[2],
+    sanitizer_ppm: r[3],
+    found_recorded_at: at,
+    recorded_at: at,
+    ...(left
+      ? {
+          left_total_alkalinity: left[0],
+          left_ph: left[1],
+          left_calcium_hardness: left[2],
+          left_sanitizer_ppm: left[3],
+          left_recorded_at: at,
+        }
+      : {}),
+  });
+
+  // Two calm tubs alongside the seeded three.
+  const { data: clients } = await admin.from("client").select("id, name").eq("org_id", orgId);
+  const clientId = (name) => clients?.find((c) => c.name === name)?.id ?? clients?.[0]?.id ?? null;
+  let { data: props } = await admin.from("property").select("id, name").eq("org_id", orgId);
+  for (const t of [
+    { name: "Summit View Lodge", address: "Moonridge, CA", client: "Pine & Ridge Stays" },
+    { name: "Aspen Hollow", address: "Fawnskin, CA", client: "Lakeview Rentals" },
+  ]) {
+    if (props.some((p) => p.name === t.name)) continue;
+    must(
+      `tub ${t.name}`,
+      await admin.from("property").insert({
+        org_id: orgId,
+        name: t.name,
+        address: t.address,
+        client_id: clientId(t.client),
+        volume_gallons: 400,
+      })
+    );
+  }
+  ({ data: props } = await admin.from("property").select("id, name").eq("org_id", orgId));
+  const tub = Object.fromEntries(props.map((p) => [p.name, p.id]));
+
+  const locked = async (propertyId, at, { steps = [], water = null, notes = null } = {}) => {
+    const { data, error } = await admin
+      .from("turnover")
+      .insert({
+        property_id: propertyId,
+        submitter_id: operatorId,
+        submitted_at_server: at,
+        created_at: at,
+        status: "submitted_locked",
+        share_token: crypto.randomUUID(),
+        cleaning_steps: steps,
+        notes,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`home board visit: ${error.message}`);
+    if (water)
+      must("reading", await admin.from("water_reading").insert({ turnover_id: data.id, property_id: propertyId, ...water }));
+    return data.id;
+  };
+
+  // Drain / filter history (older than every seeded visit, so the last reading
+  // is unchanged). Lakeview's drain is overdue (red ring), Aspen's is close
+  // (amber), the rest are comfortable (blue).
+  const ok = [100, 7.4, 200, 2];
+  const care = {
+    "Lakeview Cabin 4": [92, 40],
+    "Pine Chalet": [30, 50],
+    "Ridgeline A-Frame": [60, 20],
+    "Summit View Lodge": [20, 20],
+    "Aspen Hollow": [84, 30],
+  };
+  for (const [name, [drain, filter]] of Object.entries(care)) {
+    if (!tub[name]) continue;
+    const { count: has } = await admin
+      .from("turnover")
+      .select("id", { count: "exact", head: true })
+      .eq("property_id", tub[name])
+      .eq("notes", BOARD_MARK);
+    if (has) continue;
+    await locked(tub[name], ago(drain), { steps: ["drained_refilled"], water: reading(ok, ago(drain), ok), notes: BOARD_MARK });
+    await locked(tub[name], ago(filter), { steps: ["filter_replaced", "filters_cleaned"], water: reading(ok, ago(filter), ok), notes: BOARD_MARK });
+  }
+
+  // Calm tubs: Aspen balanced three days ago; Summit visited today (a done
+  // stop) and its report opened by the host.
+  const lastVisit = async (id) =>
+    (
+      await admin
+        .from("turnover")
+        .select("id, submitted_at_server")
+        .eq("property_id", id)
+        .eq("status", "submitted_locked")
+        .order("submitted_at_server", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ).data;
+  const aspenLast = await lastVisit(tub["Aspen Hollow"]);
+  if (!aspenLast || aspenLast.submitted_at_server < ago(10))
+    await locked(tub["Aspen Hollow"], ago(3), { steps: ["filters_cleaned", "wiped"], water: reading([110, 7.5, 210, 2.5], ago(3), [110, 7.5, 210, 2.5]) });
+  const summitLast = await lastVisit(tub["Summit View Lodge"]);
+  if (!summitLast || dayOf(new Date(summitLast.submitted_at_server)) !== today) {
+    const at = new Date(Date.now() - 2 * 3600_000).toISOString();
+    const id = await locked(tub["Summit View Lodge"], at, {
+      steps: ["filters_cleaned", "wiped", "cover_cleaned"],
+      water: reading([105, 7.6, 190, 1.5], at, [100, 7.4, 190, 2.5]),
+    });
+    must("share", await admin.from("proof_event").insert({ turnover_id: id, kind: "share_copied", actor_user_id: operatorId }));
+    must("open", await admin.from("share_view").insert({ turnover_id: id }));
+  }
+
+  // Open items, left at each tub's last visit.
+  const items = [
+    ["Lakeview Cabin 4", "filter_soak", "Filters soaking", "Swap back in"],
+    ["Lakeview Cabin 4", "recheck", "Re-check Alkalinity", "Left at 130"],
+    ["Pine Chalet", "part", "Part needed", "Jet cover cracked"],
+  ];
+  for (const [name, kind, title, note] of items) {
+    if (!tub[name]) continue;
+    const { count: has } = await admin
+      .from("task")
+      .select("id", { count: "exact", head: true })
+      .eq("property_id", tub[name])
+      .eq("title", title);
+    if (has) continue;
+    const last = await lastVisit(tub[name]);
+    must(
+      `item ${title}`,
+      await admin.from("task").insert({
+        property_id: tub[name],
+        kind,
+        title,
+        note,
+        status: "open",
+        opened_visit_id: last?.id ?? null,
+        created_by: operatorId,
+        created_at: last?.submitted_at_server ?? ago(2),
+      })
+    );
+  }
+
+  // Ridgeline added to today's route by hand.
+  if (tub["Ridgeline A-Frame"])
+    must(
+      "route stop",
+      await admin
+        .from("route_stop")
+        .upsert(
+          { org_id: orgId, property_id: tub["Ridgeline A-Frame"], day: today, created_by: operatorId },
+          { onConflict: "property_id,day", ignoreDuplicates: true }
+        )
+    );
+
+  // A visit in progress at Pine Chalet: before photo + reading as found.
+  const pine = tub["Pine Chalet"];
+  const { count: drafts } = await admin
+    .from("turnover")
+    .select("id", { count: "exact", head: true })
+    .eq("property_id", pine)
+    .eq("status", "draft");
+  if (pine && !drafts) {
+    const opened = new Date(Date.now() - 40 * 60_000).toISOString();
+    const { data: d, error } = await admin
+      .from("turnover")
+      .insert({
+        property_id: pine,
+        submitter_id: operatorId,
+        status: "draft",
+        created_at: opened,
+        share_token: crypto.randomUUID(),
+        cleaning_steps: [],
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`home board draft: ${error.message}`);
+    const path = `${orgId}/${d.id}/before/full_frame-${crypto.randomUUID()}.jpg`;
+    must(
+      "draft photo upload",
+      await admin.storage.from("photos").upload(path, readFileSync(join(IMG_DIR, BEFORE_IMG)), { contentType: "image/jpeg" })
+    );
+    must(
+      "draft photo",
+      await admin.from("photo").insert({
+        turnover_id: d.id,
+        storage_path: path,
+        phase: "before",
+        slot: "full_frame",
+        captured_at: opened,
+        confirmed_tags: [],
+      })
+    );
+    must("draft reading", await admin.from("water_reading").insert({ turnover_id: d.id, property_id: pine, ...reading([95, 7.6, 180, 1.0], opened) }));
+  }
+  console.log("Home board demo: problem tub, open items, a stop added to today, a visit in progress, calm tubs.");
 }
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
