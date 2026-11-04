@@ -34,11 +34,10 @@ export type OpenItem = {
   openedVisitId: string | null;
 };
 
-/** Stored title: the chip's label, or the typed text for Other. */
+/** Stored title: the typed text (Other, or a suggestion like "Re-check pH"),
+ *  else the chip's label. */
 export function openItemTitle(kind: OpenItemKind, text?: string): string {
-  const typed = text?.trim();
-  if (kind === "other" && typed) return typed;
-  return OPEN_ITEM_KINDS.find((k) => k.kind === kind)!.label;
+  return text?.trim() || OPEN_ITEM_KINDS.find((k) => k.kind === kind)!.label;
 }
 
 const SINGLE: Record<OpenItemKind, string> = {

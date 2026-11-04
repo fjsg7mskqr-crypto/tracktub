@@ -41,6 +41,7 @@ describe("openItemTitle", () => {
       "Cover strap loose"
     );
     expect(openItemTitle("other", "  ")).toBe("Other");
+    expect(openItemTitle("recheck", "Re-check pH")).toBe("Re-check pH");
   });
 });
 
