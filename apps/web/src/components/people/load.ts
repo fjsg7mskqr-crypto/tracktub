@@ -20,34 +20,22 @@ export async function loadPeople(
   isAdmin: boolean,
   now: Date = new Date()
 ): Promise<PeopleData> {
-  const [members, properties] = await Promise.all([
+  // One round of reads: profiles ride along on the membership rows, and
+  // assignments are scoped to the org through their property.
+  const [members, properties, assignments, invites] = await Promise.all([
     supabase
       .from("membership")
-      .select("user_id, role, all_properties")
+      .select("user_id, role, all_properties, profile(full_name, email)")
       .eq("org_id", orgId),
     supabase
       .from("property")
       .select("id, name")
       .eq("org_id", orgId)
       .order("name"),
-  ]);
-  if (members.error)
-    throw new Error(`Failed to load people: ${members.error.message}`);
-  if (properties.error)
-    throw new Error(`Failed to load properties: ${properties.error.message}`);
-
-  const logins = (members.data ?? []).filter((m) => m.role !== "owner");
-  const userIds = logins.map((m) => m.user_id);
-  const propIds = (properties.data ?? []).map((p) => p.id);
-
-  const [profiles, assignments, invites] = await Promise.all([
-    supabase.from("profile").select("id, full_name, email").in("id", userIds),
-    propIds.length
-      ? supabase
-          .from("staff_assignment")
-          .select("property_id, staff_user_id")
-          .in("property_id", propIds)
-      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("staff_assignment")
+      .select("property_id, staff_user_id, property!inner(org_id)")
+      .eq("property.org_id", orgId),
     isAdmin
       ? supabase
           .from("invite")
@@ -58,12 +46,15 @@ export async function loadPeople(
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
   ]);
-  if (profiles.error)
-    throw new Error(`Failed to load people: ${profiles.error.message}`);
+  if (members.error)
+    throw new Error(`Failed to load people: ${members.error.message}`);
+  if (properties.error)
+    throw new Error(`Failed to load properties: ${properties.error.message}`);
 
-  const byId = new Map((profiles.data ?? []).map((p) => [p.id, p]));
+  const logins = (members.data ?? []).filter((m) => m.role !== "owner");
+
   const people: Person[] = logins.map((m) => {
-    const pr = byId.get(m.user_id);
+    const pr = Array.isArray(m.profile) ? m.profile[0] : m.profile;
     const email = pr?.email ?? "";
     return {
       userId: m.user_id,

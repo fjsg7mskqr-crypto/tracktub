@@ -15,15 +15,16 @@ export default async function TubPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-
   const { id } = await params;
   const supabase = await createClient();
-  const tub = await loadTub(supabase, id);
+  const [membership, tub, visits] = await Promise.all([
+    getCurrentMembership(),
+    loadTub(supabase, id),
+    loadTubVisits(supabase, id),
+  ]);
+  if (!membership) redirect("/login");
   if (!tub) notFound();
 
-  const visits = await loadTubVisits(supabase, tub.id);
   const locked = visits.filter((v) => v.status === "submitted_locked");
   const last = locked.at(-1) ?? null;
   const now = new Date();

@@ -6,6 +6,8 @@ import {
   createDraft,
   findOpenDraft,
   finishVisit as finishVisitData,
+  leaveOpenItem as leaveOpenItemData,
+  setItemStatus as setItemStatusData,
   loadVisitSnapshot,
   logReading as logReadingData,
   saveAdded as saveAddedData,
@@ -16,6 +18,7 @@ import {
   type Db,
 } from "@/lib/visit-data";
 import type { ReadingKind } from "@/lib/readings";
+import type { OpenItemKind } from "@/components/home/open-items";
 import type { CleaningStepCode } from "@/lib/types";
 import {
   PHOTO_KINDS,
@@ -125,6 +128,29 @@ export async function saveFlag(
   flag: string | null
 ): Promise<VisitSnapshot> {
   return write(visitId, (db) => saveFlagData(db, visitId, flag));
+}
+
+/** "Leave for next time": an open item for the tub's next visit. */
+export async function leaveOpenItem(
+  visitId: string,
+  kind: OpenItemKind,
+  text: string,
+  note: string
+): Promise<VisitSnapshot> {
+  return write(visitId, (db) =>
+    leaveOpenItemData(db, visitId, kind, text, note)
+  );
+}
+
+/** Settle (or undo, or drop) one of the tub's open items at this visit. */
+export async function setOpenItemStatus(
+  visitId: string,
+  taskId: string,
+  status: "settled" | "open" | "dismissed"
+): Promise<VisitSnapshot> {
+  if (!["settled", "open", "dismissed"].includes(status))
+    throw new Error("Unknown status");
+  return write(visitId, (db) => setItemStatusData(db, visitId, taskId, status));
 }
 
 /** FormData: visitId, kind (before | after | cover), file, capturedAt (ISO). */

@@ -6,14 +6,12 @@ import { BackLink } from "@/components/tub/BackLink";
 
 // Add tub. Dynamic: getCurrentMembership() reads the session cookie.
 export default async function AddTubPage() {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-
   const supabase = await createClient();
-  const { data: clients, error } = await supabase
-    .from("client")
-    .select("id, name")
-    .order("name");
+  const [membership, { data: clients, error }] = await Promise.all([
+    getCurrentMembership(),
+    supabase.from("client").select("id, name").order("name"),
+  ]);
+  if (!membership) redirect("/login");
   if (error) throw new Error(`Failed to load clients: ${error.message}`);
 
   return (

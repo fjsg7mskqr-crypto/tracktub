@@ -12,6 +12,11 @@ import {
 } from "@/lib/readings";
 import { CLEANING_STEPS, type CleaningStepCode } from "@/lib/types";
 import {
+  isOpenItemKind,
+  openItemTitle,
+  type OpenItemKind,
+} from "@/components/home/open-items";
+import {
   PHOTO_KINDS,
   decodeAdded,
   encodeAdded,
@@ -19,6 +24,7 @@ import {
   type AddedProduct,
   type PhotoKind,
   type ReadingValues,
+  type VisitOpenItem,
   type VisitPhoto,
   type VisitSnapshot,
 } from "@/lib/visit";
@@ -136,6 +142,10 @@ export async function loadVisitSnapshot(
   const known = new Set<string>(CLEANING_STEPS.map((s) => s.code));
   const found = readingFrom(water, "found");
   const left = readingFrom(water, "left");
+  const [previous, openItems] = await Promise.all([
+    loadPrevious(db, t.property_id, t.id, t.created_at),
+    loadVisitItems(db, t.property_id, t.id),
+  ]);
 
   return {
     visitId: t.id,
@@ -159,8 +169,38 @@ export async function loadVisitSnapshot(
     ),
     notes: t.notes ?? "",
     flag: t.owner_flag ?? null,
-    previous: await loadPrevious(db, t.property_id, t.id, t.created_at),
+    openItems,
+    previous,
   };
+}
+
+/** The tub's open items, and those settled at this visit (so a mis-tap can be
+ *  undone). Dismissed ones are gone. */
+async function loadVisitItems(
+  db: Db,
+  propertyId: string,
+  visitId: string
+): Promise<VisitOpenItem[]> {
+  const { data } = await db
+    .from("task")
+    .select(
+      "id, property_id, kind, title, note, created_at, opened_visit_id, status"
+    )
+    .eq("property_id", propertyId)
+    .or(`status.eq.open,settled_visit_id.eq.${visitId}`)
+    .order("created_at", { ascending: true });
+  return (data ?? [])
+    .filter((t) => t.status === "open" || t.status === "settled")
+    .map((t) => ({
+      id: t.id,
+      tubId: t.property_id,
+      kind: isOpenItemKind(t.kind) ? t.kind : null,
+      title: t.title,
+      note: t.note,
+      openedAt: t.created_at,
+      openedVisitId: t.opened_visit_id,
+      status: t.status as "open" | "settled",
+    }));
 }
 
 /** The tub's last locked visit before this one. */
@@ -376,6 +416,56 @@ export async function saveFlag(
     .update({ owner_flag: text, urgent: text !== null })
     .eq("id", visitId);
   fail("flag", error);
+}
+
+// --- Open items ("Leave for next time") ---------------------------------------
+
+/** Leave an open item at this visit for a later one. */
+export async function leaveOpenItem(
+  db: Db,
+  visitId: string,
+  kind: OpenItemKind,
+  text: string,
+  note: string
+): Promise<void> {
+  const { propertyId } = await requireDraft(db, visitId);
+  if (!isOpenItemKind(kind)) throw new Error("Unknown item");
+  const { error } = await db.from("task").insert({
+    property_id: propertyId,
+    kind,
+    title: openItemTitle(kind, text),
+    note: note.trim() || null,
+    opened_visit_id: visitId,
+  });
+  fail("item", error);
+}
+
+/**
+ * Settle, reopen or remove one of this tub's items from the visit. `settled`
+ * records this visit; `open` undoes that; `dismissed` drops it (an item left
+ * by mistake, or no longer needed).
+ */
+export async function setItemStatus(
+  db: Db,
+  visitId: string,
+  taskId: string,
+  status: "settled" | "open" | "dismissed"
+): Promise<void> {
+  const { propertyId } = await requireDraft(db, visitId);
+  const patch =
+    status === "open"
+      ? { status, settled_at: null, settled_visit_id: null }
+      : {
+          status,
+          settled_at: new Date().toISOString(),
+          settled_visit_id: status === "settled" ? visitId : null,
+        };
+  const { error } = await db
+    .from("task")
+    .update(patch)
+    .eq("id", taskId)
+    .eq("property_id", propertyId);
+  fail("item", error);
 }
 
 /**

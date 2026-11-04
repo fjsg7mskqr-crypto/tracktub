@@ -39,12 +39,18 @@ function team() {
   vi.mocked(createClient).mockResolvedValue(
     fakeSupabase({
       membership: ok([
-        { user_id: "admin", role: "operator", all_properties: true },
-        { user_id: "sam", role: "staff", all_properties: false },
-      ]),
-      profile: ok([
-        { id: "admin", full_name: "Ethan Novak", email: "ethan@x.com" },
-        { id: "sam", full_name: "Sam Rivera", email: "sam@x.com" },
+        {
+          user_id: "admin",
+          role: "operator",
+          all_properties: true,
+          profile: { full_name: "Ethan Novak", email: "ethan@x.com" },
+        },
+        {
+          user_id: "sam",
+          role: "staff",
+          all_properties: false,
+          profile: { full_name: "Sam Rivera", email: "sam@x.com" },
+        },
       ]),
       property: props,
       staff_assignment: ok([
@@ -66,10 +72,12 @@ describe("/people", () => {
     vi.mocked(createClient).mockResolvedValue(
       fakeSupabase({
         membership: ok([
-          { user_id: "admin", role: "operator", all_properties: true },
-        ]),
-        profile: ok([
-          { id: "admin", full_name: "Ethan Novak", email: "ethan@x.com" },
+          {
+            user_id: "admin",
+            role: "operator",
+            all_properties: true,
+            profile: { full_name: "Ethan Novak", email: "ethan@x.com" },
+          },
         ]),
         property: props,
         staff_assignment: ok([]),
@@ -122,10 +130,12 @@ describe("/people", () => {
     vi.mocked(createClient).mockResolvedValue(
       fakeSupabase({
         membership: ok([
-          { user_id: "admin", role: "operator", all_properties: true },
-        ]),
-        profile: ok([
-          { id: "admin", full_name: "Ethan Novak", email: "ethan@x.com" },
+          {
+            user_id: "admin",
+            role: "operator",
+            all_properties: true,
+            profile: { full_name: "Ethan Novak", email: "ethan@x.com" },
+          },
         ]),
         property: props,
         staff_assignment: ok([]),

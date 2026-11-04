@@ -22,24 +22,23 @@ export type CareData = {
 };
 
 export async function loadCareData(supabase: Supabase): Promise<CareData> {
-  const tubs = await loadTubs(supabase);
-  if (tubs.length === 0) return { tubs: [], visits: [], drafts: new Map() };
-
-  const { data, error } = await supabase
-    .from("turnover")
-    .select(
+  // Both RLS-scoped to the caller's org, so the visits needn't wait for the
+  // tub ids; the id filter below keeps the result the same.
+  const [tubs, { data, error }] = await Promise.all([
+    loadTubs(supabase),
+    supabase.from("turnover").select(
       `id, property_id, status, submitted_at_server, cleaning_steps, share_token,
        water:water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm)`
-    )
-    .in(
-      "property_id",
-      tubs.map((t) => t.id)
-    );
+    ),
+  ]);
   if (error) throw new Error(`Failed to load visits: ${error.message}`);
+  if (tubs.length === 0) return { tubs: [], visits: [], drafts: new Map() };
+  const tubIds = new Set(tubs.map((t) => t.id));
 
   const visits: LoggedVisit[] = [];
   const drafts = new Map<string, string>();
   for (const t of data ?? []) {
+    if (!tubIds.has(t.property_id)) continue;
     if (t.status === "draft") {
       drafts.set(t.property_id, t.id);
       continue;
@@ -54,26 +53,4 @@ export async function loadCareData(supabase: Supabase): Promise<CareData> {
     });
   }
   return { tubs, visits, drafts };
-}
-
-/** Share and open events since `sinceIso`, for This week. */
-export async function loadShareActivity(
-  supabase: Supabase,
-  sinceIso: string
-): Promise<{
-  sent: { turnover_id: string; occurred_at: string }[];
-  opened: { turnover_id: string; opened_at: string }[];
-}> {
-  const [{ data: sent }, { data: opened }] = await Promise.all([
-    supabase
-      .from("proof_event")
-      .select("turnover_id, occurred_at")
-      .eq("kind", "share_copied")
-      .gte("occurred_at", sinceIso),
-    supabase
-      .from("share_view")
-      .select("turnover_id, opened_at")
-      .gte("opened_at", sinceIso),
-  ]);
-  return { sent: sent ?? [], opened: opened ?? [] };
 }

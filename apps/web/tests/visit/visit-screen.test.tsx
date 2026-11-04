@@ -7,7 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { VisitSnapshot } from "@/lib/visit";
+import type { VisitOpenItem, VisitSnapshot } from "@/lib/visit";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -20,6 +20,8 @@ const actions = vi.hoisted(() => ({
   logReading: vi.fn(),
   savePhoto: vi.fn(),
   finishVisit: vi.fn(),
+  leaveOpenItem: vi.fn(),
+  setOpenItemStatus: vi.fn(),
 }));
 vi.mock("@/lib/actions/visit", () => actions);
 
@@ -41,6 +43,7 @@ function snap(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
     added: [],
     notes: "",
     flag: null,
+    openItems: [],
     previous: null,
     ...over,
   };
@@ -162,5 +165,107 @@ describe("VisitScreen", () => {
     );
     expect(await screen.findByText("Cover strap torn")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Remove flag" })).toBeTruthy();
+  });
+});
+
+describe("VisitScreen — open items", () => {
+  const item = (over: Partial<VisitOpenItem> = {}): VisitOpenItem => ({
+    id: "t1",
+    tubId: "p1",
+    kind: "filter_soak",
+    title: "Filters soaking",
+    note: "Swap back in",
+    openedAt: "2026-10-24T14:00:00.000Z",
+    openedVisitId: "old",
+    status: "open",
+    ...over,
+  });
+
+  beforeEach(() => {
+    actions.setOpenItemStatus.mockReset();
+    actions.leaveOpenItem.mockReset();
+  });
+
+  it("shows the tub's open items at the top and settles one with a tap", async () => {
+    actions.setOpenItemStatus.mockResolvedValue(
+      snap({ openItems: [item({ status: "settled" })] })
+    );
+    render(<VisitScreen initial={snap({ openItems: [item()] })} />);
+    expect(screen.getAllByRole("heading", { level: 2 })[0].textContent).toBe(
+      "Left open last time · 1 to settle"
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Settled: Filters soaking" })
+    );
+    await waitFor(() =>
+      expect(actions.setOpenItemStatus).toHaveBeenCalledWith(
+        "v1",
+        "t1",
+        "settled"
+      )
+    );
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Settled: Filters soaking" })
+        .getAttribute("aria-checked")
+    ).toBe("true");
+  });
+
+  it("leaves an item for next time from a chip, with an optional note", async () => {
+    actions.leaveOpenItem.mockResolvedValue(snap());
+    render(<VisitScreen initial={snap()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Part needed" }));
+    fireEvent.change(screen.getByLabelText("Note (optional)"), {
+      target: { value: "Jet cover" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Leave it open" }));
+    await waitFor(() =>
+      expect(actions.leaveOpenItem).toHaveBeenCalledWith(
+        "v1",
+        "part",
+        "",
+        "Jet cover"
+      )
+    );
+  });
+
+  it("Other needs its text before it can be left", () => {
+    render(<VisitScreen initial={snap()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Other" }));
+    const leave = screen.getByRole("button", { name: "Leave it open" });
+    expect((leave as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("What's left open"), {
+      target: { value: "Cover strap loose" },
+    });
+    expect((leave as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("suggests a one-tap re-check when the as-left reading is out of range", async () => {
+    actions.leaveOpenItem.mockResolvedValue(snap());
+    const left = {
+      total_alkalinity: 100,
+      ph: 7.9,
+      calcium_hardness: 200,
+      sanitizer_ppm: 2,
+    };
+    render(<VisitScreen initial={snap({ left })} />);
+    fireEvent.click(screen.getByRole("button", { name: /Re-check pH/ }));
+    await waitFor(() =>
+      expect(actions.leaveOpenItem).toHaveBeenCalledWith(
+        "v1",
+        "recheck",
+        "Re-check pH",
+        "Left at 7.9"
+      )
+    );
+  });
+
+  it("open items never block finishing", async () => {
+    actions.finishVisit.mockResolvedValue({ visitId: "v1" });
+    render(<VisitScreen initial={snap({ openItems: [item()] })} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Finish & lock record" })
+    );
+    await waitFor(() => expect(actions.finishVisit).toHaveBeenCalledWith("v1"));
   });
 });
