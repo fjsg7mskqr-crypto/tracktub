@@ -38,7 +38,7 @@ describe("next.config.mjs static security headers", () => {
     // The Reporting-Endpoints header names the csp-endpoint group referenced by
     // `report-to csp-endpoint` in the per-request CSP built by middleware.
     expect(headers["Reporting-Endpoints"]).toMatch(
-      /^csp-endpoint="https:\/\/\S+sentry\.io\/api\/\d+\/security\//,
+      /^csp-endpoint="https:\/\/\S+sentry\.io\/api\/\d+\/security\//
     );
   });
 });
@@ -78,19 +78,23 @@ describe("enforcing nonce-based CSP (built per-request by middleware)", () => {
       isDev: false,
     });
     expect(csp).toContain(
-      "connect-src 'self' https://x.supabase.co wss://x.supabase.co",
+      "connect-src 'self' https://x.supabase.co wss://x.supabase.co"
     );
   });
 
   it("stays same-origin when Supabase env is missing or malformed", () => {
-    const csp = buildCsp(TEST_NONCE, { supabaseUrl: "not a url", isDev: false });
+    const csp = buildCsp(TEST_NONCE, {
+      supabaseUrl: "not a url",
+      isDev: false,
+    });
     expect(csp).toContain("connect-src 'self';");
     expect(csp).toContain("img-src 'self' data: blob:;");
   });
 
   it("allowlists the Supabase origin (only) in img-src for Storage photos", () => {
     const csp = buildCsp(TEST_NONCE, {
-      supabaseUrl: "https://x.supabase.co/storage/v1/object/public/photos/a.jpg",
+      supabaseUrl:
+        "https://x.supabase.co/storage/v1/object/public/photos/a.jpg",
       isDev: false,
     });
     expect(csp).toContain("img-src 'self' data: blob: https://x.supabase.co;");
@@ -107,11 +111,11 @@ describe("enforcing nonce-based CSP (built per-request by middleware)", () => {
     // Legacy (Safari/Firefox) + modern (Chrome) reporting, both pointed at the
     // Sentry security-header endpoint derived from the baked DSN.
     expect(csp).toMatch(
-      /report-uri https:\/\/\S+sentry\.io\/api\/\d+\/security\/\?sentry_key=\w+/,
+      /report-uri https:\/\/\S+sentry\.io\/api\/\d+\/security\/\?sentry_key=\w+/
     );
     expect(csp).toContain("report-to csp-endpoint");
     expect(reportUri).toMatch(
-      /^https:\/\/\S+sentry\.io\/api\/\d+\/security\/\?sentry_key=\w+/,
+      /^https:\/\/\S+sentry\.io\/api\/\d+\/security\/\?sentry_key=\w+/
     );
   });
 });

@@ -74,6 +74,12 @@ describe("visitHeadline", () => {
       )
     ).toBe("Found in range · left pH 8.0 · 1 photo");
   });
+
+  it("older visits' treatment codes read as labels", () => {
+    expect(visitHeadline(lv({ treatments: ["ph_down", "shock"] }))).toBe(
+      "No reading · pH Down, Shock · no photos"
+    );
+  });
 });
 
 describe("isPartial", () => {

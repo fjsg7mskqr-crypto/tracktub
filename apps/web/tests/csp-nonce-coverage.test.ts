@@ -35,8 +35,10 @@ const ALLOWED: Record<string, string> = {
   // These two are served, but degrade acceptably: static error text with no
   // interactive elements. Next does not support route segment config on the
   // built-in not-found/global-error boundaries.
-  "_not-found.html": "error shell — static text only, nothing interactive to break",
-  "_global-error.html": "error shell — static text only, nothing interactive to break",
+  "_not-found.html":
+    "error shell — static text only, nothing interactive to break",
+  "_global-error.html":
+    "error shell — static text only, nothing interactive to break",
 };
 
 async function findHtml(dir: string): Promise<string[]> {
@@ -66,9 +68,9 @@ describe("CSP nonce coverage over prerendered routes (#281)", () => {
           "any interactive component is inert — while the page still returns 200. " +
           'Fix by adding `export const dynamic = "force-dynamic";` to the route ' +
           "segment (see src/app/landing/page.tsx), or add an entry to ALLOWED here " +
-          "with a reason if the HTML genuinely never reaches a browser.",
+          "with a reason if the HTML genuinely never reaches a browser."
       ).toEqual([]);
-    },
+    }
   );
 
   it.skipIf(!existsSync(APP_DIR))(
@@ -80,6 +82,6 @@ describe("CSP nonce coverage over prerendered routes (#281)", () => {
       expect(rels).not.toContain("login.html");
       expect(rels).not.toContain("landing.html");
       expect(rels).not.toContain("blog.html");
-    },
+    }
   );
 });

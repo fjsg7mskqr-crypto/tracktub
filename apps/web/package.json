@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rls": "vitest run tests/rls.test.ts tests/visit.rls.test.ts",
+    "knip": "knip --include files,dependencies,devDependencies,unlisted,unresolved,binaries",
     "promo:status": "bash ../../scripts/promo-status.sh"
   },
   "dependencies": {
@@ -45,10 +46,12 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "16.3.0",
     "jsdom": "^29.1.1",
+    "knip": "5.88.1",
     "postcss": "^8.5.10",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3",
+    "vite": "8.2.2",
     "vitest": "4.1.10"
   }
 }

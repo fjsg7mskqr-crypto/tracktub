@@ -55,7 +55,10 @@ const securityHeaders = [
   // Lock down powerful APIs we don't use. The v1 capture flow takes photos via
   // <input type="file" capture>, which is NOT gated by this policy — only
   // getUserMedia-style live camera access would need `camera` re-opened.
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
 ];
 
 /** @type {import('next').NextConfig} */

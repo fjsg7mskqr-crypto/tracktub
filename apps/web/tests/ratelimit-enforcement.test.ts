@@ -11,7 +11,7 @@ async function runWith(denied: boolean, url: string) {
   vi.doMock("@/lib/ratelimit", async () => {
     const actual =
       await vi.importActual<typeof import("@/lib/ratelimit")>(
-        "@/lib/ratelimit",
+        "@/lib/ratelimit"
       );
     return {
       ...actual,

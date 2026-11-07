@@ -59,18 +59,6 @@ export async function startVisit(
   return { visitId };
 }
 
-/** Fresh snapshot of a visit the signed-in user can see. */
-export async function getVisitSnapshot(
-  visitId: string
-): Promise<VisitSnapshot> {
-  const db = await createClient();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-  if (!user) redirect("/login");
-  return loadVisitSnapshot(db, visitId);
-}
-
 /** Capture rights on the visit's tub, checked before every write. */
 async function requireVisitCapturer(visitId: string): Promise<Db> {
   const db = await createClient();

@@ -13,7 +13,7 @@ import { isAdminEmail } from "@/lib/admin";
  */
 async function rejectNonAdmin(
   supabase: SupabaseClient,
-  origin: string,
+  origin: string
 ): Promise<NextResponse | null> {
   if (process.env.NODE_ENV !== "production") return null;
   const {

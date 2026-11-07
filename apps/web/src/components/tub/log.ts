@@ -9,6 +9,7 @@ import {
   type ReadingField,
 } from "@/lib/readings";
 import { CLEANING_STEPS } from "@/lib/types";
+import { treatmentLabel } from "@/lib/chemistry";
 import type { HistoryVisit } from "@/lib/tub-history";
 import { READING_NAMES } from "@/components/tub/tub-status";
 
@@ -86,7 +87,8 @@ export function visitHeadline(v: LogVisit): string {
 
   const work = workLabels(v.cleaningSteps);
   if (work.length > 0) parts.push(work.join(", "));
-  if (v.treatments.length > 0) parts.push(v.treatments.join(", "));
+  if (v.treatments.length > 0)
+    parts.push(v.treatments.map(treatmentLabel).join(", "));
 
   const n = v.photos.length;
   parts.push(n === 0 ? "no photos" : `${n} ${n === 1 ? "photo" : "photos"}`);

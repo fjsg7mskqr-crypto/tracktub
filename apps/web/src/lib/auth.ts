@@ -94,11 +94,3 @@ export function getCurrentMembership(): Promise<CurrentMembership | null> {
 export function getVerifiedMembership(): Promise<CurrentMembership | null> {
   return loadMembership(true);
 }
-
-/** Redirect to `/` unless the acting user resolves to `operator`. */
-export async function requireOperator(): Promise<CurrentMembership> {
-  const membership = await getCurrentMembership();
-  if (!membership) redirect("/login");
-  if (membership.role !== "operator") redirect("/");
-  return membership;
-}

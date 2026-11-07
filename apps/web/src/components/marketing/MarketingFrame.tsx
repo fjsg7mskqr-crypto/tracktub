@@ -18,7 +18,10 @@ export function MarketingFrame({ children, active }: Props) {
         <div className="navlinks">
           <a href="/landing#why">Why it matters</a>
           <a href="/landing#how">How it works</a>
-          <Link href="/blog" className={active === "blog" ? "active" : undefined}>
+          <Link
+            href="/blog"
+            className={active === "blog" ? "active" : undefined}
+          >
             Resources
           </Link>
           <a href="/landing#pricing">Pricing</a>
@@ -44,7 +47,13 @@ export function MarketingFrame({ children, active }: Props) {
         <Link href="/blog" className="flink">
           Resources
         </Link>
-        <a className="fx" href="https://x.com/tracktub" target="_blank" rel="noopener noreferrer" aria-label="TrackTub on X">
+        <a
+          className="fx"
+          href="https://x.com/tracktub"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="TrackTub on X"
+        >
           <svg viewBox="0 0 24 24" width="15" height="15">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
