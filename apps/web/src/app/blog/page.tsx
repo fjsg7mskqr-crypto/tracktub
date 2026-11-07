@@ -20,14 +20,19 @@ export default function BlogIndexPage() {
         <span className="eyebrow">Resources</span>
         <h1>Hot tub operations for STR hosts</h1>
         <p>
-          Practical guides on turnover routines, documentation, and keeping your rental hot tub
-          guest-ready — written for self-managed operators, not spa hobbyists.
+          Practical guides on turnover routines, documentation, and keeping your
+          rental hot tub guest-ready — written for self-managed operators, not
+          spa hobbyists.
         </p>
       </div>
 
       <div className="blist">
         {posts.map((post) => (
-          <Link key={post.slug} href={`/blog/${post.slug}`} className="glass bcard">
+          <Link
+            key={post.slug}
+            href={`/blog/${post.slug}`}
+            className="glass bcard"
+          >
             <div className="meta">
               {post.pillar && <span className="pill">{post.pillar}</span>}
               <time dateTime={post.publishedAt}>

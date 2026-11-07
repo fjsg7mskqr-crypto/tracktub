@@ -9,7 +9,7 @@ describe("normalizeEmail", () => {
   it("accepts ordinary addresses", () => {
     expect(normalizeEmail("a@b.co")).toBe("a@b.co");
     expect(normalizeEmail("first.last+tag@host.example.com")).toBe(
-      "first.last+tag@host.example.com",
+      "first.last+tag@host.example.com"
     );
   });
 

@@ -63,8 +63,7 @@ export interface BuildCspOptions {
  */
 export function buildCsp(nonce: string, opts: BuildCspOptions = {}): string {
   const isDev = opts.isDev ?? process.env.NODE_ENV === "development";
-  const reportUri =
-    "reportUri" in opts ? opts.reportUri : getCspReportUri();
+  const reportUri = "reportUri" in opts ? opts.reportUri : getCspReportUri();
   const imgOrigin = supabaseOrigin(opts.supabaseUrl);
 
   const directives = [

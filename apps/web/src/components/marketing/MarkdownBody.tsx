@@ -13,7 +13,9 @@ export function MarkdownBody({ content }: { content: string }) {
             return (
               <a
                 href={href}
-                {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                {...(external
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
               >
                 {children}
               </a>

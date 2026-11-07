@@ -20,7 +20,7 @@ export function parseAdminEmails(raw: string | undefined): string[] {
 /** True when `email` is on the `ADMIN_EMAILS` allowlist. Empty/absent → false. */
 export function isAdminEmail(
   email: string | null | undefined,
-  raw: string | undefined = process.env.ADMIN_EMAILS,
+  raw: string | undefined = process.env.ADMIN_EMAILS
 ): boolean {
   if (!email) return false;
   return parseAdminEmails(raw).includes(email.toLowerCase());

@@ -47,3 +47,6 @@ vault/
 
 # Local dev-server pid file written by ~/bin/tt-up
 .tt-dev.pid
+
+# Supabase CLI per-machine state
+apps/web/supabase/.temp/

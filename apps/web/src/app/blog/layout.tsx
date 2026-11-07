@@ -7,6 +7,10 @@ import "./blog.css";
 // scripts are blocked (no hydration, no client routing, no analytics).
 export const dynamic = "force-dynamic";
 
-export default function BlogLayout({ children }: { children: React.ReactNode }) {
+export default function BlogLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return <div className="tt-landing tt-blog">{children}</div>;
 }

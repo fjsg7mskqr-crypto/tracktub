@@ -16,17 +16,22 @@ import { fileURLToPath } from "node:url";
 import { BEFORE_IMG, IMG_DIR, seedWorkspace } from "./seed-lib.mjs";
 
 const URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SERVICE = process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE =
+  process.env.SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANON = process.env.ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const FORCE = process.argv.includes("--force");
 
 if (!URL || !SERVICE || !ANON) {
-  console.error("Missing SUPABASE_URL / SERVICE_ROLE_KEY / ANON_KEY. Run via tt-demo.");
+  console.error(
+    "Missing SUPABASE_URL / SERVICE_ROLE_KEY / ANON_KEY. Run via tt-demo."
+  );
   process.exit(1);
 }
 if (!/127\.0\.0\.1|localhost/.test(URL)) {
   console.error(`Refusing to seed a non-local URL: ${URL}`);
-  console.error("For production, use scripts/seed-prod.mjs with --prod-i-mean-it.");
+  console.error(
+    "For production, use scripts/seed-prod.mjs with --prod-i-mean-it."
+  );
   process.exit(1);
 }
 
@@ -35,9 +40,15 @@ if (!DEMO_PASSWORD) {
   console.error("Missing DEMO_PASSWORD. Run via tt-demo (it generates one).");
   process.exit(1);
 }
-const HOST = { email: "demo-host@tracktub.test", password: DEMO_PASSWORD, name: "Ethan (demo host)" };
+const HOST = {
+  email: "demo-host@tracktub.test",
+  password: DEMO_PASSWORD,
+  name: "Ethan (demo host)",
+};
 
-const admin = createClient(URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
+const admin = createClient(URL, SERVICE, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 async function ensureUser({ email, password, name }) {
   const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
@@ -54,7 +65,9 @@ async function ensureUser({ email, password, name }) {
 }
 
 async function authed({ email, password }) {
-  const c = createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } });
+  const c = createClient(URL, ANON, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
   const { error } = await c.auth.signInWithPassword({ email, password });
   if (error) throw new Error(`sign-in failed for ${email}: ${error.message}`);
   return c;
@@ -70,12 +83,20 @@ async function main() {
     .eq("user_id", host.id)
     .eq("role", "operator")
     .single();
-  if (memErr || !mem) throw new Error(`host org lookup: ${memErr?.message ?? "no operator membership"}`);
+  if (memErr || !mem)
+    throw new Error(
+      `host org lookup: ${memErr?.message ?? "no operator membership"}`
+    );
   const orgId = mem.org_id;
 
-  const { count } = await hc.from("property").select("id", { count: "exact", head: true }).eq("org_id", orgId);
+  const { count } = await hc
+    .from("property")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId);
   if ((count ?? 0) > 0 && !FORCE) {
-    console.log("Demo data already present — skipping the workspace (use --force to re-seed a fresh DB).");
+    console.log(
+      "Demo data already present — skipping the workspace (use --force to re-seed a fresh DB)."
+    );
     await seedHomeBoard({ orgId, operatorId: host.id });
     return;
   }
@@ -92,11 +113,21 @@ async function main() {
   console.log("Seeded demo workspace 'Cascade Stays':");
   console.log(`  host: ${HOST.email}`);
   console.log("  Sign in with the 'Sign in to demo' button on /login.");
-  console.log("  3 properties; chemistry: Lakeview = shock due + low sanitizer,");
-  console.log("  Pine Chalet = low sanitizer dip, Ridgeline = healthy (multi-point trends).");
-  console.log("  before/after photo sets, shared proof links + recipient opens,");
-  console.log("  equipment per property (Ridgeline heater out-of-warranty) + a shared note,");
-  console.log("  supplies per property (Ridgeline 1 low, Lakeview 2 low, Pine all stocked),");
+  console.log(
+    "  3 properties; chemistry: Lakeview = shock due + low sanitizer,"
+  );
+  console.log(
+    "  Pine Chalet = low sanitizer dip, Ridgeline = healthy (multi-point trends)."
+  );
+  console.log(
+    "  before/after photo sets, shared proof links + recipient opens,"
+  );
+  console.log(
+    "  equipment per property (Ridgeline heater out-of-warranty) + a shared note,"
+  );
+  console.log(
+    "  supplies per property (Ridgeline 1 low, Lakeview 2 low, Pine all stocked),"
+  );
   console.log("  and a schedule calendar (upcoming turnovers + custom tasks).");
   await seedHomeBoard({ orgId, operatorId: host.id });
 }
@@ -112,7 +143,12 @@ const BOARD_MARK = "Demo care history (home board)";
 async function seedHomeBoard({ orgId, operatorId }) {
   const TZ = process.env.TRACKTUB_TIME_ZONE ?? "America/Detroit";
   const dayOf = (d) =>
-    new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(d);
   const today = dayOf(new Date());
   const DAY = 86_400_000;
   const ago = (days) => new Date(Date.now() - days * DAY).toISOString();
@@ -138,12 +174,27 @@ async function seedHomeBoard({ orgId, operatorId }) {
   });
 
   // Two calm tubs alongside the seeded three.
-  const { data: clients } = await admin.from("client").select("id, name").eq("org_id", orgId);
-  const clientId = (name) => clients?.find((c) => c.name === name)?.id ?? clients?.[0]?.id ?? null;
-  let { data: props } = await admin.from("property").select("id, name").eq("org_id", orgId);
+  const { data: clients } = await admin
+    .from("client")
+    .select("id, name")
+    .eq("org_id", orgId);
+  const clientId = (name) =>
+    clients?.find((c) => c.name === name)?.id ?? clients?.[0]?.id ?? null;
+  let { data: props } = await admin
+    .from("property")
+    .select("id, name")
+    .eq("org_id", orgId);
   for (const t of [
-    { name: "Summit View Lodge", address: "Moonridge, CA", client: "Pine & Ridge Stays" },
-    { name: "Aspen Hollow", address: "Fawnskin, CA", client: "Lakeview Rentals" },
+    {
+      name: "Summit View Lodge",
+      address: "Moonridge, CA",
+      client: "Pine & Ridge Stays",
+    },
+    {
+      name: "Aspen Hollow",
+      address: "Fawnskin, CA",
+      client: "Lakeview Rentals",
+    },
   ]) {
     if (props.some((p) => p.name === t.name)) continue;
     must(
@@ -157,10 +208,17 @@ async function seedHomeBoard({ orgId, operatorId }) {
       })
     );
   }
-  ({ data: props } = await admin.from("property").select("id, name").eq("org_id", orgId));
+  ({ data: props } = await admin
+    .from("property")
+    .select("id, name")
+    .eq("org_id", orgId));
   const tub = Object.fromEntries(props.map((p) => [p.name, p.id]));
 
-  const locked = async (propertyId, at, { steps = [], water = null, notes = null } = {}) => {
+  const locked = async (
+    propertyId,
+    at,
+    { steps = [], water = null, notes = null } = {}
+  ) => {
     const { data, error } = await admin
       .from("turnover")
       .insert({
@@ -177,7 +235,12 @@ async function seedHomeBoard({ orgId, operatorId }) {
       .single();
     if (error) throw new Error(`home board visit: ${error.message}`);
     if (water)
-      must("reading", await admin.from("water_reading").insert({ turnover_id: data.id, property_id: propertyId, ...water }));
+      must(
+        "reading",
+        await admin
+          .from("water_reading")
+          .insert({ turnover_id: data.id, property_id: propertyId, ...water })
+      );
     return data.id;
   };
 
@@ -200,8 +263,16 @@ async function seedHomeBoard({ orgId, operatorId }) {
       .eq("property_id", tub[name])
       .eq("notes", BOARD_MARK);
     if (has) continue;
-    await locked(tub[name], ago(drain), { steps: ["drained_refilled"], water: reading(ok, ago(drain), ok), notes: BOARD_MARK });
-    await locked(tub[name], ago(filter), { steps: ["filter_replaced", "filters_cleaned"], water: reading(ok, ago(filter), ok), notes: BOARD_MARK });
+    await locked(tub[name], ago(drain), {
+      steps: ["drained_refilled"],
+      water: reading(ok, ago(drain), ok),
+      notes: BOARD_MARK,
+    });
+    await locked(tub[name], ago(filter), {
+      steps: ["filter_replaced", "filters_cleaned"],
+      water: reading(ok, ago(filter), ok),
+      notes: BOARD_MARK,
+    });
   }
 
   // Calm tubs: Aspen balanced three days ago; Summit visited today (a done
@@ -219,15 +290,28 @@ async function seedHomeBoard({ orgId, operatorId }) {
     ).data;
   const aspenLast = await lastVisit(tub["Aspen Hollow"]);
   if (!aspenLast || aspenLast.submitted_at_server < ago(10))
-    await locked(tub["Aspen Hollow"], ago(3), { steps: ["filters_cleaned", "wiped"], water: reading([110, 7.5, 210, 2.5], ago(3), [110, 7.5, 210, 2.5]) });
+    await locked(tub["Aspen Hollow"], ago(3), {
+      steps: ["filters_cleaned", "wiped"],
+      water: reading([110, 7.5, 210, 2.5], ago(3), [110, 7.5, 210, 2.5]),
+    });
   const summitLast = await lastVisit(tub["Summit View Lodge"]);
-  if (!summitLast || dayOf(new Date(summitLast.submitted_at_server)) !== today) {
+  if (
+    !summitLast ||
+    dayOf(new Date(summitLast.submitted_at_server)) !== today
+  ) {
     const at = new Date(Date.now() - 2 * 3600_000).toISOString();
     const id = await locked(tub["Summit View Lodge"], at, {
       steps: ["filters_cleaned", "wiped", "cover_cleaned"],
       water: reading([105, 7.6, 190, 1.5], at, [100, 7.4, 190, 2.5]),
     });
-    must("share", await admin.from("proof_event").insert({ turnover_id: id, kind: "share_copied", actor_user_id: operatorId }));
+    must(
+      "share",
+      await admin.from("proof_event").insert({
+        turnover_id: id,
+        kind: "share_copied",
+        actor_user_id: operatorId,
+      })
+    );
     must("open", await admin.from("share_view").insert({ turnover_id: id }));
   }
 
@@ -265,12 +349,15 @@ async function seedHomeBoard({ orgId, operatorId }) {
   if (tub["Ridgeline A-Frame"])
     must(
       "route stop",
-      await admin
-        .from("route_stop")
-        .upsert(
-          { org_id: orgId, property_id: tub["Ridgeline A-Frame"], day: today, created_by: operatorId },
-          { onConflict: "property_id,day", ignoreDuplicates: true }
-        )
+      await admin.from("route_stop").upsert(
+        {
+          org_id: orgId,
+          property_id: tub["Ridgeline A-Frame"],
+          day: today,
+          created_by: operatorId,
+        },
+        { onConflict: "property_id,day", ignoreDuplicates: true }
+      )
     );
 
   // A visit in progress at Pine Chalet: before photo + reading as found.
@@ -298,7 +385,11 @@ async function seedHomeBoard({ orgId, operatorId }) {
     const path = `${orgId}/${d.id}/before/full_frame-${crypto.randomUUID()}.jpg`;
     must(
       "draft photo upload",
-      await admin.storage.from("photos").upload(path, readFileSync(join(IMG_DIR, BEFORE_IMG)), { contentType: "image/jpeg" })
+      await admin.storage
+        .from("photos")
+        .upload(path, readFileSync(join(IMG_DIR, BEFORE_IMG)), {
+          contentType: "image/jpeg",
+        })
     );
     must(
       "draft photo",
@@ -311,9 +402,18 @@ async function seedHomeBoard({ orgId, operatorId }) {
         confirmed_tags: [],
       })
     );
-    must("draft reading", await admin.from("water_reading").insert({ turnover_id: d.id, property_id: pine, ...reading([95, 7.6, 180, 1.0], opened) }));
+    must(
+      "draft reading",
+      await admin.from("water_reading").insert({
+        turnover_id: d.id,
+        property_id: pine,
+        ...reading([95, 7.6, 180, 1.0], opened),
+      })
+    );
   }
-  console.log("Home board demo: problem tub, open items, a stop added to today, a visit in progress, calm tubs.");
+  console.log(
+    "Home board demo: problem tub, open items, a stop added to today, a visit in progress, calm tubs."
+  );
 }
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
