@@ -1,5 +1,5 @@
 import path from "node:path";
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 // NOTE: cleanEnv and sentryCspReportUri below intentionally duplicate logic
 // from src/lib/csp.ts (getCspReportUri / cleanEnv). next.config.mjs is
