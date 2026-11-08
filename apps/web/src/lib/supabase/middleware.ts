@@ -47,7 +47,7 @@ const PUBLIC_PATHS = [
  */
 export async function updateSession(
   request: NextRequest,
-  extraRequestHeaders?: Record<string, string>,
+  extraRequestHeaders?: Record<string, string>
 ) {
   // Build the headers that Next.js will forward to server components.
   // Copying all existing headers preserves cookies/auth state; extra headers
@@ -68,7 +68,7 @@ export async function updateSession(
   if (bucket) {
     const { success, reset } = await checkRateLimit(
       bucket,
-      getClientIp(request.headers),
+      getClientIp(request.headers)
     );
     if (!success) return tooManyRequests(reset);
   }
@@ -81,7 +81,7 @@ export async function updateSession(
   const env = getEnvSafe();
   if (!env) {
     console.warn(
-      "[middleware] Supabase env not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY); skipping session refresh and auth gating.",
+      "[middleware] Supabase env not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY); skipping session refresh and auth gating."
     );
     return response;
   }
@@ -100,9 +100,11 @@ export async function updateSession(
         getAll: () => request.cookies.getAll(),
         setAll: (toSet) => {
           toSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request: { headers: forwardHeaders } });
+          response = NextResponse.next({
+            request: { headers: forwardHeaders },
+          });
           toSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, options)
           );
         },
       },
@@ -145,7 +147,9 @@ export async function updateSession(
       // Carry any cookies refreshed above onto the redirect, matching the
       // canonical Supabase middleware (harmless today, correct if logic changes).
       const redirect = NextResponse.redirect(url);
-      response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+      response.cookies
+        .getAll()
+        .forEach((cookie) => redirect.cookies.set(cookie));
       return redirect;
     }
 
@@ -158,7 +162,7 @@ export async function updateSession(
     Sentry.captureException(err);
     console.error(
       "[middleware] Supabase session check failed; passing the request through to avoid a site-wide 500. Check NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY:",
-      err,
+      err
     );
     return response;
   }

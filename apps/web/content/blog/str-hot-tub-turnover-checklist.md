@@ -8,7 +8,7 @@ author: "TrackTub Team"
 
 A neglected hot tub is a health hazard, a liability risk, and a review killer. For short-term rental operators, the tub is often the **highest-earning amenity per square foot** — and one of the most expensive to repair when something goes wrong.
 
-The good news: between-guest maintenance is manageable when you follow the same protocol every turnover. The [Short Term Shop hot tub guide](https://theshorttermshop.com/hot-tub-guide-short-term-rental/) puts typical between-guest work at **15–20 minutes**. This checklist adapts industry guidance for self-managed STR hosts who need the tub guest-ready *and* defensible if a guest or owner questions it later.
+The good news: between-guest maintenance is manageable when you follow the same protocol every turnover. The [Short Term Shop hot tub guide](https://theshorttermshop.com/hot-tub-guide-short-term-rental/) puts typical between-guest work at **15–20 minutes**. This checklist adapts industry guidance for self-managed STR hosts who need the tub guest-ready _and_ defensible if a guest or owner questions it later.
 
 ## Why every turnover matters
 
@@ -68,13 +68,13 @@ Camera-roll photos help operationally, but they are weak as **dispute evidence**
 
 Industry operators keep a maintenance log whether they use paper or software. At minimum, record:
 
-| Field | Why it matters |
-| --- | --- |
-| Date and time | Proves when the tub was serviced relative to check-in |
-| Sanitizer + pH readings | Shows water was in safe ranges |
-| Actions taken (shock, filter rinse, etc.) | Demonstrates response, not neglect |
-| Who performed the service | Accountability for staff handoffs |
-| Drain / deep-clean dates | Proves long-cycle maintenance |
+| Field                                     | Why it matters                                        |
+| ----------------------------------------- | ----------------------------------------------------- |
+| Date and time                             | Proves when the tub was serviced relative to check-in |
+| Sanitizer + pH readings                   | Shows water was in safe ranges                        |
+| Actions taken (shock, filter rinse, etc.) | Demonstrates response, not neglect                    |
+| Who performed the service                 | Accountability for staff handoffs                     |
+| Drain / deep-clean dates                  | Proves long-cycle maintenance                         |
 
 The [CDC toolkit](https://www.cdc.gov/healthy-swimming/toolkit/operating-public-pools-hot-tubs-and-splash-pads.html) explicitly recommends **accurate records of disinfectant/pH measurements and maintenance activities**. When a guest claims the tub was dirty or unsafe, "I think we checked it" loses to a dated log every time.
 
@@ -110,4 +110,4 @@ The checklist only works if whoever does the turnover actually runs it. Tips for
 
 ---
 
-*TrackTub is built for self-managed STR hosts who want guest-ready peace of mind first — and a record to show when anyone asks. [Join the early-access list](/landing#join) to capture guided turnover records with server timestamps, camera-only photos, and one-tap share links.*
+_TrackTub is built for self-managed STR hosts who want guest-ready peace of mind first — and a record to show when anyone asks. [Join the early-access list](/landing#join) to capture guided turnover records with server timestamps, camera-only photos, and one-tap share links._

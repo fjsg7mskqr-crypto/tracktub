@@ -28,7 +28,9 @@ const PATHS: Record<IconName, ReactNode> = {
       <circle cx="12" cy="13" r="3.2" />
     </>
   ),
-  droplet: <path d="M12 3.4c3 3.9 5.6 6.5 5.6 9.6a5.6 5.6 0 0 1-11.2 0c0-3.1 2.6-5.7 5.6-9.6z" />,
+  droplet: (
+    <path d="M12 3.4c3 3.9 5.6 6.5 5.6 9.6a5.6 5.6 0 0 1-11.2 0c0-3.1 2.6-5.7 5.6-9.6z" />
+  ),
   gauge: (
     <>
       <path d="M4 17a8 8 0 1 1 16 0" />
@@ -104,7 +106,9 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M13 3.5V8.5h5" />
     </>
   ),
-  sparkle: <path d="M12 4l1.7 4.6L18 10l-4.3 1.4L12 16l-1.7-4.6L6 10l4.3-1.4z" />,
+  sparkle: (
+    <path d="M12 4l1.7 4.6L18 10l-4.3 1.4L12 16l-1.7-4.6L6 10l4.3-1.4z" />
+  ),
   reset: (
     <>
       <path d="M19.5 8.5A7 7 0 1 0 20.8 14" />

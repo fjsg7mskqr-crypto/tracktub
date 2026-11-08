@@ -13,10 +13,31 @@ export function Lockup({ className }: { className?: string }) {
       aria-label="TrackTub"
     >
       <g transform="translate(-24.346 -19.477) scale(2.4346)">
-        <path d="M10 42 q5.5 -3.5 11 0 t11 0 t11 0 t11 0" stroke="#3B82F6" strokeWidth="2" fill="none" />
-        <path d="M14 48 q5 -2.2 10 0 t10 0 t10 0 t10 0" stroke="#3B82F6" strokeWidth="1.2" fill="none" opacity="0.55" />
-        <path d="M16 24 L26 34" stroke="#EDEDEF" strokeWidth="5.5" strokeLinecap="square" />
-        <path d="M26 34 L48 10" stroke="#EDEDEF" strokeWidth="5.5" strokeLinecap="square" />
+        <path
+          d="M10 42 q5.5 -3.5 11 0 t11 0 t11 0 t11 0"
+          stroke="#3B82F6"
+          strokeWidth="2"
+          fill="none"
+        />
+        <path
+          d="M14 48 q5 -2.2 10 0 t10 0 t10 0 t10 0"
+          stroke="#3B82F6"
+          strokeWidth="1.2"
+          fill="none"
+          opacity="0.55"
+        />
+        <path
+          d="M16 24 L26 34"
+          stroke="#EDEDEF"
+          strokeWidth="5.5"
+          strokeLinecap="square"
+        />
+        <path
+          d="M26 34 L48 10"
+          stroke="#EDEDEF"
+          strokeWidth="5.5"
+          strokeLinecap="square"
+        />
       </g>
       <g transform="translate(107.122 16.622)">
         <g transform="translate(-4.053 72.754)">
@@ -35,7 +56,13 @@ export function Lockup({ className }: { className?: string }) {
 }
 
 /** The mark — verified check on a waterline. */
-export function Mark({ className, label }: { className?: string; label?: string }) {
+export function Mark({
+  className,
+  label,
+}: {
+  className?: string;
+  label?: string;
+}) {
   return (
     <svg
       className={className}
@@ -44,16 +71,43 @@ export function Mark({ className, label }: { className?: string; label?: string 
       role="img"
       aria-label={label ?? "TrackTub"}
     >
-      <path d="M10 42 q5.5 -3.5 11 0 t11 0 t11 0 t11 0" stroke="#3B82F6" strokeWidth="2" fill="none" />
-      <path d="M14 48 q5 -2.2 10 0 t10 0 t10 0 t10 0" stroke="#3B82F6" strokeWidth="1.2" fill="none" opacity="0.55" />
-      <path d="M16 24 L26 34" stroke="#EDEDEF" strokeWidth="5.5" strokeLinecap="square" />
-      <path d="M26 34 L48 10" stroke="#EDEDEF" strokeWidth="5.5" strokeLinecap="square" />
+      <path
+        d="M10 42 q5.5 -3.5 11 0 t11 0 t11 0 t11 0"
+        stroke="#3B82F6"
+        strokeWidth="2"
+        fill="none"
+      />
+      <path
+        d="M14 48 q5 -2.2 10 0 t10 0 t10 0 t10 0"
+        stroke="#3B82F6"
+        strokeWidth="1.2"
+        fill="none"
+        opacity="0.55"
+      />
+      <path
+        d="M16 24 L26 34"
+        stroke="#EDEDEF"
+        strokeWidth="5.5"
+        strokeLinecap="square"
+      />
+      <path
+        d="M26 34 L48 10"
+        stroke="#EDEDEF"
+        strokeWidth="5.5"
+        strokeLinecap="square"
+      />
     </svg>
   );
 }
 
 /** The waterline device — a wavy blue line used as motif/divider. */
-export function Waterline({ strokeWidth = 1.4, style }: { strokeWidth?: number; style?: CSSProperties }) {
+export function Waterline({
+  strokeWidth = 1.4,
+  style,
+}: {
+  strokeWidth?: number;
+  style?: CSSProperties;
+}) {
   return (
     <svg
       viewBox="0 0 256 16"

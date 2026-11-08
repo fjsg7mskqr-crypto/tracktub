@@ -74,8 +74,3 @@ export async function settleOpenItem(
 ): Promise<void> {
   await closeItem(taskId, { status: "settled", settled_visit_id: visitId });
 }
-
-/** No longer needed. */
-export async function dismissOpenItem(taskId: string): Promise<void> {
-  await closeItem(taskId, { status: "dismissed" });
-}

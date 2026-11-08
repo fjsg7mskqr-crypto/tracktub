@@ -26,7 +26,8 @@ export function getEnv() {
   const SUPABASE_URL = clean(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const SUPABASE_ANON_KEY = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   if (!SUPABASE_URL) throw new Error("Missing env NEXT_PUBLIC_SUPABASE_URL");
-  if (!SUPABASE_ANON_KEY) throw new Error("Missing env NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  if (!SUPABASE_ANON_KEY)
+    throw new Error("Missing env NEXT_PUBLIC_SUPABASE_ANON_KEY");
   return { SUPABASE_URL, SUPABASE_ANON_KEY };
 }
 

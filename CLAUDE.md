@@ -8,11 +8,11 @@ TrackTub — the dispute-grade **evidence layer for short-term-rental hot-tub
 turnovers** (B2B SaaS). Source of truth for product decisions: `docs/PRD.md`.
 Brand/visual spec: `branding/` (minimal/sharp, dark-first, Inter + JetBrains Mono).
 
-**Current phase (build-first):** the app in `apps/web` is a clickable thin-MVP
-**demo** (Next.js 15, localStorage, no backend) — it is the **UX/design
-reference only**. v1 is a **fresh schema-first rebuild on Supabase**
-(Postgres + RLS + Auth + Storage + server timestamps + audit log), built on a
-feature branch. Do not treat the demo as the real codebase.
+**Current state:** `apps/web` is the live app on **tracktub.com** — Next.js 16
+(read `apps/web/AGENTS.md` before writing Next code) on Supabase (Postgres + RLS +
+Auth + Storage). Design source of truth for the app surface:
+`docs/superpowers/specs/2026-10-27-app-rebuild-design.md` plus later specs in
+`docs/superpowers/specs/`.
 
 ## Repo layout
 - `apps/web` — Next.js app (the only app today).
@@ -51,7 +51,7 @@ feature branch (in a worktree)
  test   staging — deploys to the test branch/preview URL
    │  promote (PR, fast-forward) after QA
    ▼
- prod   PRODUCTION — Vercel "Production Branch" = `prod`; reaches the live site (tracktub.vercel.app)
+ prod   PRODUCTION — Vercel "Production Branch" = `prod`; reaches the live site (tracktub.com)
 ```
 - **main** — everything lands here via PR. Never edited directly. Deploys
   **Preview** builds only — **`main` is NOT production.** Production must never
@@ -128,8 +128,10 @@ publishes the live site. This only works because Vercel's **Production Branch**
 setting is `prod` (not `main`) — verify that before relying on a release.
 
 ## Quality gate
-Before opening a PR, locally: `npm run lint && npm run typecheck && npm run build`
-(from `apps/web`). CI runs the same on every PR; the `web (lint · typecheck ·
+Before opening a PR, locally (from `apps/web`):
+`npm run lint && npm run format:check && npm run knip && npm run typecheck && npm test && npm run build`.
+`knip` fails on unused files or dependencies — delete dead code rather than
+keeping it "for later" (git history has it). CI runs the same on every PR; the `web (lint · typecheck ·
 build)` check is required to merge to any protected branch.
 
 ## Conventions

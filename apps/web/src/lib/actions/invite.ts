@@ -87,34 +87,3 @@ export async function revokeInviteAction(
   revalidatePath("/people");
   return { ok: true };
 }
-
-export type ResendInviteResult =
-  { ok: true; token: string } | { ok: false; error: string };
-
-/** Operator-only: regenerate a pending invite's token + bump its expiry. */
-export async function resendInviteAction(
-  inviteId: string
-): Promise<ResendInviteResult> {
-  const membership = await getVerifiedMembership();
-  if (membership?.role !== "operator") {
-    return { ok: false, error: "Only the admin can resend invites." };
-  }
-  const supabase = await createClient();
-  const token = randomUUID();
-  const expiresAt = new Date(
-    Date.now() + 14 * 24 * 60 * 60 * 1000
-  ).toISOString();
-  const { data, error } = await supabase
-    .from("invite")
-    .update({ token, expires_at: expiresAt, accepted_at: null })
-    .eq("id", inviteId)
-    .select("token")
-    .single();
-  if (error || !data) {
-    return {
-      ok: false,
-      error: error?.message ?? "Could not resend the invite.",
-    };
-  }
-  return { ok: true, token: data.token };
-}

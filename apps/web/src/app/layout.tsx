@@ -1,10 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Archivo,
-  Inter,
-  JetBrains_Mono,
-  Space_Grotesk,
-} from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "./app-tokens.css";
 import { Shell } from "@/components/Shell";
@@ -12,29 +7,32 @@ import { Analytics } from "@/components/Analytics";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { getURL } from "@/lib/url";
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+// Self-hosted (Fontsource variable builds, latin, OFL — see ./fonts) so the
+// build never fetches from Google Fonts; that fetch flaked CI and blocked a
+// release.
+const inter = localFont({
+  src: "./fonts/inter-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-inter",
   display: "swap",
 });
-const jbMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const jbMono = localFont({
+  src: "./fonts/jetbrains-mono-latin-wght-normal.woff2",
+  weight: "100 800",
   variable: "--font-jbmono",
   display: "swap",
 });
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+const spaceGrotesk = localFont({
+  src: "./fonts/space-grotesk-latin-wght-normal.woff2",
+  weight: "300 700",
   variable: "--font-space",
   display: "swap",
 });
 // Signed-in app only — applied via `.tt-app` (app-tokens.css), so /landing and
 // /blog keep their own type.
-const archivo = Archivo({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const archivo = localFont({
+  src: "./fonts/archivo-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-archivo",
   display: "swap",
 });

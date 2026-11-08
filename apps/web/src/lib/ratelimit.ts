@@ -21,13 +21,15 @@ export type RateLimitBucket = "login" | "callback" | "waitlist" | "proof";
 
 // Generous windows: a scripted burst trips them; ordinary interactive use never
 // does. Per-IP, sliding window.
-const LIMITS: Record<RateLimitBucket, { tokens: number; window: `${number} s` }> =
-  {
-    login: { tokens: 10, window: "60 s" },
-    callback: { tokens: 10, window: "60 s" },
-    waitlist: { tokens: 5, window: "60 s" },
-    proof: { tokens: 30, window: "60 s" },
-  };
+const LIMITS: Record<
+  RateLimitBucket,
+  { tokens: number; window: `${number} s` }
+> = {
+  login: { tokens: 10, window: "60 s" },
+  callback: { tokens: 10, window: "60 s" },
+  waitlist: { tokens: 5, window: "60 s" },
+  proof: { tokens: 30, window: "60 s" },
+};
 
 // `undefined` = not yet resolved; `null` = resolved-but-unconfigured (no-op).
 let limiters: Record<RateLimitBucket, Ratelimit> | null | undefined;
@@ -48,12 +50,12 @@ function getLimiters(): Record<RateLimitBucket, Ratelimit> | null {
         redis,
         limiter: Ratelimit.slidingWindow(
           LIMITS[bucket].tokens,
-          LIMITS[bucket].window,
+          LIMITS[bucket].window
         ),
         prefix: `tt:rl:${bucket}`,
         analytics: false,
       }),
-    ]),
+    ])
   ) as Record<RateLimitBucket, Ratelimit>;
   return limiters;
 }
@@ -88,7 +90,7 @@ export type RateLimitResult = { success: boolean; reset?: number };
  */
 export async function checkRateLimit(
   bucket: RateLimitBucket,
-  identifier: string,
+  identifier: string
 ): Promise<RateLimitResult> {
   const ls = getLimiters();
   if (!ls) return { success: true };
@@ -109,6 +111,6 @@ export function tooManyRequests(reset?: number): NextResponse {
       : 60;
   return NextResponse.json(
     { error: "Too many requests. Please slow down and try again shortly." },
-    { status: 429, headers: { "retry-after": String(seconds) } },
+    { status: 429, headers: { "retry-after": String(seconds) } }
   );
 }
