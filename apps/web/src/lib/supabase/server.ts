@@ -17,7 +17,7 @@ export async function createClient() {
       setAll: (toSet) => {
         try {
           toSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
+            cookieStore.set(name, value, options)
           );
         } catch {
           // Called from a Server Component — cookies are read-only here.

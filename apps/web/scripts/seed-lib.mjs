@@ -14,10 +14,26 @@ export const SLOT_IMG = {
 export const BEFORE_IMG = "full-frame.jpg";
 
 export const PROPERTIES = [
-  { name: "Ridgeline A-Frame", address: "Big Bear, CA", tub_notes: "6-person Jacuzzi, saltwater." },
-  { name: "Lakeview Cabin 4", address: "Big Bear Lake, CA", tub_notes: "Bromine, cover replaced 2026-05." },
-  { name: "Pine Chalet", address: "Big Bear City, CA", tub_notes: "Chlorine, high turnover weekends." },
-  { name: "Summit View Lodge", address: "Moonridge, CA", tub_notes: "8-person spa, heavy winter use." },
+  {
+    name: "Ridgeline A-Frame",
+    address: "Big Bear, CA",
+    tub_notes: "6-person Jacuzzi, saltwater.",
+  },
+  {
+    name: "Lakeview Cabin 4",
+    address: "Big Bear Lake, CA",
+    tub_notes: "Bromine, cover replaced 2026-05.",
+  },
+  {
+    name: "Pine Chalet",
+    address: "Big Bear City, CA",
+    tub_notes: "Chlorine, high turnover weekends.",
+  },
+  {
+    name: "Summit View Lodge",
+    address: "Moonridge, CA",
+    tub_notes: "8-person spa, heavy winter use.",
+  },
 ];
 
 export async function uploadTurnoverPhotos(client, { orgId, turnoverId }) {
@@ -25,18 +41,19 @@ export async function uploadTurnoverPhotos(client, { orgId, turnoverId }) {
   const beforePath = `${orgId}/${turnoverId}/before`;
   const { error: bUpErr } = await client.storage
     .from("photos")
-    .upload(beforePath, beforeBuf, { contentType: "image/jpeg", upsert: false });
-  if (bUpErr) throw new Error(`upload before: ${bUpErr.message}`);
-  const { error: bErr } = await client
-    .from("photo")
-    .insert({
-      turnover_id: turnoverId,
-      storage_path: beforePath,
-      slot: "wide",
-      phase: "before",
-      captured_at: new Date().toISOString(),
-      confirmed_tags: [],
+    .upload(beforePath, beforeBuf, {
+      contentType: "image/jpeg",
+      upsert: false,
     });
+  if (bUpErr) throw new Error(`upload before: ${bUpErr.message}`);
+  const { error: bErr } = await client.from("photo").insert({
+    turnover_id: turnoverId,
+    storage_path: beforePath,
+    slot: "wide",
+    phase: "before",
+    captured_at: new Date().toISOString(),
+    confirmed_tags: [],
+  });
   if (bErr) throw new Error(`photo row before: ${bErr.message}`);
 
   for (const [slot, file] of Object.entries(SLOT_IMG)) {
@@ -46,16 +63,14 @@ export async function uploadTurnoverPhotos(client, { orgId, turnoverId }) {
       .from("photos")
       .upload(path, buf, { contentType: "image/jpeg", upsert: false });
     if (upErr) throw new Error(`upload ${slot}: ${upErr.message}`);
-    const { error: pErr } = await client
-      .from("photo")
-      .insert({
-        turnover_id: turnoverId,
-        storage_path: path,
-        slot,
-        phase: "after",
-        captured_at: new Date().toISOString(),
-        confirmed_tags: [],
-      });
+    const { error: pErr } = await client.from("photo").insert({
+      turnover_id: turnoverId,
+      storage_path: path,
+      slot,
+      phase: "after",
+      captured_at: new Date().toISOString(),
+      confirmed_tags: [],
+    });
     if (pErr) throw new Error(`photo row ${slot}: ${pErr.message}`);
   }
 }
@@ -94,7 +109,13 @@ export async function makeTurnover(
   const shareToken = crypto.randomUUID();
   const { data: t, error } = await client
     .from("turnover")
-    .insert({ property_id: propertyId, urgent, notes, status: "draft", share_token: shareToken })
+    .insert({
+      property_id: propertyId,
+      urgent,
+      notes,
+      status: "draft",
+      share_token: shareToken,
+    })
     .select("id")
     .single();
   if (error) throw new Error(`turnover insert: ${error.message}`);
@@ -112,25 +133,36 @@ export async function makeTurnover(
   }
 
   if (water) {
-    const { error: wrErr } = await client.from("water_reading").insert(waterRow(propertyId, t.id, water));
+    const { error: wrErr } = await client
+      .from("water_reading")
+      .insert(waterRow(propertyId, t.id, water));
     if (wrErr) throw new Error(`water_reading: ${wrErr.message}`);
   }
 
-  const { error: lockErr } = await client.from("turnover").update({ status: "submitted_locked" }).eq("id", t.id);
+  const { error: lockErr } = await client
+    .from("turnover")
+    .update({ status: "submitted_locked" })
+    .eq("id", t.id);
   if (lockErr) throw new Error(`lock: ${lockErr.message}`);
 
   if (share) {
-    const { error: evErr } = await client
-      .from("proof_event")
-      .insert({ turnover_id: t.id, kind: "share_copied", actor_user_id: actorId });
+    const { error: evErr } = await client.from("proof_event").insert({
+      turnover_id: t.id,
+      kind: "share_copied",
+      actor_user_id: actorId,
+    });
     if (evErr) throw new Error(`proof_event: ${evErr.message}`);
   }
   for (let i = 0; i < opens; i++) {
-    const { error: opErr } = await client.rpc("record_proof_open", { p_share_token: shareToken });
+    const { error: opErr } = await client.rpc("record_proof_open", {
+      p_share_token: shareToken,
+    });
     if (opErr) throw new Error(`record_proof_open: ${opErr.message}`);
   }
   if (notify) {
-    const { error: nErr } = await client.rpc("notify_turnover_ready", { p_turnover_id: t.id });
+    const { error: nErr } = await client.rpc("notify_turnover_ready", {
+      p_turnover_id: t.id,
+    });
     if (nErr) throw new Error(`notify_turnover_ready: ${nErr.message}`);
   }
   return t.id;
@@ -169,7 +201,9 @@ export async function histTurnover(
   }
 
   if (water) {
-    const { error: wErr } = await admin.from("water_reading").insert(waterRow(propertyId, t.id, water, at));
+    const { error: wErr } = await admin
+      .from("water_reading")
+      .insert(waterRow(propertyId, t.id, water, at));
     if (wErr) throw new Error(`hist water_reading: ${wErr.message}`);
   }
   if (issue) {
@@ -205,25 +239,101 @@ export async function seedWorkspace({
     .from("property")
     .insert(propsToInsert.map((p) => ({ org_id: orgId, ...p })))
     .select("id, name");
-  if (propErr || !props) throw new Error(`property insert: ${propErr?.message}`);
+  if (propErr || !props)
+    throw new Error(`property insert: ${propErr?.message}`);
   const byName = Object.fromEntries(props.map((p) => [p.name, p.id]));
 
   const equipment = [
-    { name: "Ridgeline A-Frame", type: "pump", make_model: "Balboa BP6013G1", installed_at: "2023-04-12", warranty_until: "2028-04-12" },
-    { name: "Ridgeline A-Frame", type: "heater", make_model: "Balboa M7 Titanium", installed_at: "2021-10-05", warranty_until: "2025-11-01", notes: "Out of warranty — watch for element failure." },
-    { name: "Ridgeline A-Frame", type: "cover", make_model: "Covana Legend", installed_at: "2024-06-20", warranty_until: "2029-06-20" },
-    { name: "Ridgeline A-Frame", type: "filter", make_model: "Pleatco PWW50", installed_at: "2026-03-01" },
-    { name: "Lakeview Cabin 4", type: "pump", make_model: "Waterway Executive 56", installed_at: "2022-08-15", warranty_until: "2027-08-15" },
-    { name: "Lakeview Cabin 4", type: "heater", make_model: "Balboa M7", installed_at: "2022-08-15", warranty_until: "2027-08-15" },
-    { name: "Lakeview Cabin 4", type: "cover", make_model: "ThermoFloat vinyl", installed_at: "2026-05-10", warranty_until: "2028-05-10", notes: "Replaced May 2026." },
-    { name: "Lakeview Cabin 4", type: "filter", make_model: "Pleatco PWW50", installed_at: "2026-06-01" },
-    { name: "Pine Chalet", type: "pump", make_model: "Gecko Aqua-Flo XP2", installed_at: "2023-01-20", warranty_until: "2028-01-20" },
-    { name: "Pine Chalet", type: "heater", make_model: "Gecko In.YE-5", installed_at: "2023-01-20", warranty_until: "2028-01-20" },
-    { name: "Pine Chalet", type: "cover", make_model: "Marquis hard cover", installed_at: "2025-02-14", warranty_until: "2030-02-14" },
-    { name: "Pine Chalet", type: "filter", make_model: "Unicel C-4326", installed_at: "2026-06-10" },
+    {
+      name: "Ridgeline A-Frame",
+      type: "pump",
+      make_model: "Balboa BP6013G1",
+      installed_at: "2023-04-12",
+      warranty_until: "2028-04-12",
+    },
+    {
+      name: "Ridgeline A-Frame",
+      type: "heater",
+      make_model: "Balboa M7 Titanium",
+      installed_at: "2021-10-05",
+      warranty_until: "2025-11-01",
+      notes: "Out of warranty — watch for element failure.",
+    },
+    {
+      name: "Ridgeline A-Frame",
+      type: "cover",
+      make_model: "Covana Legend",
+      installed_at: "2024-06-20",
+      warranty_until: "2029-06-20",
+    },
+    {
+      name: "Ridgeline A-Frame",
+      type: "filter",
+      make_model: "Pleatco PWW50",
+      installed_at: "2026-03-01",
+    },
+    {
+      name: "Lakeview Cabin 4",
+      type: "pump",
+      make_model: "Waterway Executive 56",
+      installed_at: "2022-08-15",
+      warranty_until: "2027-08-15",
+    },
+    {
+      name: "Lakeview Cabin 4",
+      type: "heater",
+      make_model: "Balboa M7",
+      installed_at: "2022-08-15",
+      warranty_until: "2027-08-15",
+    },
+    {
+      name: "Lakeview Cabin 4",
+      type: "cover",
+      make_model: "ThermoFloat vinyl",
+      installed_at: "2026-05-10",
+      warranty_until: "2028-05-10",
+      notes: "Replaced May 2026.",
+    },
+    {
+      name: "Lakeview Cabin 4",
+      type: "filter",
+      make_model: "Pleatco PWW50",
+      installed_at: "2026-06-01",
+    },
+    {
+      name: "Pine Chalet",
+      type: "pump",
+      make_model: "Gecko Aqua-Flo XP2",
+      installed_at: "2023-01-20",
+      warranty_until: "2028-01-20",
+    },
+    {
+      name: "Pine Chalet",
+      type: "heater",
+      make_model: "Gecko In.YE-5",
+      installed_at: "2023-01-20",
+      warranty_until: "2028-01-20",
+    },
+    {
+      name: "Pine Chalet",
+      type: "cover",
+      make_model: "Marquis hard cover",
+      installed_at: "2025-02-14",
+      warranty_until: "2030-02-14",
+    },
+    {
+      name: "Pine Chalet",
+      type: "filter",
+      make_model: "Unicel C-4326",
+      installed_at: "2026-06-10",
+    },
   ]
     .filter(({ name }) => byName[name])
-    .map(({ name, ...rest }) => ({ org_id: orgId, property_id: byName[name], ...rest }));
+    .map(({ name, ...rest }) => ({
+      org_id: orgId,
+      property_id: byName[name],
+      ...rest,
+    }));
   const { error: eqErr } = await client.from("equipment").insert(equipment);
   if (eqErr) throw new Error(`equipment insert: ${eqErr.message}`);
 
@@ -236,18 +346,104 @@ export async function seedWorkspace({
 
   const restocked = (days) => ago(days * DAY).slice(0, 10);
   const supplies = [
-    { name: "Ridgeline A-Frame", nm: "Chlorine granules", unit: "lb", quantity: 1, reorder_at: 1, last_restocked_at: restocked(24), notes: "Big Bear Spa & Pool acct #CS-4471." },
-    { name: "Ridgeline A-Frame", nm: "pH Down", unit: "lb", quantity: 4, reorder_at: 1, last_restocked_at: restocked(24) },
-    { name: "Ridgeline A-Frame", nm: "Filter cartridge", unit: "cartridge", quantity: 2, reorder_at: 1, last_restocked_at: restocked(60) },
-    { name: "Ridgeline A-Frame", nm: "Test strips", unit: "strips", quantity: 50, reorder_at: 25, last_restocked_at: restocked(12) },
-    { name: "Lakeview Cabin 4", nm: "Shock / oxidizer", unit: "lb", quantity: 0.5, reorder_at: 2, last_restocked_at: restocked(30), notes: "Burned through after a big group." },
-    { name: "Lakeview Cabin 4", nm: "Filter cartridge", unit: "cartridge", quantity: 0, reorder_at: 1, last_restocked_at: restocked(45) },
-    { name: "Lakeview Cabin 4", nm: "Bromine tablets", unit: "tabs", quantity: 30, reorder_at: 10, last_restocked_at: restocked(8) },
-    { name: "Lakeview Cabin 4", nm: "Clarifier", unit: "bottle", quantity: 2, reorder_at: 1, last_restocked_at: restocked(20) },
-    { name: "Pine Chalet", nm: "Chlorine granules", unit: "lb", quantity: 5, reorder_at: 1, last_restocked_at: restocked(5) },
-    { name: "Pine Chalet", nm: "pH Up", unit: "lb", quantity: 3, reorder_at: 1, last_restocked_at: restocked(5) },
-    { name: "Pine Chalet", nm: "Cover cleaner", unit: "bottle", quantity: 2, reorder_at: 1, last_restocked_at: restocked(40) },
-    { name: "Pine Chalet", nm: "Test strips", unit: "strips", quantity: 75, reorder_at: 25, last_restocked_at: restocked(15) },
+    {
+      name: "Ridgeline A-Frame",
+      nm: "Chlorine granules",
+      unit: "lb",
+      quantity: 1,
+      reorder_at: 1,
+      last_restocked_at: restocked(24),
+      notes: "Big Bear Spa & Pool acct #CS-4471.",
+    },
+    {
+      name: "Ridgeline A-Frame",
+      nm: "pH Down",
+      unit: "lb",
+      quantity: 4,
+      reorder_at: 1,
+      last_restocked_at: restocked(24),
+    },
+    {
+      name: "Ridgeline A-Frame",
+      nm: "Filter cartridge",
+      unit: "cartridge",
+      quantity: 2,
+      reorder_at: 1,
+      last_restocked_at: restocked(60),
+    },
+    {
+      name: "Ridgeline A-Frame",
+      nm: "Test strips",
+      unit: "strips",
+      quantity: 50,
+      reorder_at: 25,
+      last_restocked_at: restocked(12),
+    },
+    {
+      name: "Lakeview Cabin 4",
+      nm: "Shock / oxidizer",
+      unit: "lb",
+      quantity: 0.5,
+      reorder_at: 2,
+      last_restocked_at: restocked(30),
+      notes: "Burned through after a big group.",
+    },
+    {
+      name: "Lakeview Cabin 4",
+      nm: "Filter cartridge",
+      unit: "cartridge",
+      quantity: 0,
+      reorder_at: 1,
+      last_restocked_at: restocked(45),
+    },
+    {
+      name: "Lakeview Cabin 4",
+      nm: "Bromine tablets",
+      unit: "tabs",
+      quantity: 30,
+      reorder_at: 10,
+      last_restocked_at: restocked(8),
+    },
+    {
+      name: "Lakeview Cabin 4",
+      nm: "Clarifier",
+      unit: "bottle",
+      quantity: 2,
+      reorder_at: 1,
+      last_restocked_at: restocked(20),
+    },
+    {
+      name: "Pine Chalet",
+      nm: "Chlorine granules",
+      unit: "lb",
+      quantity: 5,
+      reorder_at: 1,
+      last_restocked_at: restocked(5),
+    },
+    {
+      name: "Pine Chalet",
+      nm: "pH Up",
+      unit: "lb",
+      quantity: 3,
+      reorder_at: 1,
+      last_restocked_at: restocked(5),
+    },
+    {
+      name: "Pine Chalet",
+      nm: "Cover cleaner",
+      unit: "bottle",
+      quantity: 2,
+      reorder_at: 1,
+      last_restocked_at: restocked(40),
+    },
+    {
+      name: "Pine Chalet",
+      nm: "Test strips",
+      unit: "strips",
+      quantity: 75,
+      reorder_at: 25,
+      last_restocked_at: restocked(15),
+    },
   ]
     .filter(({ name }) => byName[name])
     .map(({ name, nm, ...rest }) => ({
@@ -303,7 +499,8 @@ export async function seedWorkspace({
     actorId: operatorId,
     urgent: true,
     issue: "water_cloudy",
-    notes: "Cloudy after a big group — shocked the tub, will recheck before check-in.",
+    notes:
+      "Cloudy after a big group — shocked the tub, will recheck before check-in.",
     water: lakeviewWater,
   });
   await makeTurnover(client, {
@@ -358,21 +555,43 @@ export async function seedWorkspace({
     submitterId: operatorId,
     at: ago(21 * DAY),
     photos: true,
-    water: { total_alkalinity: 100, ph: 7.4, calcium_hardness: 200, sanitizer_ppm: 4, temp_f: 101, treatments: ["sanitizer"], balanced: true },
+    water: {
+      total_alkalinity: 100,
+      ph: 7.4,
+      calcium_hardness: 200,
+      sanitizer_ppm: 4,
+      temp_f: 101,
+      treatments: ["sanitizer"],
+      balanced: true,
+    },
   });
   await histTurnover(admin, {
     propertyId: byName["Ridgeline A-Frame"],
     orgId,
     submitterId: operatorId,
     at: ago(14 * DAY),
-    water: { total_alkalinity: 110, ph: 7.5, calcium_hardness: 200, sanitizer_ppm: 3.5, temp_f: 100, balanced: true },
+    water: {
+      total_alkalinity: 110,
+      ph: 7.5,
+      calcium_hardness: 200,
+      sanitizer_ppm: 3.5,
+      temp_f: 100,
+      balanced: true,
+    },
   });
   await histTurnover(admin, {
     propertyId: byName["Ridgeline A-Frame"],
     orgId,
     submitterId: operatorId,
     at: ago(7 * DAY),
-    water: { total_alkalinity: 95, ph: 7.3, calcium_hardness: 185, sanitizer_ppm: 4.5, temp_f: 102, balanced: true },
+    water: {
+      total_alkalinity: 95,
+      ph: 7.3,
+      calcium_hardness: 185,
+      sanitizer_ppm: 4.5,
+      temp_f: 102,
+      balanced: true,
+    },
   });
 
   await histTurnover(admin, {
@@ -381,14 +600,28 @@ export async function seedWorkspace({
     submitterId: operatorId,
     at: ago(10 * DAY),
     photos: true,
-    water: { total_alkalinity: 115, ph: 7.6, calcium_hardness: 220, sanitizer_ppm: 5, temp_f: 102, balanced: true },
+    water: {
+      total_alkalinity: 115,
+      ph: 7.6,
+      calcium_hardness: 220,
+      sanitizer_ppm: 5,
+      temp_f: 102,
+      balanced: true,
+    },
   });
   await histTurnover(admin, {
     propertyId: byName["Lakeview Cabin 4"],
     orgId,
     submitterId: operatorId,
     at: ago(4 * DAY),
-    water: { total_alkalinity: 120, ph: 7.7, calcium_hardness: 230, sanitizer_ppm: 4, temp_f: 103, balanced: true },
+    water: {
+      total_alkalinity: 120,
+      ph: 7.7,
+      calcium_hardness: 230,
+      sanitizer_ppm: 4,
+      temp_f: 103,
+      balanced: true,
+    },
   });
   await histTurnover(admin, {
     propertyId: byName["Lakeview Cabin 4"],
@@ -396,7 +629,15 @@ export async function seedWorkspace({
     submitterId: operatorId,
     at: ago(18 * HOUR),
     urgent: true,
-    water: { total_alkalinity: 125, ph: 7.8, calcium_hardness: 240, sanitizer_ppm: 3, temp_f: 103, treatments: ["shock"], balanced: false },
+    water: {
+      total_alkalinity: 125,
+      ph: 7.8,
+      calcium_hardness: 240,
+      sanitizer_ppm: 3,
+      temp_f: 103,
+      treatments: ["shock"],
+      balanced: false,
+    },
   });
 
   await histTurnover(admin, {
@@ -405,14 +646,28 @@ export async function seedWorkspace({
     submitterId: operatorId,
     at: ago(16 * DAY),
     photos: true,
-    water: { total_alkalinity: 108, ph: 7.5, calcium_hardness: 205, sanitizer_ppm: 4, temp_f: 101, balanced: true },
+    water: {
+      total_alkalinity: 108,
+      ph: 7.5,
+      calcium_hardness: 205,
+      sanitizer_ppm: 4,
+      temp_f: 101,
+      balanced: true,
+    },
   });
   await histTurnover(admin, {
     propertyId: byName["Pine Chalet"],
     orgId,
     submitterId: operatorId,
     at: ago(9 * DAY),
-    water: { total_alkalinity: 100, ph: 7.4, calcium_hardness: 195, sanitizer_ppm: 3.5, temp_f: 100, balanced: true },
+    water: {
+      total_alkalinity: 100,
+      ph: 7.4,
+      calcium_hardness: 195,
+      sanitizer_ppm: 3.5,
+      temp_f: 100,
+      balanced: true,
+    },
   });
 
   if (includeMaintenance) {
@@ -472,7 +727,9 @@ export async function seedWorkspace({
         note: "Routine completion (seeded history).",
       }));
     if (logs.length > 0) {
-      const { error: mlErr } = await client.from("maintenance_log").insert(logs);
+      const { error: mlErr } = await client
+        .from("maintenance_log")
+        .insert(logs);
       if (mlErr) throw new Error(`maintenance_log insert: ${mlErr.message}`);
     }
   }
@@ -484,7 +741,13 @@ export async function seedWorkspace({
   };
 
   const scheduledDefs = [
-    { name: "Pine Chalet", kind: "turnover", title: "Turnover", scheduled_for: fromToday(0), status: "scheduled" },
+    {
+      name: "Pine Chalet",
+      kind: "turnover",
+      title: "Turnover",
+      scheduled_for: fromToday(0),
+      status: "scheduled",
+    },
     {
       name: "Ridgeline A-Frame",
       kind: "turnover",
@@ -578,7 +841,9 @@ export async function seedWorkspace({
       ...rest,
     }));
 
-  const { error: siErr } = await client.from("scheduled_item").insert(scheduledDefs);
+  const { error: siErr } = await client
+    .from("scheduled_item")
+    .insert(scheduledDefs);
   if (siErr) throw new Error(`scheduled_item insert: ${siErr.message}`);
 
   return { byName, ago, DAY };

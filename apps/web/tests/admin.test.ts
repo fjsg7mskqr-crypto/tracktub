@@ -33,11 +33,18 @@ describe("isAdminEmail", () => {
 });
 
 describe("appAccessDecision (pre-launch gate matrix)", () => {
-  const base = { isPublic: false, hasUser: false, isAdmin: false, enforceAdmin: true };
+  const base = {
+    isPublic: false,
+    hasUser: false,
+    isAdmin: false,
+    enforceAdmin: true,
+  };
 
   it("always allows public paths", () => {
     for (const path of ["/landing", "/blog", "/login", "/auth/callback"]) {
-      expect(appAccessDecision({ ...base, path, isPublic: true })).toBe("allow");
+      expect(appAccessDecision({ ...base, path, isPublic: true })).toBe(
+        "allow"
+      );
     }
   });
 
@@ -49,13 +56,23 @@ describe("appAccessDecision (pre-launch gate matrix)", () => {
 
   it("bounces a signed-in NON-admin off protected paths in production", () => {
     expect(
-      appAccessDecision({ ...base, path: "/team", hasUser: true, isAdmin: false }),
+      appAccessDecision({
+        ...base,
+        path: "/team",
+        hasUser: true,
+        isAdmin: false,
+      })
     ).toBe("landing");
   });
 
   it("lets a signed-in admin reach protected paths", () => {
     expect(
-      appAccessDecision({ ...base, path: "/team", hasUser: true, isAdmin: true }),
+      appAccessDecision({
+        ...base,
+        path: "/team",
+        hasUser: true,
+        isAdmin: true,
+      })
     ).toBe("allow");
   });
 
@@ -67,7 +84,7 @@ describe("appAccessDecision (pre-launch gate matrix)", () => {
         hasUser: true,
         isAdmin: false,
         enforceAdmin: false,
-      }),
+      })
     ).toBe("allow");
   });
 });

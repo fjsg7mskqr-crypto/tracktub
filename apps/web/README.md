@@ -42,8 +42,8 @@ npm run dev
 
 ## What's real vs. mocked
 
-| Real in the demo | Mocked / flagged in-UI |
-|---|---|
+| Real in the demo                                                                                                                      | Mocked / flagged in-UI                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Guided capture, cockpit, locked records, shareable proof link, share + open tracking, role-scoped views, WTP fake-door, live insights | Photos (generated placeholders), AI tag-suggest + completeness, chemistry bather-load reminder, signed PDF, geofence badge — all labeled `roadmap mock` / `fast-follow` |
 
 ## Stack

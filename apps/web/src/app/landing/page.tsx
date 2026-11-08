@@ -29,10 +29,30 @@ const PLATES = [
 ];
 
 /** Small green check used across the proof card + pricing. */
-function Check({ size = 11, color = "#04240f", w = 3.2 }: { size?: number; color?: string; w?: number }) {
+function Check({
+  size = 11,
+  color = "#04240f",
+  w = 3.2,
+}: {
+  size?: number;
+  color?: string;
+  w?: number;
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 12.5l4 4 9-10" stroke={color} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 12.5l4 4 9-10"
+        stroke={color}
+        strokeWidth={w}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -118,12 +138,14 @@ export default function Landing() {
           </svg>
           <div>
             <h1>
-              Know your hot <span className="tub">tub</span> was guest-ready — without being there.
+              Know your hot <span className="tub">tub</span> was guest-ready —
+              without being there.
             </h1>
             <p className="sub">
-              Every turnover, you or your cleaner snap a quick guided photo set. TrackTub stamps the time on our server and
-              locks the record once it&rsquo;s submitted — so you have a record the tub was clean, safe, and ready, and
-              a link to share the moment anyone asks.
+              Every turnover, you or your cleaner snap a quick guided photo set.
+              TrackTub stamps the time on our server and locks the record once
+              it&rsquo;s submitted — so you have a record the tub was clean,
+              safe, and ready, and a link to share the moment anyone asks.
             </p>
             <LandingWaitlist />
             <div className="trust">
@@ -144,7 +166,11 @@ export default function Landing() {
               </div>
               <div className="plates">
                 {PLATES.map((p) => (
-                  <div key={p.label} className="plate photo" style={{ backgroundImage: `url(${p.src})` }}>
+                  <div
+                    key={p.label}
+                    className="plate photo"
+                    style={{ backgroundImage: `url(${p.src})` }}
+                  >
                     <span className="ck">
                       <Check />
                     </span>
@@ -180,20 +206,36 @@ export default function Landing() {
         <div className="section" id="why">
           <span className="eyebrow">Peace of mind</span>
           <div className="sechead">
-            <h2>You can&rsquo;t be at every check-in. Now you don&rsquo;t have to be.</h2>
+            <h2>
+              You can&rsquo;t be at every check-in. Now you don&rsquo;t have to
+              be.
+            </h2>
           </div>
           <div className="feat">
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#60A5FA,#2563EB)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#60A5FA,#2563EB)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <path d="M5 12.5l4 4 9-10" />
                 </svg>
               </div>
               <h3>Know it got done</h3>
-              <p>A clear, guided routine every turnover, so nothing gets skipped — even when someone else does the clean.</p>
+              <p>
+                A clear, guided routine every turnover, so nothing gets skipped
+                — even when someone else does the clean.
+              </p>
             </div>
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#3B82F6,#1D4ED8)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#3B82F6,#1D4ED8)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z" />
                   <circle cx="12" cy="10" r="2.6" />
@@ -201,18 +243,27 @@ export default function Landing() {
               </div>
               <h3>Know it was safe &amp; ready</h3>
               <p>
-                Water level, clarity, and the control panel, captured every time.
+                Water level, clarity, and the control panel, captured every
+                time.
               </p>
             </div>
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#93C5FD,#3B82F6)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#93C5FD,#3B82F6)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <path d="M7 3.5h7l4 4v13H7z" />
                   <path d="M9.5 13l2 2 3.5-4" />
                 </svg>
               </div>
               <h3>Prove it if anyone asks</h3>
-              <p>A timestamped, locked record and a share link — for the owner, the guest, or anyone who asks.</p>
+              <p>
+                A timestamped, locked record and a share link — for the owner,
+                the guest, or anyone who asks.
+              </p>
             </div>
           </div>
         </div>
@@ -227,27 +278,43 @@ export default function Landing() {
             <div className="glass fcard">
               <div className="ichip num">1</div>
               <h3>Snap the guided set</h3>
-              <p>The same guided shots every turnover, taken with your phone&rsquo;s camera. No app to install.</p>
+              <p>
+                The same guided shots every turnover, taken with your
+                phone&rsquo;s camera. No app to install.
+              </p>
             </div>
             <div className="glass fcard">
               <div className="ichip num">2</div>
               <h3>Timestamped and locked</h3>
-              <p>TrackTub stamps the time on our server the moment it&rsquo;s saved, then locks the record so it can&rsquo;t be edited in the app or back-dated.</p>
+              <p>
+                TrackTub stamps the time on our server the moment it&rsquo;s
+                saved, then locks the record so it can&rsquo;t be edited in the
+                app or back-dated.
+              </p>
             </div>
             <div className="glass fcard">
               <div className="ichip num">3</div>
               <h3>Share it or just relax</h3>
-              <p>Keep it as peace of mind, or send a one-tap link to an owner, guest, or Airbnb. They open it — no login.</p>
+              <p>
+                Keep it as peace of mind, or send a one-tap link to an owner,
+                guest, or Airbnb. They open it — no login.
+              </p>
             </div>
           </div>
         </div>
 
         {/* LIFESTYLE BAND */}
         <div className="section">
-          <div className="glass band" style={{ backgroundImage: "url(/landing/cabin.jpg)" }}>
+          <div
+            className="glass band"
+            style={{ backgroundImage: "url(/landing/cabin.jpg)" }}
+          >
             <div className="bandcopy">
               <h2>Built for the way you actually host.</h2>
-              <p>One person, a few places, a tub that has to be right before every guest checks in.</p>
+              <p>
+                One person, a few places, a tub that has to be right before
+                every guest checks in.
+              </p>
             </div>
           </div>
         </div>
@@ -257,22 +324,37 @@ export default function Landing() {
           <span className="eyebrow">What&rsquo;s in the record</span>
           <div className="sechead">
             <h2>Everything that rides along with every turnover</h2>
-            <p>A guided photo set becomes a record you can actually stand behind.</p>
+            <p>
+              A guided photo set becomes a record you can actually stand behind.
+            </p>
           </div>
           <div className="feat">
             {/* 1 — Guided photos */}
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#60A5FA,#2563EB)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#60A5FA,#2563EB)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z" />
                   <circle cx="12" cy="13" r="3.2" />
                 </svg>
               </div>
               <h3>Guided photos</h3>
-              <p>Full frame, water level, control panel, water chemistry — the same set every clean.</p>
+              <p>
+                Full frame, water level, control panel, water chemistry — the
+                same set every clean.
+              </p>
               <div className="ui">
                 <div className="uigrid">
-                  {["Full frame", "Water level", "Control panel", "Water chemistry"].map((l) => (
+                  {[
+                    "Full frame",
+                    "Water level",
+                    "Control panel",
+                    "Water chemistry",
+                  ].map((l) => (
                     <div key={l} className="uichk">
                       <Check size={13} color="#34D399" w={3} />
                       {l}
@@ -284,14 +366,22 @@ export default function Landing() {
 
             {/* 2 — Server timestamp */}
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#3B82F6,#1D4ED8)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#3B82F6,#1D4ED8)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <circle cx="12" cy="12" r="8.5" />
                   <path d="M12 7.5V12l3 2" />
                 </svg>
               </div>
               <h3>Server timestamp</h3>
-              <p>Stamped the moment it&rsquo;s submitted — our clock, never the cleaner&rsquo;s phone.</p>
+              <p>
+                Stamped the moment it&rsquo;s submitted — our clock, never the
+                cleaner&rsquo;s phone.
+              </p>
               <div className="ui">
                 <UiLog
                   rows={[
@@ -305,18 +395,31 @@ export default function Landing() {
 
             {/* 3 — Locked after submit */}
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#93C5FD,#3B82F6)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#93C5FD,#3B82F6)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <rect x="5" y="11" width="14" height="9" rx="2.2" />
                   <path d="M8 11V8a4 4 0 018 0v3" />
                 </svg>
               </div>
               <h3>Locked after submit</h3>
-              <p>Once it&rsquo;s submitted, the record can&rsquo;t be edited in TrackTub, and the timestamp can&rsquo;t be back-dated.</p>
+              <p>
+                Once it&rsquo;s submitted, the record can&rsquo;t be edited in
+                TrackTub, and the timestamp can&rsquo;t be back-dated.
+              </p>
               <div className="ui">
                 <div className="uifield">
                   <span className="l">
-                    <svg className="uiic" width="13" height="13" viewBox="0 0 24 24">
+                    <svg
+                      className="uiic"
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                    >
                       <rect x="5" y="11" width="14" height="9" rx="2" />
                       <path d="M8 11V8a4 4 0 018 0v3" />
                     </svg>
@@ -329,7 +432,12 @@ export default function Landing() {
 
             {/* 4 — One-tap share link */}
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#60A5FA,#3B82F6)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#60A5FA,#3B82F6)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <circle cx="6.5" cy="12" r="2.4" />
                   <circle cx="17.5" cy="6.5" r="2.4" />
@@ -338,7 +446,10 @@ export default function Landing() {
                 </svg>
               </div>
               <h3>One-tap share link</h3>
-              <p>Send the record to an owner, guest, or anyone who asks. They open it — no login, nothing to install.</p>
+              <p>
+                Send the record to an owner, guest, or anyone who asks. They
+                open it — no login, nothing to install.
+              </p>
               <div className="ui">
                 <div className="uifield">
                   <span className="mono">tracktub.app/p/lakeside</span>
@@ -354,14 +465,22 @@ export default function Landing() {
 
             {/* 5 — Camera capture */}
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#3B82F6,#2563EB)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#3B82F6,#2563EB)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z" />
                   <circle cx="12" cy="13" r="3.2" />
                 </svg>
               </div>
               <h3>Taken, not uploaded</h3>
-              <p>Photos come straight from the phone&rsquo;s camera at the tub — not picked out of an old camera roll.</p>
+              <p>
+                Photos come straight from the phone&rsquo;s camera at the tub —
+                not picked out of an old camera roll.
+              </p>
               <div className="ui">
                 <div className="uifield">
                   <span className="mono">Source: camera</span>
@@ -372,7 +491,12 @@ export default function Landing() {
 
             {/* 6 — Audit trail */}
             <div className="glass fcard">
-              <div className="ichip" style={{ background: "linear-gradient(135deg,#93C5FD,#2563EB)" }}>
+              <div
+                className="ichip"
+                style={{
+                  background: "linear-gradient(135deg,#93C5FD,#2563EB)",
+                }}
+              >
                 <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
                   <path d="M7 3.5h7l4 4v13H7z" />
                   <path d="M14 3.5v4h4" />
@@ -380,7 +504,10 @@ export default function Landing() {
                 </svg>
               </div>
               <h3>Audit trail</h3>
-              <p>Every photo and every change is logged with who and when — and the log itself can&rsquo;t be edited.</p>
+              <p>
+                Every photo and every change is logged with who and when — and
+                the log itself can&rsquo;t be edited.
+              </p>
               <div className="ui">
                 <UiLog
                   rows={[
@@ -406,18 +533,29 @@ export default function Landing() {
         {/* LAUNCH / CTA */}
         <div className="glass cta" id="join">
           <Mark className="markbig" />
-          <span className="eyebrow" style={{ display: "block", marginBottom: 9 }}>
+          <span
+            className="eyebrow"
+            style={{ display: "block", marginBottom: 9 }}
+          >
             Launching soon · building in public
           </span>
           <h2>Be one of the first hosts on TrackTub.</h2>
           <p>
-            We&rsquo;re onboarding hosts in small batches and shipping in the open. Join the early-access list, then
-            follow the build on X.
+            We&rsquo;re onboarding hosts in small batches and shipping in the
+            open. Join the early-access list, then follow the build on X.
           </p>
           <LandingWaitlist />
-          <a className="xfollow" href="https://x.com/tracktub" target="_blank" rel="noopener noreferrer">
+          <a
+            className="xfollow"
+            href="https://x.com/tracktub"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" fill="currentColor" />
+              <path
+                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                fill="currentColor"
+              />
             </svg>
             Follow @tracktub on X
           </a>
@@ -433,7 +571,13 @@ export default function Landing() {
           <Link href="/blog" className="flink">
             Resources
           </Link>
-          <a className="fx" href="https://x.com/tracktub" target="_blank" rel="noopener noreferrer" aria-label="TrackTub on X">
+          <a
+            className="fx"
+            href="https://x.com/tracktub"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="TrackTub on X"
+          >
             <svg viewBox="0 0 24 24" width="15" height="15">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>

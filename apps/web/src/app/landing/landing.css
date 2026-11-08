@@ -45,8 +45,16 @@
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(820px 560px at 88% -6%, rgba(59, 130, 246, 0.1), transparent 64%),
-    radial-gradient(520px 420px at 97% 3%, rgba(96, 165, 250, 0.06), transparent 58%);
+    radial-gradient(
+      820px 560px at 88% -6%,
+      rgba(59, 130, 246, 0.1),
+      transparent 64%
+    ),
+    radial-gradient(
+      520px 420px at 97% 3%,
+      rgba(96, 165, 250, 0.06),
+      transparent 58%
+    );
 }
 /* film grain — monochrome, no hue */
 .tt-landing::after {
@@ -88,10 +96,16 @@
   position: relative;
   border: 1px solid var(--gline);
   border-radius: 22px;
-  background: linear-gradient(157deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.022) 55%);
+  background: linear-gradient(
+    157deg,
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.022) 55%
+  );
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   backdrop-filter: blur(20px) saturate(150%);
-  box-shadow: 0 28px 64px -34px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 28px 64px -34px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .tt-landing .glass::before {
   content: "";
@@ -99,7 +113,11 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 26%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    transparent 26%
+  );
 }
 .tt-landing .btn {
   font-family: var(--disp);
@@ -111,12 +129,18 @@
   cursor: pointer;
   color: #fff;
   background: linear-gradient(135deg, var(--blue), var(--blue2));
-  box-shadow: 0 12px 30px -10px rgba(59, 130, 246, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow:
+    0 12px 30px -10px rgba(59, 130, 246, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .tt-landing .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 18px 40px -12px rgba(59, 130, 246, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 18px 40px -12px rgba(59, 130, 246, 0.78),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .tt-landing .btn.ghost {
   background: rgba(255, 255, 255, 0.07);
@@ -282,7 +306,11 @@
   position: absolute;
   inset: 8% 6%;
   border-radius: 30px;
-  background: radial-gradient(closest-side, rgba(59, 130, 246, 0.2), transparent);
+  background: radial-gradient(
+    closest-side,
+    rgba(59, 130, 246, 0.2),
+    transparent
+  );
   filter: blur(26px);
   z-index: -1;
 }
@@ -312,7 +340,11 @@
   aspect-ratio: 4/3;
   border-radius: 14px;
   border: 1px solid var(--gline);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+  background: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.015)
+  );
   display: flex;
   align-items: flex-end;
   padding: 10px;
@@ -436,7 +468,9 @@
 }
 .tt-landing .fcard {
   padding: 24px;
-  transition: transform 0.16s ease, border-color 0.16s ease;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease;
 }
 .tt-landing .fcard:hover {
   transform: translateY(-5px);
@@ -449,7 +483,9 @@
   display: grid;
   place-items: center;
   margin-bottom: 16px;
-  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 12px 26px -12px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .tt-landing .fcard h3 {
   font-size: 18px;
@@ -582,9 +618,16 @@
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 / 100% 15px,
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 / 15px 100%,
-    radial-gradient(circle at 50% 56%, rgba(59, 130, 246, 0.13), transparent 62%), #0c0e13;
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 / 100%
+      15px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px) 0 0 /
+      15px 100%,
+    radial-gradient(
+      circle at 50% 56%,
+      rgba(59, 130, 246, 0.13),
+      transparent 62%
+    ),
+    #0c0e13;
 }
 .tt-landing .map svg {
   position: absolute;
@@ -675,7 +718,9 @@
 }
 .tt-landing .pcard.hot {
   border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 28px 64px -30px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 28px 64px -30px rgba(59, 130, 246, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 .tt-landing .pcard .k {
   font-family: var(--disp);
@@ -873,7 +918,12 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, rgba(8, 9, 10, 0.93) 6%, rgba(8, 9, 10, 0.55) 46%, rgba(8, 9, 10, 0.18));
+  background: linear-gradient(
+    105deg,
+    rgba(8, 9, 10, 0.93) 6%,
+    rgba(8, 9, 10, 0.55) 46%,
+    rgba(8, 9, 10, 0.18)
+  );
 }
 .tt-landing .bandcopy {
   position: relative;

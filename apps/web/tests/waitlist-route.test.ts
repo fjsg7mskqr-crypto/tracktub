@@ -12,7 +12,7 @@ async function post(
   opts: {
     insertError?: { code: string; message: string } | null;
     limited?: boolean;
-  } = {},
+  } = {}
 ) {
   vi.resetModules();
   const insert = vi.fn(async () => ({ error: opts.insertError ?? null }));
@@ -22,7 +22,7 @@ async function post(
   vi.doMock("@/lib/ratelimit", async () => {
     const actual =
       await vi.importActual<typeof import("@/lib/ratelimit")>(
-        "@/lib/ratelimit",
+        "@/lib/ratelimit"
       );
     return {
       ...actual,
@@ -35,7 +35,7 @@ async function post(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
-    }),
+    })
   );
   return { res, json: await res.json(), insert };
 }
@@ -60,7 +60,7 @@ describe("POST /landing/waitlist", () => {
   it("treats a duplicate signup as already-on-the-list", async () => {
     const { res, json } = await post(
       { email: "host@example.com" },
-      { insertError: { code: "23505", message: "dup" } },
+      { insertError: { code: "23505", message: "dup" } }
     );
     expect(res.status).toBe(200);
     expect(json).toEqual({ status: "already" });
@@ -82,7 +82,7 @@ describe("POST /landing/waitlist", () => {
   it("returns 429 when rate-limited", async () => {
     const { res, json } = await post(
       { email: "host@example.com" },
-      { limited: true },
+      { limited: true }
     );
     expect(res.status).toBe(429);
     expect(json.status).toBe("error");
@@ -91,7 +91,7 @@ describe("POST /landing/waitlist", () => {
   it("returns 500 with a friendly message when the insert fails", async () => {
     const { res, json } = await post(
       { email: "host@example.com" },
-      { insertError: { code: "XX000", message: "boom" } },
+      { insertError: { code: "XX000", message: "boom" } }
     );
     expect(res.status).toBe(500);
     expect(json).toEqual({
@@ -106,10 +106,10 @@ describe("landing has no Server Actions", () => {
     const dir = join(__dirname, "../src/app/landing");
     const walk = (d: string): string[] =>
       readdirSync(d, { withFileTypes: true }).flatMap((e) =>
-        e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)],
+        e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]
       );
     const offenders = walk(dir).filter((f) =>
-      /^\s*["']use server["']/m.test(readFileSync(f, "utf8")),
+      /^\s*["']use server["']/m.test(readFileSync(f, "utf8"))
     );
     expect(offenders).toEqual([]);
   });

@@ -67,8 +67,8 @@ export default async function BlogPostPage({ params }: Props) {
         <div className="glass bcta">
           <h2>Turn your turnover photos into proof</h2>
           <p>
-            TrackTub stamps each guided capture on a trusted clock, locks the record, and gives you
-            a share link when an owner or guest asks.
+            TrackTub stamps each guided capture on a trusted clock, locks the
+            record, and gives you a share link when an owner or guest asks.
           </p>
           <a href="/landing#join" className="btn">
             Get early access
