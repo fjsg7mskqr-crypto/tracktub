@@ -3,6 +3,7 @@
 // run the same code. RLS does the access control; callers check the actor can
 // capture for the property first (src/lib/actions/visit.ts).
 
+import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import {
@@ -400,7 +401,18 @@ export async function savePhoto(
   const stale = (existing ?? [])
     .map((p) => p.storage_path)
     .filter((p): p is string => !!p && p !== storagePath);
-  if (stale.length) await db.storage.from("photos").remove(stale);
+  if (stale.length) {
+    // The new shot is already saved, so a failed cleanup only leaves an
+    // unreferenced file behind: report it rather than fail the retake.
+    const { data: removed, error } = await db.storage
+      .from("photos")
+      .remove(stale);
+    if (error || (removed?.length ?? 0) < stale.length)
+      Sentry.captureMessage("Retake left stale photo files", {
+        level: "warning",
+        extra: { stale, removed: removed?.length ?? 0, error: error?.message },
+      });
+  }
 }
 
 /** Flag something for the owner (null clears it). Sets urgent to match. */

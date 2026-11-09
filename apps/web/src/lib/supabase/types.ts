@@ -1231,6 +1231,10 @@ export type Database = {
       app_is_assigned: { Args: { p_property: string }; Returns: boolean };
       app_is_member: { Args: { p_org: string }; Returns: boolean };
       app_is_team: { Args: { p_org: string }; Returns: boolean };
+      app_photo_path_access: {
+        Args: { p_name: string; p_write: boolean };
+        Returns: boolean;
+      };
       app_sees_all_properties: { Args: { p_org: string }; Returns: boolean };
       app_shares_org: { Args: { p_user: string }; Returns: boolean };
       complete_maintenance_occurrence: {
