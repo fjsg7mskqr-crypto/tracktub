@@ -310,6 +310,98 @@ describe.skipIf(!ready)("visit data", () => {
     expect(data?.share_token).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  it("a retake deletes the old photo file", async () => {
+    const tub = await newTub("Retake");
+    const id = await createDraft(db, tub, userId);
+    await savePhoto(db, id, "before", jpeg(), "2026-11-08T09:00:00.000Z");
+    await savePhoto(db, id, "before", jpeg(), "2026-11-08T09:05:00.000Z");
+    const { data: files } = await admin.storage
+      .from("photos")
+      .list(`${orgId}/${id}/before`);
+    const { data: rows } = await admin
+      .from("photo")
+      .select("storage_path")
+      .eq("turnover_id", id);
+    expect(files).toHaveLength(1);
+    expect(rows?.map((r) => r.storage_path)).toEqual([
+      `${orgId}/${id}/before/${files![0].name}`,
+    ]);
+  });
+
+  it("photo files are limited to people with access to the tub", async () => {
+    const tub = await newTub("Storage scope");
+    const id = await createDraft(db, tub, userId);
+    await savePhoto(db, id, "before", jpeg(), "2026-11-08T09:00:00.000Z");
+    const { data: row } = await admin
+      .from("photo")
+      .select("storage_path")
+      .eq("turnover_id", id)
+      .single();
+    const path = row!.storage_path!;
+    const folder = `${orgId}/${id}/before`;
+
+    const email = `outsider-${randomUUID()}@tracktub.test`;
+    const { data: u } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    const { data: otherOrg } = await admin
+      .from("org")
+      .insert({ name: "Visit Test Org (outsider)" })
+      .select("id")
+      .single();
+    await admin
+      .from("membership")
+      .insert({ user_id: u!.user!.id, org_id: otherOrg!.id, role: "operator" });
+    const outsider = createClient<Database>(url!, anon!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    await outsider.auth.signInWithPassword({ email, password });
+    const nobody = createClient<Database>(url!, anon!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    try {
+      for (const client of [outsider, nobody]) {
+        const up = await client.storage
+          .from("photos")
+          .upload(`${folder}/planted.jpg`, jpeg());
+        expect(up.error).not.toBeNull();
+        const { data: listed } = await client.storage
+          .from("photos")
+          .list(folder);
+        expect(listed ?? []).toHaveLength(0);
+        const { data: removed } = await client.storage
+          .from("photos")
+          .remove([path]);
+        expect(removed ?? []).toHaveLength(0);
+      }
+      // Its own org's folder is fine, but only under a real visit.
+      const stray = await outsider.storage
+        .from("photos")
+        .upload(`${otherOrg!.id}/${randomUUID()}/x.jpg`, jpeg());
+      expect(stray.error).not.toBeNull();
+
+      // The owner can list it, but once the visit is finished nobody
+      // signed in can delete or replace its evidence.
+      const { data: own } = await db.storage.from("photos").list(folder);
+      expect(own).toHaveLength(1);
+      await finishVisit(db, id);
+      const { data: removed } = await db.storage.from("photos").remove([path]);
+      expect(removed ?? []).toHaveLength(0);
+      const late = await db.storage
+        .from("photos")
+        .upload(`${folder}/late.jpg`, jpeg());
+      expect(late.error).not.toBeNull();
+      const { data: still } = await admin.storage.from("photos").list(folder);
+      expect(still).toHaveLength(1);
+    } finally {
+      await admin.from("org").delete().eq("id", otherOrg!.id);
+      await admin.auth.admin.deleteUser(u!.user!.id);
+    }
+  });
+
   it("finish locks an empty visit as partial", async () => {
     const tub = await newTub("Empty finish");
     const id = await createDraft(db, tub, userId);
