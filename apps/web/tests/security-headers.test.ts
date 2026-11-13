@@ -141,6 +141,100 @@ describe("enforcing nonce-based CSP (built per-request by middleware)", () => {
     expect(scriptSrc).not.toContain("supabase.co");
   });
 
+  const connectSrcOf = (csp: string) =>
+    csp
+      .split(";")
+      .map((d) => d.trim())
+      .find((d) => d.startsWith("connect-src "));
+
+  it("allowlists exactly PostHog US ingest + assets when the key is set", () => {
+    const csp = buildCsp(TEST_NONCE, {
+      supabaseUrl: "https://x.supabase.co",
+      posthogKey: "phc_test",
+      isDev: false,
+    });
+    expect(connectSrcOf(csp)).toBe(
+      "connect-src 'self' https://x.supabase.co wss://x.supabase.co " +
+        "https://us.i.posthog.com https://us-assets.i.posthog.com"
+    );
+  });
+
+  it("adds no PostHog origin when the key is unset", () => {
+    const csp = buildCsp(TEST_NONCE, {
+      supabaseUrl: "https://x.supabase.co",
+      posthogKey: undefined,
+      posthogHost: "https://eu.i.posthog.com",
+      isDev: false,
+    });
+    expect(csp).not.toContain("posthog");
+    expect(connectSrcOf(csp)).toBe(
+      "connect-src 'self' https://x.supabase.co wss://x.supabase.co"
+    );
+  });
+
+  it("honours a PostHog Cloud region host (EU)", () => {
+    const csp = buildCsp(TEST_NONCE, {
+      posthogKey: "phc_test",
+      posthogHost: "https://eu.i.posthog.com/",
+      supabaseUrl: "not a url",
+      isDev: false,
+    });
+    expect(connectSrcOf(csp)).toBe(
+      "connect-src 'self' https://eu.i.posthog.com https://eu-assets.i.posthog.com"
+    );
+  });
+
+  it("honours a custom (reverse-proxy / self-hosted) PostHog host", () => {
+    const csp = buildCsp(TEST_NONCE, {
+      posthogKey: "phc_test",
+      posthogHost: "https://ph.example.com/ingest",
+      supabaseUrl: "not a url",
+      isDev: false,
+    });
+    expect(connectSrcOf(csp)).toBe("connect-src 'self' https://ph.example.com");
+  });
+
+  it("reads the PostHog key + host from env", () => {
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", " phc_env ");
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://ph.example.com");
+    try {
+      const csp = buildCsp(TEST_NONCE, {
+        supabaseUrl: "not a url",
+        isDev: false,
+      });
+      expect(connectSrcOf(csp)).toBe(
+        "connect-src 'self' https://ph.example.com"
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it.each(["not a url", "javascript:alert(1)", "ftp://ph.example.com"])(
+    "drops a malformed PostHog host (%s) without breaking the policy",
+    (posthogHost) => {
+      const csp = buildCsp(TEST_NONCE, {
+        posthogKey: "phc_test",
+        posthogHost,
+        supabaseUrl: "https://x.supabase.co",
+        isDev: false,
+      });
+      expect(connectSrcOf(csp)).toBe(
+        "connect-src 'self' https://x.supabase.co wss://x.supabase.co"
+      );
+      expect(csp).toContain("object-src 'none'");
+      expect(csp).toContain("frame-ancestors 'none'");
+    }
+  );
+
+  it("never widens script-src for PostHog", () => {
+    const csp = buildCsp(TEST_NONCE, { posthogKey: "phc_test", isDev: false });
+    const scriptSrc = csp
+      .split(";")
+      .find((d) => d.trim().startsWith("script-src"));
+    expect(scriptSrc).not.toContain("posthog");
+  });
+
   it("keeps report-uri + report-to in the enforcing policy (Sentry)", () => {
     const reportUri = getCspReportUri();
     const csp = buildCsp(TEST_NONCE, { isDev: false });
