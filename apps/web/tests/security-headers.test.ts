@@ -7,10 +7,16 @@ import { buildCsp, getCspReportUri } from "@/lib/csp";
 async function loadConfigHeaders() {
   const config = (await import("../next.config.mjs")).default;
   const rules = await config.headers!();
-  expect(rules).toHaveLength(1);
+  // Rule 0 = our site-wide headers; rule 1 = Vercel BotID's own first-party
+  // path (withBotId, issue #43), and nothing else.
+  expect(rules).toHaveLength(2);
   expect(rules[0].source).toBe("/(.*)");
+  expect(rules[1].source).toBe(BOTID_SOURCE);
   return Object.fromEntries(rules[0].headers.map((h) => [h.key, h.value]));
 }
+
+const BOTID_SOURCE =
+  "/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/:path*";
 
 // Stable nonce for CSP builder assertions — the middleware generates a fresh
 // one per request; tests pass it explicitly for deterministic checks.
@@ -39,6 +45,36 @@ describe("next.config.mjs static security headers", () => {
     // `report-to csp-endpoint` in the per-request CSP built by middleware.
     expect(headers["Reporting-Endpoints"]).toMatch(
       /^csp-endpoint="https:\/\/\S+sentry\.io\/api\/\d+\/security\//
+    );
+  });
+});
+
+describe("Vercel BotID path headers (issue #43)", () => {
+  it("only loosens framing for BotID's own path, appended after the site rule", async () => {
+    // Next applies the LAST matching rule per header key, so BotID's
+    // SAMEORIGIN must come after our site-wide DENY to win on its path only.
+    const config = (await import("../next.config.mjs")).default;
+    const rules = await config.headers!();
+    const botid = Object.fromEntries(
+      rules[1].headers.map((h) => [h.key, h.value])
+    );
+    expect(botid).toEqual({
+      "X-Frame-Options": "SAMEORIGIN",
+      "Content-Security-Policy": "frame-ancestors 'self'",
+    });
+  });
+
+  it("rewrites BotID's first-party path to Vercel", async () => {
+    const config = (await import("../next.config.mjs")).default;
+    const rewrites = await config.rewrites!();
+    const list = Array.isArray(rewrites)
+      ? rewrites
+      : [...(rewrites.beforeFiles ?? []), ...(rewrites.afterFiles ?? [])];
+    expect(list.map((r) => r.destination)).toEqual(
+      expect.arrayContaining([
+        "https://api.vercel.com/bot-protection/v1/challenge",
+        "https://api.vercel.com/bot-protection/v1/proxy/:path*",
+      ])
     );
   });
 });

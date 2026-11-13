@@ -43,7 +43,12 @@ export const config = {
   // `robots.txt` / `sitemap.xml` are excluded too: they MUST be fetchable by
   // anonymous crawlers, and the pre-launch gate would otherwise redirect them
   // to /login or /landing, defeating the whole SEO point.
+  // `149e9513-01fa-4fb0-aad4-566afd725d1b` is Vercel BotID's first-party prefix
+  // (rewritten to Vercel by withBotId in next.config.mjs, issue #43). Proxy runs
+  // BEFORE config rewrites, so without this exclusion a signed-out visitor's
+  // challenge-script fetch would be redirected to /landing and get our
+  // `frame-ancestors 'none'` CSP, silently disabling bot protection.
   matcher: [
-    "/((?!monitoring|robots.txt|sitemap.xml|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!monitoring|149e9513-01fa-4fb0-aad4-566afd725d1b|robots.txt|sitemap.xml|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
