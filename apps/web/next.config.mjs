@@ -1,5 +1,6 @@
 import path from "node:path";
 import { withSentryConfig } from "@sentry/nextjs/config";
+import { withBotId } from "botid/next/config";
 
 // NOTE: cleanEnv and sentryCspReportUri below intentionally duplicate logic
 // from src/lib/csp.ts (getCspReportUri / cleanEnv). next.config.mjs is
@@ -82,7 +83,11 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+// withBotId (issue #43) adds the first-party rewrites that proxy BotID's
+// challenge script + API from /149e9513-…/ on our own origin to Vercel, plus
+// frame headers for that path. That prefix is excluded from the proxy matcher
+// (src/proxy.ts) so auth gating and the page CSP never touch it.
+export default withSentryConfig(withBotId(nextConfig), {
   org: "supernova-r7",
   project: "tracktub-web",
 

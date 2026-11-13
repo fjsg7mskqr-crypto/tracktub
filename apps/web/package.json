@@ -24,6 +24,7 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.2",
     "@vercel/analytics": "^2.0.1",
+    "botid": "1.5.12",
     "gray-matter": "^4.0.3",
     "next": "16.4.5",
     "posthog-js": "^1.447.3",
