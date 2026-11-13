@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { normalizeEmail } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
+import { rejectBots } from "@/lib/botid";
 
 export type WaitlistState = {
   status: "idle" | "ok" | "already" | "error";
@@ -17,6 +18,10 @@ const reply = (state: WaitlistState, status = 200) =>
  *  `/landing` prefix in PUBLIC_PATHS. The anon RLS policy allows INSERT only, so
  *  this works for logged-out visitors and can never read the list back. */
 export async function POST(request: Request) {
+  // Invisible bot check first (issue #43). Fails open — see src/lib/botid.ts.
+  const blocked = await rejectBots("waitlist");
+  if (blocked) return blocked;
+
   // Throttle waitlist submissions per IP (issue #42). No-op until Upstash is
   // configured; fails open, so a limiter hiccup never blocks a real signup.
   const { success } = await checkRateLimit(

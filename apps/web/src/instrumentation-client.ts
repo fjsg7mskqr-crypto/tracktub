@@ -1,4 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
+import { initBotId } from "botid/client/core";
+import { BOTID_PROTECTED_ROUTES } from "@/lib/botid-routes";
 
 Sentry.init({
   // The DSN is public by design (it only addresses where events are sent), so
@@ -28,5 +30,12 @@ Sentry.init({
     Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
   ],
 });
+
+// Vercel BotID (issue #43): attaches invisible challenge headers to fetches
+// for the listed public write endpoints; the route verifies them server-side
+// (src/lib/botid.ts). No-op in `next dev`. The challenge script loads from our
+// own origin (withBotId rewrites in next.config.mjs), injected by this nonce'd
+// bundle, so 'strict-dynamic' already permits it — no CSP host allowlist.
+initBotId({ protect: BOTID_PROTECTED_ROUTES.map((r) => ({ ...r })) });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

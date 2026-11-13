@@ -12,9 +12,17 @@ async function post(
   opts: {
     insertError?: { code: string; message: string } | null;
     limited?: boolean;
+    bot?: boolean;
   } = {}
 ) {
   vi.resetModules();
+  const checkBotId = vi.fn(async () => ({
+    isBot: !!opts.bot,
+    isHuman: !opts.bot,
+    isVerifiedBot: false,
+    bypassed: false,
+  }));
+  vi.doMock("botid/server", () => ({ checkBotId }));
   const insert = vi.fn(async () => ({ error: opts.insertError ?? null }));
   vi.doMock("@/lib/supabase/server", () => ({
     createClient: async () => ({ from: () => ({ insert }) }),
@@ -37,14 +45,37 @@ async function post(
       body: JSON.stringify(body),
     })
   );
-  return { res, json: await res.json(), insert };
+  return { res, json: await res.json(), insert, checkBotId };
 }
 
 describe("POST /landing/waitlist", () => {
   afterEach(() => {
     vi.doUnmock("@/lib/supabase/server");
     vi.doUnmock("@/lib/ratelimit");
+    vi.doUnmock("botid/server");
     vi.resetModules();
+  });
+
+  it("rejects a BotID bot verdict with 403 before touching the DB", async () => {
+    const { res, json, insert, checkBotId } = await post(
+      { email: "host@example.com" },
+      { bot: true }
+    );
+    expect(checkBotId).toHaveBeenCalledOnce();
+    expect(res.status).toBe(403);
+    expect(json.status).toBe("error");
+    expect(json.message).toMatch(/refresh the page/);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("accepts a BotID human verdict", async () => {
+    const { res, json, insert, checkBotId } = await post({
+      email: "host@example.com",
+    });
+    expect(checkBotId).toHaveBeenCalledOnce();
+    expect(res.status).toBe(200);
+    expect(json).toEqual({ status: "ok" });
+    expect(insert).toHaveBeenCalledOnce();
   });
 
   it("persists a valid email and reports ok", async () => {
