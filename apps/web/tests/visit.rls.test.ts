@@ -411,4 +411,95 @@ describe.skipIf(!ready)("visit data", () => {
     expect(isPartial(s)).toBe(true);
     await expect(saveNotes(db, id, "late")).rejects.toThrow("Visit is locked");
   });
+  describe("server times (#389)", () => {
+    const LONG_AGO = "2020-01-01T00:00:00.000Z";
+    const recent = (iso: string | null | undefined) =>
+      Math.abs(Date.now() - Date.parse(iso ?? "")) < 60_000;
+
+    it("a client cannot set photo.received_at", async () => {
+      const tub = await newTub("Received forge");
+      const id = await createDraft(db, tub, userId);
+      const { data: row, error } = await db
+        .from("photo")
+        .insert({
+          turnover_id: id,
+          slot: "cover",
+          phase: "after",
+          storage_path: `${orgId}/${id}/after/forged.jpg`,
+          received_at: LONG_AGO,
+        })
+        .select("id")
+        .single();
+      if (error || !row) throw error ?? new Error("photo insert failed");
+      const read = async () =>
+        (
+          await admin
+            .from("photo")
+            .select("received_at")
+            .eq("id", row.id)
+            .single()
+        ).data?.received_at;
+      const stamped = await read();
+      expect(recent(stamped)).toBe(true);
+
+      const { error: uErr } = await db
+        .from("photo")
+        .update({ received_at: LONG_AGO })
+        .eq("id", row.id);
+      expect(uErr).toBeNull();
+      expect(await read()).toBe(stamped);
+    });
+
+    it("a retake restamps photo.received_at", async () => {
+      const tub = await newTub("Received retake");
+      const id = await createDraft(db, tub, userId);
+      const read = async () =>
+        (
+          await admin
+            .from("photo")
+            .select("received_at, created_at")
+            .eq("turnover_id", id)
+            .single()
+        ).data!;
+      await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:00:00.000Z");
+      const first = await read();
+      await new Promise((r) => setTimeout(r, 50));
+      await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:05:00.000Z");
+      const second = await read();
+      expect(Date.parse(second.received_at)).toBeGreaterThan(
+        Date.parse(first.received_at)
+      );
+      expect(second.created_at).toBe(first.created_at);
+    });
+
+    it("locking stamps turnover.locked_at; a client cannot set it", async () => {
+      const tub = await newTub("Locked at");
+      const id = await createDraft(db, tub, userId);
+      const read = async () =>
+        (await admin.from("turnover").select("locked_at").eq("id", id).single())
+          .data?.locked_at;
+
+      const { error } = await db
+        .from("turnover")
+        .update({ locked_at: LONG_AGO })
+        .eq("id", id);
+      expect(error).toBeNull();
+      expect(await read()).toBeNull();
+
+      await finishVisit(db, id);
+      expect(recent(await read())).toBe(true);
+
+      const { data: forged, error: fErr } = await db
+        .from("turnover")
+        .insert({
+          property_id: tub,
+          submitter_id: userId,
+          status: "submitted_locked",
+          locked_at: LONG_AGO,
+        })
+        .select("locked_at")
+        .single();
+      if (!fErr) expect(recent(forged?.locked_at)).toBe(true);
+    });
+  });
 });

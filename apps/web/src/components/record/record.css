@@ -217,6 +217,11 @@
   font-size: 12px;
   color: #2b2f36;
 }
+.tt-record-received {
+  display: block;
+  font-size: 11px;
+  color: #5a5f6a;
+}
 
 .tt-record .tt-record-pair {
   display: grid;

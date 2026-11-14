@@ -544,6 +544,7 @@ export type Database = {
           created_at: string;
           id: string;
           phase: Database["public"]["Enums"]["capture_phase"];
+          received_at: string;
           slot: Database["public"]["Enums"]["photo_slot"];
           storage_path: string | null;
           turnover_id: string;
@@ -556,6 +557,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           phase?: Database["public"]["Enums"]["capture_phase"];
+          received_at?: string;
           slot: Database["public"]["Enums"]["photo_slot"];
           storage_path?: string | null;
           turnover_id: string;
@@ -568,6 +570,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           phase?: Database["public"]["Enums"]["capture_phase"];
+          received_at?: string;
           slot?: Database["public"]["Enums"]["photo_slot"];
           storage_path?: string | null;
           turnover_id?: string;
@@ -1047,6 +1050,7 @@ export type Database = {
           created_at: string;
           geofence_ok: boolean | null;
           id: string;
+          locked_at: string | null;
           notes: string | null;
           owner_flag: string | null;
           property_id: string;
@@ -1064,6 +1068,7 @@ export type Database = {
           created_at?: string;
           geofence_ok?: boolean | null;
           id?: string;
+          locked_at?: string | null;
           notes?: string | null;
           owner_flag?: string | null;
           property_id: string;
@@ -1081,6 +1086,7 @@ export type Database = {
           created_at?: string;
           geofence_ok?: boolean | null;
           id?: string;
+          locked_at?: string | null;
           notes?: string | null;
           owner_flag?: string | null;
           property_id?: string;

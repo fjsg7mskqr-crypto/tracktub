@@ -6,7 +6,7 @@ import "./record.css";
 
 /** Verbatim from the spec/mockup (D23 wording). */
 export const RECORD_FOOTER =
-  "Photos taken live in the TrackTub camera. Photo times come from the phone that took them; the record was locked when submitted and can't be edited.";
+  "Photos taken live in the TrackTub camera. Photo times come from the phone that took them; each photo also carries the time our server received it. The record was locked when submitted and can't be edited.";
 
 /** "10:58 AM" → "10:58": badge, table headers and captions use the bare clock
  *  (as the mockup); the period is on the span line above them. */
@@ -180,6 +180,11 @@ export function RecordView({
                   <img src={p.url} alt={`${p.label} photo`} loading="lazy" />
                   <figcaption>
                     {p.label} · {clock(p.time)}
+                    {p.received ? (
+                      <span className="tt-record-received">
+                        received {clock(p.received)}
+                      </span>
+                    ) : null}
                   </figcaption>
                 </figure>
               ))}
