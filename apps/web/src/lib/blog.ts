@@ -80,7 +80,9 @@ export function postLastModified(post: BlogPostMeta): string {
  * moves when content actually changes.
  */
 export function getLatestPostDate(): string | null {
-  const dates = getAllPosts().map(postLastModified).sort();
+  const dates = getAllPosts()
+    .map(postLastModified)
+    .sort((a, b) => a.localeCompare(b));
   return dates.at(-1) ?? null;
 }
 
