@@ -11,7 +11,7 @@ vi.mock("@/lib/actions/proofEvent", () => ({ recordProofShare: vi.fn() }));
 afterEach(cleanup);
 
 const FOOTER =
-  "Photos taken live in the TrackTub camera. Times stamped by TrackTub's server; the record was locked when submitted and can't be edited.";
+  "Photos taken live in the TrackTub camera. Photo times come from the phone that took them; the record was locked when submitted and can't be edited.";
 const URL = "https://tracktub.com/proof/7Kq2tok";
 
 describe("RecordView", () => {
