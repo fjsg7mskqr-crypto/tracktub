@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { getURL } from "@/lib/url";
 
-/** Shared OG/Twitter card — exported from `branding/social/og-card.svg`. */
-export const OG_IMAGE_PATH = "/og-card.svg";
+/**
+ * Shared OG/Twitter card — the 1200×630 PNG export of `branding/social/og-card.svg`
+ * (copied from `branding/social/og-card.png`). PNG, not SVG: Facebook, LinkedIn,
+ * X and most chat unfurlers ignore SVG og:images.
+ */
+export const OG_IMAGE_PATH = "/og-card.png";
 
 export function absoluteUrl(pathname: string): string {
   const base = getURL();

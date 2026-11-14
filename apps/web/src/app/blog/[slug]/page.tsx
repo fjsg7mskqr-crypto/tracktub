@@ -3,8 +3,21 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarkdownBody } from "@/components/marketing/MarkdownBody";
 import { MarketingFrame } from "@/components/marketing/MarketingFrame";
-import { getPostBySlug, getPostSlugs } from "@/lib/blog";
-import { absoluteUrl, articleMetadata } from "@/lib/marketing-seo";
+import { getPostBySlug, getPostSlugs, getRelatedPosts } from "@/lib/blog";
+import {
+  absoluteUrl,
+  articleMetadata,
+  OG_IMAGE_PATH,
+} from "@/lib/marketing-seo";
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -24,6 +37,8 @@ export default async function BlogPostPage({ params }: Props) {
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
+  const url = absoluteUrl(`/blog/${post.slug}`);
+  const related = getRelatedPosts(post.slug);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -31,13 +46,15 @@ export default async function BlogPostPage({ params }: Props) {
     description: post.description,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt ?? post.publishedAt,
+    url,
+    image: absoluteUrl(OG_IMAGE_PATH),
     author: { "@type": "Organization", name: post.author ?? "TrackTub Team" },
     publisher: {
       "@type": "Organization",
       name: "TrackTub",
-      logo: { "@type": "ImageObject", url: absoluteUrl("/og-card.svg") },
+      logo: { "@type": "ImageObject", url: absoluteUrl(OG_IMAGE_PATH) },
     },
-    mainEntityOfPage: absoluteUrl(`/blog/${post.slug}`),
+    mainEntityOfPage: url,
   };
 
   return (
@@ -54,16 +71,32 @@ export default async function BlogPostPage({ params }: Props) {
         <h1>{post.title}</h1>
         <div className="meta">
           <time dateTime={post.publishedAt}>
-            {new Date(post.publishedAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-              timeZone: "UTC",
-            })}
+            {formatDate(post.publishedAt)}
           </time>
+          {post.updatedAt && post.updatedAt !== post.publishedAt && (
+            <span>
+              Updated{" "}
+              <time dateTime={post.updatedAt}>
+                {formatDate(post.updatedAt)}
+              </time>
+            </span>
+          )}
           <span>{post.author ?? "TrackTub Team"}</span>
         </div>
         <MarkdownBody content={post.content} />
+        {related.length > 0 && (
+          <nav className="brelated" aria-labelledby="related-heading">
+            <h2 id="related-heading">Keep reading</h2>
+            <ul>
+              {related.map((r) => (
+                <li key={r.slug}>
+                  <Link href={`/blog/${r.slug}`}>{r.title}</Link>
+                  <p>{r.description}</p>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
         <div className="glass bcta">
           <h2>Turn your turnover photos into proof</h2>
           <p>
