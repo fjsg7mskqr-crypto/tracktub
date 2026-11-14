@@ -11,10 +11,18 @@ vi.mock("@/lib/actions/proofEvent", () => ({ recordProofShare: vi.fn() }));
 afterEach(cleanup);
 
 const FOOTER =
-  "Photos taken live in the TrackTub camera. Times stamped by TrackTub's server; the record was locked when submitted and can't be edited.";
+  "Photos taken live in the TrackTub camera. Photo times come from the phone that took them; each photo also carries the time our server received it. The record was locked when submitted and can't be edited.";
 const URL = "https://tracktub.com/proof/7Kq2tok";
 
 describe("RecordView", () => {
+  it("shows a photo's receive time only when it differs from the phone time", () => {
+    const row = mockupRow();
+    row.photos[0] = { ...row.photos[0], received_at: "2026-10-26T15:30:00Z" };
+    render(<RecordView visit={buildRecord(row)} audience="owner" />);
+    expect(screen.getAllByText(/^received /)).toHaveLength(1);
+    expect(screen.getByText("received 11:30")).toBeTruthy();
+  });
+
   it("operator view has Send / Copy and the owner-preview note", () => {
     render(
       <RecordView

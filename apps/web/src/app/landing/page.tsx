@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = marketingMetadata({
   title: "TrackTub — know your hot tub was guest-ready",
   description:
-    "For self-managed STR hosts: capture each hot-tub turnover with a server timestamp, lock it after submit, and share it in one tap. Free for your first property.",
+    "For self-managed STR hosts: capture each hot-tub turnover with in-app camera photos, see the time on every shot, lock it after submit, and share it in one tap. Free for your first property.",
   pathname: "/landing",
 });
 
@@ -143,7 +143,7 @@ export default function Landing() {
             </h1>
             <p className="sub">
               Every turnover, you or your cleaner snap a quick guided photo set.
-              TrackTub stamps the time on our server and locks the record once
+              Every photo shows the time it was taken, and the record locks once
               it&rsquo;s submitted — so you have a record the tub was clean,
               safe, and ready, and a link to share the moment anyone asks.
             </p>
@@ -184,7 +184,7 @@ export default function Landing() {
                 </span>
                 <span>·</span>
                 <span>
-                  Server time <b>✓</b>
+                  Photo times <b>✓</b>
                 </span>
                 <span>·</span>
                 <span>
@@ -287,9 +287,8 @@ export default function Landing() {
               <div className="ichip num">2</div>
               <h3>Timestamped and locked</h3>
               <p>
-                TrackTub stamps the time on our server the moment it&rsquo;s
-                saved, then locks the record so it can&rsquo;t be edited in the
-                app or back-dated.
+                Every photo shows the time it was taken. Once the record is
+                submitted, it locks so it can&rsquo;t be edited in the app.
               </p>
             </div>
             <div className="glass fcard">
@@ -364,7 +363,7 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* 2 — Server timestamp */}
+            {/* 2 — Time on every photo */}
             <div className="glass fcard">
               <div
                 className="ichip"
@@ -377,17 +376,17 @@ export default function Landing() {
                   <path d="M12 7.5V12l3 2" />
                 </svg>
               </div>
-              <h3>Server timestamp</h3>
+              <h3>Time on every photo</h3>
               <p>
-                Stamped the moment it&rsquo;s submitted — our clock, never the
-                cleaner&rsquo;s phone.
+                Each shot shows the time it was taken, right on the record the
+                owner sees.
               </p>
               <div className="ui">
                 <UiLog
                   rows={[
-                    ["14:22:07", "Photos submitted"],
-                    ["14:22:08", "Server-stamped"],
-                    ["14:22:08", "Record locked"],
+                    ["14:08", "Before · full frame"],
+                    ["14:21", "After · water level"],
+                    ["14:22", "After · cover on"],
                   ]}
                 />
               </div>
@@ -408,8 +407,8 @@ export default function Landing() {
               </div>
               <h3>Locked after submit</h3>
               <p>
-                Once it&rsquo;s submitted, the record can&rsquo;t be edited in
-                TrackTub, and the timestamp can&rsquo;t be back-dated.
+                Once it&rsquo;s submitted, the record locks and can&rsquo;t be
+                edited in TrackTub.
               </p>
               <div className="ui">
                 <div className="uifield">
