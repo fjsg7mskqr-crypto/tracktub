@@ -198,7 +198,7 @@ export function receivedLabel(
 ): string | null {
   if (!capturedAt || !receivedAt) return null;
   const gap = Math.abs(Date.parse(receivedAt) - Date.parse(capturedAt));
-  if (!(gap > RECEIVED_GAP_MS)) return null;
+  if (Number.isNaN(gap) || gap <= RECEIVED_GAP_MS) return null;
   const time = formatTime(receivedAt);
   return formatDate(receivedAt) === formatDate(capturedAt)
     ? time

@@ -28,7 +28,7 @@
 alter table photo add column received_at timestamptz;
 
 alter table photo disable trigger audit_photo;
-update photo set received_at = created_at;
+update photo set received_at = created_at where received_at is null;
 alter table photo enable trigger audit_photo;
 
 alter table photo
