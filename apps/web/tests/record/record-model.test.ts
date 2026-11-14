@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRecord } from "@/components/record/record-model";
+import { buildRecord, receivedLabel } from "@/components/record/record-model";
 import { emptyRow, mockupRow } from "./fixtures";
 
 describe("buildRecord — the mockup visit", () => {
@@ -13,9 +13,17 @@ describe("buildRecord — the mockup visit", () => {
     expect(r.span).toBe("9:42 – 10:58 AM");
   });
 
-  it("is locked at the submit time", () => {
+  it("is locked at the lock time, not the visit start", () => {
     expect(r.locked).toBe(true);
     expect(r.lockedAt).toBe("10:58 AM");
+    const started = buildRecord(
+      mockupRow({ submitted_at_server: "2026-10-26T13:42:00Z" })
+    );
+    expect(started.lockedAt).toBe("10:58 AM");
+  });
+
+  it("photos within 5 minutes of receipt show only the phone time", () => {
+    expect(r.photos.map((p) => p.received)).toEqual([null, null, null]);
   });
 
   it("builds the water table in reading order", () => {
@@ -111,9 +119,7 @@ describe("buildRecord — edge cases", () => {
   });
 
   it("a span across noon shows both periods", () => {
-    const r = buildRecord(
-      mockupRow({ submitted_at_server: "2026-10-26T17:05:00Z" })
-    );
+    const r = buildRecord(mockupRow({ locked_at: "2026-10-26T17:05:00Z" }));
     expect(r.span).toBe("9:42 AM – 1:05 PM");
   });
 
@@ -148,13 +154,15 @@ describe("buildRecord — edge cases", () => {
             phase: "before",
             storage_path: "org/t/issue.jpg",
             captured_at: null,
-            created_at: "2026-10-26T13:50:00Z",
+            received_at: "2026-10-26T13:50:00Z",
+            created_at: "2026-10-26T13:40:00Z",
           },
           {
             slot: "full_frame",
             phase: "before",
             storage_path: null,
             captured_at: null,
+            received_at: "2026-10-26T13:43:00Z",
             created_at: "2026-10-26T13:43:00Z",
           },
         ],
@@ -171,5 +179,40 @@ describe("buildRecord — edge cases", () => {
       buildRecord(mockupRow({ owner_flag: "Cover strap fraying" })).ownerFlag
     ).toBe("Cover strap fraying");
     expect(buildRecord(mockupRow({ owner_flag: "  " })).ownerFlag).toBeNull();
+  });
+});
+
+describe("receivedLabel — when to show the server receive time", () => {
+  const phone = "2026-10-26T14:00:00Z";
+
+  it.each([
+    ["same instant", "2026-10-26T14:00:00Z"],
+    ["4 minutes later", "2026-10-26T14:04:00Z"],
+    ["exactly 5 minutes later", "2026-10-26T14:05:00Z"],
+    ["5 minutes earlier", "2026-10-26T13:55:00Z"],
+  ])("hidden when %s", (_, received) => {
+    expect(receivedLabel(phone, received)).toBeNull();
+  });
+
+  it("shown past 5 minutes either way", () => {
+    expect(receivedLabel(phone, "2026-10-26T14:05:01Z")).toBe("10:05 AM");
+    expect(receivedLabel(phone, "2026-10-26T13:30:00Z")).toBe("9:30 AM");
+  });
+
+  it("adds the date when the receive day differs", () => {
+    expect(receivedLabel(phone, "2026-10-27T15:10:00Z")).toBe(
+      "Oct 27, 11:10 AM"
+    );
+  });
+
+  it("hidden without a phone time (the photo already shows server time)", () => {
+    expect(receivedLabel(null, "2026-10-26T14:30:00Z")).toBeNull();
+  });
+
+  it("flows into the record's photos", () => {
+    const row = mockupRow();
+    row.photos[0] = { ...row.photos[0], received_at: "2026-10-26T15:30:00Z" };
+    const cover = buildRecord(row).photos.find((p) => p.label === "Cover on");
+    expect(cover?.received).toBe("11:30 AM");
   });
 });
