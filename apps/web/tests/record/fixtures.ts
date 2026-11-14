@@ -6,7 +6,8 @@ export function mockupRow(overrides: Partial<RecordRow> = {}): RecordRow {
     id: "3f9a2c1e-7b44-4d1a-9e2b-0c5d6e7f8a9b",
     status: "submitted_locked",
     created_at: "2026-10-26T13:42:00Z",
-    submitted_at_server: "2026-10-26T14:58:00Z",
+    submitted_at_server: "2026-10-26T13:42:00Z",
+    locked_at: "2026-10-26T14:58:00Z",
     share_token: "7Kq2tok",
     notes: "Light foam on arrival, cleared after the filter clean.",
     cleaning_steps: ["filters_cleaned", "wiped"],
@@ -24,6 +25,7 @@ export function mockupRow(overrides: Partial<RecordRow> = {}): RecordRow {
         phase: "after",
         storage_path: "org/t/cover.jpg",
         captured_at: "2026-10-26T14:56:00Z",
+        received_at: "2026-10-26T14:56:05Z",
         created_at: "2026-10-26T14:56:05Z",
       },
       {
@@ -31,6 +33,7 @@ export function mockupRow(overrides: Partial<RecordRow> = {}): RecordRow {
         phase: "before",
         storage_path: "org/t/before.jpg",
         captured_at: "2026-10-26T13:43:00Z",
+        received_at: "2026-10-26T13:43:05Z",
         created_at: "2026-10-26T13:43:05Z",
       },
       {
@@ -38,6 +41,7 @@ export function mockupRow(overrides: Partial<RecordRow> = {}): RecordRow {
         phase: "after",
         storage_path: "org/t/after.jpg",
         captured_at: "2026-10-26T14:54:00Z",
+        received_at: "2026-10-26T14:54:05Z",
         created_at: "2026-10-26T14:54:05Z",
       },
     ],

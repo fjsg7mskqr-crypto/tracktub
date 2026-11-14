@@ -37,6 +37,8 @@ export type RecordRow = {
   status: string;
   created_at: string;
   submitted_at_server: string | null;
+  /** Server time the visit was locked (null while a draft). */
+  locked_at: string | null;
   share_token: string | null;
   notes: string | null;
   cleaning_steps: string[] | null;
@@ -55,6 +57,8 @@ export type RecordRow = {
     phase: string;
     storage_path: string | null;
     captured_at: string | null;
+    /** Server time this shot reached us (restamped on retake). */
+    received_at: string;
     created_at: string;
   }[];
   water: WaterRow | null;
@@ -88,7 +92,14 @@ export type RecordModel = {
     lines: WaterLine[];
     any: boolean;
   };
-  photos: { label: string; time: string; url: string }[];
+  photos: {
+    label: string;
+    /** Phone time (server time when the phone sent none). */
+    time: string;
+    /** Server receive time, only when it differs meaningfully from `time`. */
+    received: string | null;
+    url: string;
+  }[];
   added: string[];
   work: { label: string; done: boolean }[];
   ownerFlag: string | null;
@@ -171,6 +182,29 @@ function timeSpan(start: string, end: string | null): string {
   return `${a} – ${b}`;
 }
 
+/** Gap past which a photo's server receive time is worth showing (late
+ *  upload, or a phone clock that is off). */
+const RECEIVED_GAP_MS = 5 * 60 * 1000;
+
+/**
+ * "received HH:MM" for a photo — the server receive time, formatted, when it
+ * differs from the phone time by more than 5 minutes; null otherwise (and when
+ * there is no phone time, since the photo already shows the receive time).
+ * Prefixed with the date when the two fall on different days.
+ */
+export function receivedLabel(
+  capturedAt: string | null,
+  receivedAt: string | null
+): string | null {
+  if (!capturedAt || !receivedAt) return null;
+  const gap = Math.abs(Date.parse(receivedAt) - Date.parse(capturedAt));
+  if (Number.isNaN(gap) || gap <= RECEIVED_GAP_MS) return null;
+  const time = formatTime(receivedAt);
+  return formatDate(receivedAt) === formatDate(capturedAt)
+    ? time
+    : `${formatShortDate(receivedAt)}, ${time}`;
+}
+
 export function buildRecord(row: RecordRow): RecordModel {
   const water = row.water;
   const locked = row.status === "submitted_locked";
@@ -202,7 +236,8 @@ export function buildRecord(row: RecordRow): RecordModel {
           kind === "other"
             ? (PHOTO_SLOT_LABELS[p.slot as PhotoSlot] ?? p.slot)
             : PHOTO_LABEL[kind],
-        time: formatTime(p.captured_at ?? p.created_at),
+        time: formatTime(p.captured_at ?? p.received_at),
+        received: receivedLabel(p.captured_at, p.received_at),
         url: photoPublicUrl(p.storage_path as string),
       }))
   );
@@ -242,9 +277,9 @@ export function buildRecord(row: RecordRow): RecordModel {
     address: row.property?.address ?? null,
     date: formatDate(row.created_at),
     operator: operatorName(row.submitter),
-    span: timeSpan(row.created_at, locked ? row.submitted_at_server : null),
+    span: timeSpan(row.created_at, locked ? row.locked_at : null),
     locked,
-    lockedAt: locked ? formatTime(row.submitted_at_server) : null,
+    lockedAt: locked ? formatTime(row.locked_at) : null,
     water: {
       foundAt: foundLogged
         ? formatTime(water?.found_recorded_at ?? water?.recorded_at ?? null)
