@@ -47,6 +47,12 @@ export function MarketingFrame({ children, active }: Props) {
         <Link href="/blog" className="flink">
           Resources
         </Link>
+        <Link href="/privacy" className="flink">
+          Privacy
+        </Link>
+        <Link href="/terms" className="flink">
+          Terms
+        </Link>
         <a
           className="fx"
           href="https://x.com/tracktub"
