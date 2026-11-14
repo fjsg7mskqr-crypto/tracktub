@@ -246,7 +246,7 @@ describe("VisitScreen — open items", () => {
       total_alkalinity: 100,
       ph: 7.9,
       calcium_hardness: 200,
-      sanitizer_ppm: 2,
+      sanitizer_ppm: 4,
     };
     render(<VisitScreen initial={snap({ left })} />);
     fireEvent.click(screen.getByRole("button", { name: /Re-check pH/ }));
