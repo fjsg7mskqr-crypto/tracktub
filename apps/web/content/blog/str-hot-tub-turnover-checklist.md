@@ -108,6 +108,11 @@ The checklist only works if whoever does the turnover actually runs it. Tips for
 - **One place for records** — scattered group-chat photos do not scale across properties
 - **Share proof proactively with owners** — reduces "was it done?" messages before they become disputes
 
+## Further reading
+
+- [Should you drain a rental hot tub between every guest?](/blog/drain-rental-hot-tub-between-guests) — when a drain is the right call, and a schedule based on use
+- [Guest says the hot tub was dirty: Airbnb refunds, claims, and your record](/blog/guest-says-hot-tub-was-dirty-airbnb-refunds-claims) — what Airbnb's rules say and what your record should show
+
 ---
 
 _TrackTub is built for self-managed STR hosts who want guest-ready peace of mind first — and a record to show when anyone asks. [Join the early-access list](/landing#join) to capture guided turnover records with camera-only photos, the time on every photo, and one-tap share links._

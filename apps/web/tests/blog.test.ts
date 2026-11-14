@@ -5,7 +5,29 @@ describe("blog content", () => {
   it("lists published posts newest first", () => {
     const posts = getAllPosts();
     expect(posts.length).toBeGreaterThan(0);
-    expect(posts[0]?.slug).toBe("str-hot-tub-turnover-checklist");
+    for (let i = 1; i < posts.length; i++) {
+      expect(
+        posts[i - 1]!.publishedAt.localeCompare(posts[i]!.publishedAt)
+      ).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("every post has the frontmatter the page and sitemap rely on", () => {
+    for (const meta of getAllPosts()) {
+      expect(meta.title.length).toBeGreaterThan(0);
+      expect(meta.description.length).toBeGreaterThan(0);
+      expect(Number.isNaN(Date.parse(meta.publishedAt))).toBe(false);
+    }
+  });
+
+  it("internal /blog links in posts point at real posts", () => {
+    const slugs = new Set(getPostSlugs());
+    for (const slug of slugs) {
+      const body = getPostBySlug(slug)?.content ?? "";
+      for (const m of body.matchAll(/\]\(\/blog\/([a-z0-9-]+)\)/g)) {
+        expect(slugs.has(m[1]!)).toBe(true);
+      }
+    }
   });
 
   it("loads a post by slug with frontmatter", () => {
