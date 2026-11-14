@@ -26,7 +26,7 @@ describe("reading targets (app rebuild, D27)", () => {
     expect(pick("total_alkalinity")).toEqual({ lo: 80, hi: 120, step: 10 });
     expect(pick("ph")).toEqual({ lo: 7.2, hi: 7.8, step: 0.1 });
     expect(pick("calcium_hardness")).toEqual({ lo: 150, hi: 250, step: 10 });
-    expect(pick("sanitizer_ppm")).toEqual({ lo: 1, hi: 3, step: 0.5 });
+    expect(pick("sanitizer_ppm")).toEqual({ lo: 3, hi: 10, step: 0.5 });
     expect(READING_TARGETS.ph.decimals).toBe(1);
     expect(READING_TARGETS.total_alkalinity.decimals).toBe(0);
   });
@@ -35,6 +35,15 @@ describe("reading targets (app rebuild, D27)", () => {
     expect(inRange("ph", 7.9)).toBe(false);
     expect(inRange("ph", 7.5)).toBe(true);
     expect(inRange("sanitizer_ppm", null)).toBeNull();
+  });
+
+  it("judges chlorine against the CDC rental range 3–10 ppm", () => {
+    expect(inRange("sanitizer_ppm", 2.9)).toBe(false); // low
+    expect(inRange("sanitizer_ppm", 3.0)).toBe(true);
+    expect(inRange("sanitizer_ppm", 10.0)).toBe(true);
+    expect(inRange("sanitizer_ppm", 10.5)).toBe(false); // high
+    expect(10.5 > READING_TARGETS.sanitizer_ppm.hi).toBe(true);
+    expect(2.9 < READING_TARGETS.sanitizer_ppm.lo).toBe(true);
   });
 
   it("inRange treats the bounds as in range", () => {

@@ -47,8 +47,9 @@ export const READING_TARGETS: Record<
   sanitizer_ppm: {
     label: "Chlorine",
     short: "Cl",
-    lo: 1,
-    hi: 3,
+    // CDC vacation-rental range for free chlorine (#395).
+    lo: 3,
+    hi: 10,
     step: 0.5,
     decimals: 1,
   },
