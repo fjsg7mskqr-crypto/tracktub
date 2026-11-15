@@ -42,6 +42,7 @@ function snapshot(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
       visitedOn: "2026-10-17T09:00:00.000Z",
       found: lastFound,
       photos: [],
+      notes: "",
     },
     ...over,
   };

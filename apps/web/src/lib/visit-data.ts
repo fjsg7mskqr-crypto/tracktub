@@ -244,7 +244,7 @@ async function loadPrevious(
   const { data: p } = await db
     .from("turnover")
     .select(
-      `id, created_at,
+      `id, created_at, notes,
        photos:photo(id, phase, slot, storage_path, captured_at, created_at),
        water:water_reading(${READING_SELECT})`
     )
@@ -261,6 +261,7 @@ async function loadPrevious(
     visitedOn: p.created_at,
     found: readingFrom(one(p.water) as ReadingRow | null, "found"),
     photos: visitPhotos(p.photos),
+    notes: (p.notes ?? "").trim(),
   };
 }
 
