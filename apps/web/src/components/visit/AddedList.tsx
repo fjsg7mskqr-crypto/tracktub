@@ -3,8 +3,10 @@
 import { useState } from "react";
 import type { AddedProduct } from "@/lib/visit";
 
+const keyOf = (product: string) => product.trim().toLocaleLowerCase();
+
 const input: React.CSSProperties = {
-  minHeight: 48,
+  minHeight: 44,
   borderRadius: 14,
   border: 0,
   background: "var(--tt-raised)",
@@ -15,81 +17,155 @@ const input: React.CSSProperties = {
   minWidth: 0,
 };
 
-/** "What you added": product + amount rows, then "Add a product". */
+function AmountInput({
+  product,
+  amount,
+  onCommit,
+}: {
+  product: string;
+  amount: string;
+  onCommit: (amount: string) => void;
+}) {
+  return (
+    <input
+      aria-label={`Amount for ${product}`}
+      placeholder="Amount"
+      defaultValue={amount}
+      onBlur={(e) => {
+        if (e.currentTarget.value !== amount) onCommit(e.currentTarget.value);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      style={{ ...input, width: "100%", minHeight: 40, fontSize: 14 }}
+    />
+  );
+}
+
+/** Tap a product as with Work completed; selected amounts edit in place. */
 export function AddedList({
   added,
+  suggestions,
   onChange,
 }: {
   added: AddedProduct[];
+  suggestions: AddedProduct[];
   onChange: (next: AddedProduct[]) => void;
 }) {
   const [draft, setDraft] = useState<AddedProduct | null>(null);
+  const known = new Set(suggestions.map((s) => keyOf(s.product)));
+  const products = [
+    ...suggestions,
+    ...added.filter((a) => {
+      const key = keyOf(a.product);
+      if (known.has(key)) return false;
+      known.add(key);
+      return true;
+    }),
+  ];
 
-  function save() {
-    if (!draft || !draft.product.trim()) return;
+  function saveOther() {
+    if (!draft?.product.trim()) return;
+    const product = draft.product.trim();
+    const next = { product, amount: draft.amount.trim() };
     onChange([
-      ...added,
-      { product: draft.product.trim(), amount: draft.amount.trim() },
+      ...added.filter((a) => keyOf(a.product) !== keyOf(product)),
+      next,
     ]);
     setDraft(null);
   }
 
   return (
-    <div
-      style={{
-        background: "var(--tt-surface)",
-        borderRadius: "var(--tt-radius-card)",
-        padding: "8px 16px",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {added.map((a, i) => (
-        <div
-          key={`${a.product}-${i}`}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            minHeight: 52,
-          }}
-        >
-          <span style={{ fontSize: 16 }}>{a.product}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 16, fontWeight: 600 }}>{a.amount}</span>
-            <button
-              type="button"
-              aria-label={`Remove ${a.product}`}
-              onClick={() => onChange(added.filter((_, j) => j !== i))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {products.map((suggestion) => {
+          const selected = added.find(
+            (a) => keyOf(a.product) === keyOf(suggestion.product)
+          );
+          const on = Boolean(selected);
+          return (
+            <div
+              key={keyOf(suggestion.product)}
               style={{
-                width: 44,
-                height: 44,
-                border: 0,
-                background: "transparent",
-                color: "var(--tt-text-3)",
-                fontSize: 20,
-                fontFamily: "inherit",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                maxWidth: "100%",
               }}
             >
-              ×
-            </button>
-          </span>
-        </div>
-      ))}
-
-      {draft ? (
+              <button
+                type="button"
+                aria-pressed={on}
+                onClick={() =>
+                  onChange(
+                    on
+                      ? added.filter(
+                          (a) => keyOf(a.product) !== keyOf(suggestion.product)
+                        )
+                      : [...added, suggestion]
+                  )
+                }
+                style={{
+                  minHeight: 44,
+                  padding: "0 16px",
+                  borderRadius: 999,
+                  border: 0,
+                  background: on ? "#1E3A6B" : "var(--tt-raised)",
+                  color: on ? "var(--tt-text)" : "#C4C8CF",
+                  fontSize: 15,
+                  fontWeight: 500,
+                  fontFamily: "inherit",
+                }}
+              >
+                {on && <span aria-hidden="true">✓ </span>}
+                {suggestion.product}
+              </button>
+              {selected && (
+                <AmountInput
+                  key={`${selected.product}:${selected.amount}`}
+                  product={selected.product}
+                  amount={selected.amount}
+                  onCommit={(amount) =>
+                    onChange(
+                      added.map((a) =>
+                        keyOf(a.product) === keyOf(selected.product)
+                          ? { ...a, amount: amount.trim() }
+                          : a
+                      )
+                    )
+                  }
+                />
+              )}
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          aria-label="Other product"
+          aria-expanded={draft !== null}
+          onClick={() => setDraft(draft ? null : { product: "", amount: "" })}
+          style={{
+            minHeight: 44,
+            padding: "0 16px",
+            borderRadius: 999,
+            border: 0,
+            background: "var(--tt-raised)",
+            color: "#C4C8CF",
+            fontSize: 15,
+            fontWeight: 500,
+            fontFamily: "inherit",
+          }}
+        >
+          Other
+        </button>
+      </div>
+      {draft && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            save();
+            saveOther();
           }}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            padding: "8px 0",
-          }}
+          style={{ display: "flex", flexDirection: "column", gap: 8 }}
         >
           <div
             style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8 }}
@@ -148,37 +224,6 @@ export function AddedList({
             </button>
           </div>
         </form>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setDraft({ product: "", amount: "" })}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            minHeight: 52,
-            border: 0,
-            background: "transparent",
-            color: "var(--tt-link)",
-            fontSize: 16,
-            fontWeight: 500,
-            fontFamily: "inherit",
-            padding: 0,
-          }}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            aria-hidden="true"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Add a product
-        </button>
       )}
     </div>
   );

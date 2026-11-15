@@ -33,6 +33,42 @@ export type ReadingValues = Record<ReadingField, number | null>;
 
 export type AddedProduct = { product: string; amount: string };
 
+export type ProductHistory = { property_id: string; treatments: string[] };
+
+const DEFAULT_PRODUCTS = [
+  "Chlorine granules",
+  "Alkalinity up",
+  "pH down",
+  "pH up",
+  "Calcium up",
+  "Defoamer",
+  "Non-chlorine shock",
+  "Clarifier",
+  "Filter cleaner",
+];
+
+/** History arrives newest first. A tub's last amount wins over the org's. */
+export function buildProductSuggestions(
+  propertyId: string,
+  history: ProductHistory[]
+): AddedProduct[] {
+  const seen = new Set<string>();
+  const suggestions: AddedProduct[] = [];
+  const add = (entry: AddedProduct) => {
+    const product = entry.product.trim();
+    const key = product.toLocaleLowerCase();
+    if (!product || seen.has(key)) return;
+    seen.add(key);
+    suggestions.push({ product, amount: entry.amount.trim() });
+  };
+  for (const row of history.filter((row) => row.property_id === propertyId))
+    for (const treatment of row.treatments) add(decodeAdded(treatment));
+  for (const row of history.filter((row) => row.property_id !== propertyId))
+    for (const treatment of row.treatments) add(decodeAdded(treatment));
+  for (const product of DEFAULT_PRODUCTS) add({ product, amount: "" });
+  return suggestions;
+}
+
 export type VisitPhoto = {
   id: string;
   kind: PhotoKind;
@@ -57,6 +93,7 @@ export type VisitSnapshot = {
   leftAt: string | null;
   work: CleaningStepCode[];
   added: AddedProduct[];
+  productSuggestions: AddedProduct[];
   notes: string;
   /** Text flagged for the owner; null when nothing is flagged. */
   flag: string | null;

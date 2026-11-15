@@ -84,8 +84,13 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
       // products; the last save to land brings the server's copy.
       setSnap((cur) =>
         pending.current > 1
-          ? { ...next, work: cur.work, added: cur.added }
-          : next
+          ? {
+              ...next,
+              work: cur.work,
+              added: cur.added,
+              productSuggestions: cur.productSuggestions,
+            }
+          : { ...next, productSuggestions: cur.productSuggestions }
       );
       pending.current -= 1;
       if (pending.current === 0) setSave({ kind: "saved", at: new Date() });
@@ -334,7 +339,11 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
         >
           What you added
         </h3>
-        <AddedList added={snap.added} onChange={changeAdded} />
+        <AddedList
+          added={snap.added}
+          suggestions={snap.productSuggestions}
+          onChange={changeAdded}
+        />
       </Section>
 
       <Section n={4} title="Reading as left">
