@@ -33,6 +33,7 @@ function snapshot(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
     leftAt: null,
     work: [],
     added: [],
+    productSuggestions: [],
     notes: "",
     flag: null,
     openItems: [],

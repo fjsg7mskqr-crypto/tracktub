@@ -41,6 +41,7 @@ function snap(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
     leftAt: null,
     work: [],
     added: [],
+    productSuggestions: [],
     notes: "",
     flag: null,
     openItems: [],
@@ -86,6 +87,19 @@ describe("VisitScreen", () => {
         .getByRole("button", { name: "Replaced filter" })
         .getAttribute("aria-pressed")
     ).toBe("true");
+  });
+
+  it("keeps loaded product suggestions after a save response", async () => {
+    const productSuggestions = [
+      { product: "Chlorine granules", amount: "3 oz" },
+    ];
+    actions.saveWork.mockResolvedValue(snap());
+    render(<VisitScreen initial={snap({ productSuggestions })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Wiped down" }));
+    await screen.findByText(/^Saved \d{1,2}:\d{2}/);
+    expect(
+      screen.getByRole("button", { name: "Chlorine granules" })
+    ).toBeTruthy();
   });
 
   it("Saved hh:mm appears after a save", async () => {
