@@ -15,6 +15,7 @@ import {
   saveWork,
 } from "@/lib/actions/visit";
 import { recordPath, tubPath } from "@/lib/app-routes";
+import { compressPhoto } from "@/lib/compress-photo";
 import {
   READING_FIELDS,
   READING_TARGETS,
@@ -40,7 +41,6 @@ import {
   type OpenItemKind,
 } from "@/components/home/open-items";
 import { AddedList } from "./AddedList";
-import { CameraSheet, compressPhoto } from "./CameraSheet";
 import { LeaveForNext, LeftOpen } from "./OpenItems";
 import { OwnerFlag } from "./OwnerFlag";
 import { ReadingSheet } from "./ReadingSheet";
@@ -65,7 +65,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [notes, setNotes] = useState(initial.notes);
   const [sheet, setSheet] = useState<ReadingKind | null>(null);
-  const [camera, setCamera] = useState<PhotoKind | null>(null);
+  const [viewing, setViewing] = useState<PhotoKind | null>(null);
   const [uploading, setUploading] = useState<
     Partial<Record<PhotoKind, string>>
   >({});
@@ -157,7 +157,6 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   }
 
   async function capture(kind: PhotoKind, file: File, capturedAt: string) {
-    setCamera(null);
     const preview = URL.createObjectURL(file);
     setUploading((u) => ({ ...u, [kind]: preview }));
     const blob = await compressPhoto(file);
@@ -269,7 +268,9 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
             kind="before"
             photo={photo("before")}
             preview={uploading.before}
-            onOpen={() => setCamera("before")}
+            lastShot={null}
+            onCaptured={(f, at) => void capture("before", f, at)}
+            onViewLast={() => setViewing("before")}
           />
           <PastTile
             shot={lastShot("after")}
@@ -359,18 +360,17 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
 
       <Section n={5} title="After">
         <div style={grid2}>
-          <PhotoTile
-            kind="after"
-            photo={photo("after")}
-            preview={uploading.after}
-            onOpen={() => setCamera("after")}
-          />
-          <PhotoTile
-            kind="cover"
-            photo={photo("cover")}
-            preview={uploading.cover}
-            onOpen={() => setCamera("cover")}
-          />
+          {(["after", "cover"] as const).map((k) => (
+            <PhotoTile
+              key={k}
+              kind={k}
+              photo={photo(k)}
+              preview={uploading[k]}
+              lastShot={lastShot(k)}
+              onCaptured={(f, at) => void capture(k, f, at)}
+              onViewLast={() => setViewing(k)}
+            />
+          ))}
         </div>
       </Section>
 
@@ -451,12 +451,12 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
           onClose={() => setSheet(null)}
         />
       )}
-      {camera && (
-        <CameraSheet
-          kind={camera}
-          lastShot={lastShot(camera)}
-          onCaptured={(file, at) => void capture(camera, file, at)}
-          onClose={() => setCamera(null)}
+      {viewing && (
+        <LastShotViewer
+          kind={viewing}
+          shot={lastShot(viewing)}
+          visitedOn={snap.previous?.visitedOn}
+          onClose={() => setViewing(null)}
         />
       )}
     </main>
@@ -665,84 +665,171 @@ const tile: React.CSSProperties = {
   position: "relative",
 };
 
+/**
+ * One photo step. The whole tile is a <label> around a capture-only file
+ * input, so a single tap opens the phone camera (iOS allows this because the
+ * tap lands on the label itself). Last visit's shot is a separate small
+ * thumbnail button — outside the label, so tapping it never opens the camera.
+ */
 function PhotoTile({
   kind,
   photo,
   preview,
-  onOpen,
+  lastShot,
+  onCaptured,
+  onViewLast,
 }: {
   kind: PhotoKind;
   photo: VisitPhoto | null;
   preview?: string;
-  onOpen: () => void;
+  lastShot: VisitPhoto | null;
+  onCaptured: (file: File, capturedAt: string) => void;
+  onViewLast: () => void;
 }) {
   const label = PHOTO_KINDS[kind].label;
   const src = preview ?? (photo ? photoPublicUrl(photo.storagePath) : null);
-  if (!src) {
-    return (
-      <button
-        type="button"
-        onClick={onOpen}
-        style={{
-          ...tile,
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 8,
-          border: "2px dashed #3A3F48",
-          background: "transparent",
-          color: "#C4C8CF",
-          fontFamily: "inherit",
-        }}
-      >
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden="true"
-        >
-          <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-          <circle cx="12" cy="13" r="3.5" />
-        </svg>
-        <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
-      </button>
-    );
-  }
+  const input = (
+    <input
+      type="file"
+      accept="image/*"
+      capture="environment"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (file) onCaptured(file, new Date().toISOString());
+      }}
+      style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+    />
+  );
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`${label} — retake`}
+    <div style={{ position: "relative" }}>
+      {src ? (
+        <label
+          aria-label={`${label} — retake`}
+          style={{
+            ...tile,
+            background: `#1B2A44 center / cover no-repeat url("${src}")`,
+            color: "var(--tt-text)",
+            alignItems: "flex-start",
+            textAlign: "left",
+            cursor: "pointer",
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(transparent 50%, rgba(0,0,0,0.65))",
+            }}
+          />
+          <span style={{ position: "relative", fontSize: 14, fontWeight: 600 }}>
+            {label}
+          </span>
+          <span
+            style={{ position: "relative", fontSize: 12, color: "#C9D6EE" }}
+          >
+            {preview
+              ? "Saving…"
+              : photo?.capturedAt
+                ? formatTime(photo.capturedAt)
+                : null}
+          </span>
+          {input}
+        </label>
+      ) : (
+        <label
+          style={{
+            ...tile,
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 8,
+            border: "2px dashed #3A3F48",
+            color: "#C4C8CF",
+            cursor: "pointer",
+          }}
+        >
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
+          {input}
+        </label>
+      )}
+      {lastShot && (
+        <button
+          type="button"
+          aria-label={`Last visit's ${label} photo — view`}
+          onClick={onViewLast}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: 52,
+            height: 52,
+            borderRadius: 12,
+            border: "2px solid rgba(255,255,255,0.6)",
+            background: `#131417 center / cover no-repeat url("${photoPublicUrl(lastShot.storagePath)}")`,
+            padding: 0,
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Last visit's shot of one kind, large. Tap anywhere to close. */
+function LastShotViewer({
+  kind,
+  shot,
+  visitedOn,
+  onClose,
+}: {
+  kind: PhotoKind;
+  shot: VisitPhoto | null;
+  visitedOn?: string;
+  onClose: () => void;
+}) {
+  if (!shot) return null;
+  const label = PHOTO_KINDS[kind].label;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Last visit · ${label}`}
+      onClick={onClose}
       style={{
-        ...tile,
-        border: 0,
-        background: `#1B2A44 center / cover no-repeat url("${src}")`,
-        color: "var(--tt-text)",
-        fontFamily: "inherit",
-        alignItems: "flex-start",
-        textAlign: "left",
+        position: "fixed",
+        inset: 0,
+        zIndex: 70,
+        background: "rgba(0,0,0,0.92)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+        padding: 16,
       }}
     >
-      <span
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(transparent 50%, rgba(0,0,0,0.65))",
-        }}
+      {/* eslint-disable-next-line @next/next/no-img-element -- storage URL, sized by CSS */}
+      <img
+        src={photoPublicUrl(shot.storagePath)}
+        alt={`Last visit's ${label} photo`}
+        style={{ maxWidth: "100%", maxHeight: "80%", objectFit: "contain" }}
       />
-      <span style={{ position: "relative", fontSize: 14, fontWeight: 600 }}>
-        {label}
+      <span style={{ fontSize: 14, color: "#C4C8CF" }}>
+        Last visit · {label}
+        {visitedOn ? ` · ${formatShortDate(visitedOn)}` : ""} — tap to close
       </span>
-      <span style={{ position: "relative", fontSize: 12, color: "#C9D6EE" }}>
-        {preview
-          ? "Saving…"
-          : photo?.capturedAt
-            ? formatTime(photo.capturedAt)
-            : null}
-      </span>
-    </button>
+    </div>
   );
 }
 
