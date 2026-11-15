@@ -268,11 +268,19 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
             kind="before"
             photo={photo("before")}
             preview={uploading.before}
-            lastShot={lastShot("before")}
+            lastShot={null}
             onCaptured={(f, at) => void capture("before", f, at)}
             onViewLast={() => setViewing("before")}
           />
+          <PastTile
+            shot={lastShot("after")}
+            visitedOn={snap.previous?.visitedOn}
+          />
         </div>
+        <p style={hint}>
+          Side by side so you&apos;re comparing against a photo, not your
+          memory.
+        </p>
       </Section>
 
       <Section n={2} title="Reading as found">
@@ -820,6 +828,58 @@ function LastShotViewer({
       <span style={{ fontSize: 14, color: "#C4C8CF" }}>
         Last visit · {label}
         {visitedOn ? ` · ${formatShortDate(visitedOn)}` : ""} — tap to close
+      </span>
+    </div>
+  );
+}
+
+function PastTile({
+  shot,
+  visitedOn,
+}: {
+  shot: VisitPhoto | null;
+  visitedOn?: string;
+}) {
+  return (
+    <div
+      style={{
+        ...tile,
+        background: shot
+          ? `#131417 center / cover no-repeat url("${photoPublicUrl(shot.storagePath)}")`
+          : "var(--tt-surface)",
+      }}
+    >
+      {shot && (
+        <span
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(transparent 50%, rgba(0,0,0,0.65))",
+          }}
+        />
+      )}
+      <span
+        style={{
+          position: "relative",
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#C4C8CF",
+        }}
+      >
+        Last visit
+      </span>
+      <span
+        style={{
+          position: "relative",
+          fontSize: 12,
+          color: "var(--tt-text-3)",
+        }}
+      >
+        {shot && visitedOn ? (
+          <>{formatShortDate(visitedOn)} · after</>
+        ) : (
+          "No earlier photo"
+        )}
       </span>
     </div>
   );

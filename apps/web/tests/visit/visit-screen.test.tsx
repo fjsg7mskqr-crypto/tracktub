@@ -172,8 +172,8 @@ describe("VisitScreen", () => {
             photos: [
               {
                 id: "ph0",
-                kind: "before",
-                storagePath: "u/old-before.jpg",
+                kind: "after",
+                storagePath: "u/old-after.jpg",
                 capturedAt: null,
               },
             ],
@@ -181,12 +181,19 @@ describe("VisitScreen", () => {
         })}
       />
     );
-    const thumb = screen.getByLabelText("Last visit's Before photo — view");
+    expect(
+      screen.queryByLabelText("Last visit's Before photo — view")
+    ).toBeNull();
+    const thumb = screen.getByLabelText(
+      "Last visit's After · full tub photo — view"
+    );
     expect(thumb.closest("label")).toBeNull();
-    expect(screen.queryByLabelText(/After · full tub photo — view/)).toBeNull();
+    expect(screen.getByText(/Side by side/)).toBeTruthy();
     fireEvent.click(thumb);
     expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(screen.getByAltText("Last visit's Before photo")).toBeTruthy();
+    expect(
+      screen.getByAltText("Last visit's After · full tub photo")
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("dialog"));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
