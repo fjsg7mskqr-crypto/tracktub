@@ -195,7 +195,8 @@ async function loadProductHistory(db: Db, orgId: string, visitId: string) {
     .eq("property.org_id", orgId)
     .eq("turnover.status", "submitted_locked")
     .neq("turnover_id", visitId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (error)
     throw new Error(`Failed to load product history: ${error.message}`);
   return (data ?? []).map(({ property_id, treatments }) => ({

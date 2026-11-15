@@ -5,6 +5,7 @@
 import type { ReadingField } from "@/lib/readings";
 import { READING_FIELDS } from "@/lib/readings";
 import type { CleaningStepCode } from "@/lib/types";
+import { treatmentLabel } from "@/lib/chemistry";
 import type { OpenItem } from "@/components/home/open-items";
 
 /** The three photos a visit asks for (spec §8). Extras are never prompted. */
@@ -52,18 +53,34 @@ export function buildProductSuggestions(
   propertyId: string,
   history: ProductHistory[]
 ): AddedProduct[] {
+  const tubHistory = history.filter((row) => row.property_id === propertyId);
+  const otherHistory = history.filter((row) => row.property_id !== propertyId);
+  const hasDifferentChlorineProduct = tubHistory.some((row) =>
+    row.treatments.some((treatment) => {
+      const product = decodeAdded(treatment).product.toLocaleLowerCase();
+      return (
+        product.includes("chlorine") &&
+        !product.includes("non-chlorine") &&
+        product !== "chlorine granules"
+      );
+    })
+  );
   const seen = new Set<string>();
   const suggestions: AddedProduct[] = [];
   const add = (entry: AddedProduct) => {
-    const product = entry.product.trim();
+    const raw = entry.product.trim();
+    const product =
+      raw === "sanitizer" && !hasDifferentChlorineProduct
+        ? "Chlorine granules"
+        : treatmentLabel(raw);
     const key = product.toLocaleLowerCase();
     if (!product || seen.has(key)) return;
     seen.add(key);
     suggestions.push({ product, amount: entry.amount.trim() });
   };
-  for (const row of history.filter((row) => row.property_id === propertyId))
+  for (const row of tubHistory)
     for (const treatment of row.treatments) add(decodeAdded(treatment));
-  for (const row of history.filter((row) => row.property_id !== propertyId))
+  for (const row of otherHistory)
     for (const treatment of row.treatments) add(decodeAdded(treatment));
   for (const product of DEFAULT_PRODUCTS) add({ product, amount: "" });
   return suggestions;
