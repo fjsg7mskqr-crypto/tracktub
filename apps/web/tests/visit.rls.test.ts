@@ -138,9 +138,12 @@ describe.skipIf(!ready)("visit data", () => {
       .select("id")
       .single();
     if (error || !old) throw error ?? new Error("seed failed");
-    await admin
-      .from("water_reading")
-      .insert({ turnover_id: old.id, property_id: tub, ph: 8.0 });
+    await admin.from("water_reading").insert({
+      turnover_id: old.id,
+      property_id: tub,
+      ph: 8.0,
+      treatments: ["pH down · 2 oz"],
+    });
     await admin
       .from("turnover")
       .update({ status: "submitted_locked" })
@@ -149,6 +152,10 @@ describe.skipIf(!ready)("visit data", () => {
     const id = await createDraft(db, tub, userId);
     const s = await loadVisitSnapshot(db, id);
     expect(s.previous?.visitId).toBe(old.id);
+    expect(s.productSuggestions[0]).toEqual({
+      product: "pH down",
+      amount: "2 oz",
+    });
     expect(s.previous?.found).toEqual({
       total_alkalinity: null,
       ph: 8,

@@ -68,3 +68,36 @@ export function getPostBySlug(slug: string): BlogPost | null {
   const raw = fs.readFileSync(filePath, "utf8");
   return parseFile(slug, raw);
 }
+
+/** The date a post last changed: `updatedAt` when set, else `publishedAt`. */
+export function postLastModified(post: BlogPostMeta): string {
+  return post.updatedAt ?? post.publishedAt;
+}
+
+/**
+ * Newest last-modified date across all posts (ISO `YYYY-MM-DD`), or null when
+ * there are no posts. Drives the `/blog` index's sitemap `lastmod` so it only
+ * moves when content actually changes.
+ */
+export function getLatestPostDate(): string | null {
+  const dates = getAllPosts()
+    .map(postLastModified)
+    .sort((a, b) => a.localeCompare(b));
+  return dates.at(-1) ?? null;
+}
+
+/**
+ * Up to `limit` other posts to link from a post: same pillar first, then the
+ * rest, each group newest first. Internal links between posts help readers and
+ * crawlers find the rest of the library.
+ */
+export function getRelatedPosts(slug: string, limit = 3): BlogPostMeta[] {
+  const all = getAllPosts();
+  const current = all.find((p) => p.slug === slug);
+  const others = all.filter((p) => p.slug !== slug);
+  const samePillar = others.filter(
+    (p) => current?.pillar && p.pillar === current.pillar
+  );
+  const rest = others.filter((p) => !samePillar.includes(p));
+  return [...samePillar, ...rest].slice(0, limit);
+}

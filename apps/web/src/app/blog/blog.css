@@ -175,3 +175,40 @@
 .tt-blog .bback:hover {
   color: var(--ink-2);
 }
+
+.tt-blog .brelated {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--gline);
+}
+
+.tt-blog .brelated h2 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.tt-blog .brelated ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.tt-blog .brelated a {
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tt-blog .brelated a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tt-blog .brelated p {
+  color: var(--ink-3);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}

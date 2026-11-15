@@ -5,7 +5,7 @@ import { getAllPosts } from "@/lib/blog";
 import { marketingMetadata } from "@/lib/marketing-seo";
 
 export const metadata: Metadata = marketingMetadata({
-  title: "Resources — TrackTub",
+  title: "Hot tub guides for rental hosts — TrackTub",
   description:
     "Guides for self-managed STR hosts: hot tub turnover checklists, dispute documentation, water safety, and guest-ready proof.",
   pathname: "/blog",

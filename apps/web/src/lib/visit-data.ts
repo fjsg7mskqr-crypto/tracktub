@@ -19,6 +19,7 @@ import {
 } from "@/components/home/open-items";
 import {
   PHOTO_KINDS,
+  buildProductSuggestions,
   decodeAdded,
   encodeAdded,
   photoKindOf,
@@ -125,13 +126,14 @@ const one = <T>(v: T | T[] | null | undefined): T | null =>
 /** Everything the visit screen needs, read fresh from the database. */
 export async function loadVisitSnapshot(
   db: Db,
-  visitId: string
+  visitId: string,
+  includeProductHistory = true
 ): Promise<VisitSnapshot> {
   const { data: t, error } = await db
     .from("turnover")
     .select(
       `id, property_id, status, created_at, notes, cleaning_steps, owner_flag,
-       property:property(name),
+       property:property(name, org_id),
        photos:photo(id, phase, slot, storage_path, captured_at, created_at),
        water:water_reading(${READING_SELECT})`
     )
@@ -143,9 +145,14 @@ export async function loadVisitSnapshot(
   const known = new Set<string>(CLEANING_STEPS.map((s) => s.code));
   const found = readingFrom(water, "found");
   const left = readingFrom(water, "left");
-  const [previous, openItems] = await Promise.all([
+  const orgId = one(t.property)?.org_id;
+  if (!orgId) throw new Error("Visit not found");
+  const [previous, openItems, productHistory] = await Promise.all([
     loadPrevious(db, t.property_id, t.id, t.created_at),
     loadVisitItems(db, t.property_id, t.id),
+    includeProductHistory
+      ? loadProductHistory(db, orgId, t.id)
+      : Promise.resolve([]),
   ]);
 
   return {
@@ -168,11 +175,34 @@ export async function loadVisitSnapshot(
     added: (((water?.treatments as unknown) ?? []) as string[]).map(
       decodeAdded
     ),
+    productSuggestions: includeProductHistory
+      ? buildProductSuggestions(t.property_id, productHistory)
+      : [],
     notes: t.notes ?? "",
     flag: t.owner_flag ?? null,
     openItems,
     previous,
   };
+}
+
+/** One org-scoped query for past locked treatments; RLS further limits visible tubs. */
+async function loadProductHistory(db: Db, orgId: string, visitId: string) {
+  const { data, error } = await db
+    .from("water_reading")
+    .select(
+      "property_id, treatments, property:property!inner(org_id), turnover:turnover!inner(status)"
+    )
+    .eq("property.org_id", orgId)
+    .eq("turnover.status", "submitted_locked")
+    .neq("turnover_id", visitId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error)
+    throw new Error(`Failed to load product history: ${error.message}`);
+  return (data ?? []).map(({ property_id, treatments }) => ({
+    property_id,
+    treatments,
+  }));
 }
 
 /** The tub's open items, and those settled at this visit (so a mis-tap can be

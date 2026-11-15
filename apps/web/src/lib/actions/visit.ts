@@ -78,7 +78,7 @@ async function write(
 ): Promise<VisitSnapshot> {
   const db = await requireVisitCapturer(visitId);
   await fn(db);
-  return loadVisitSnapshot(db, visitId);
+  return loadVisitSnapshot(db, visitId, false);
 }
 
 export async function saveWork(

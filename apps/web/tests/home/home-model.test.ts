@@ -40,7 +40,7 @@ const OK = {
   total_alkalinity: 100,
   ph: 7.4,
   calcium_hardness: 200,
-  sanitizer_ppm: 2,
+  sanitizer_ppm: 4,
 };
 
 let n = 0;
