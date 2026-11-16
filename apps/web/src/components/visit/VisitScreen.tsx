@@ -70,6 +70,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
     Partial<Record<PhotoKind, string>>
   >({});
   const [finishing, setFinishing] = useState(false);
+  const [reminded, setReminded] = useState<string | null>(null);
   const pending = useRef(0);
   const savedNotes = useRef(initial.notes);
   const id = snap.visitId;
@@ -137,6 +138,17 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
 
   function leave(kind: OpenItemKind, text: string, note: string) {
     void run(() => leaveOpenItem(id, kind, text, note));
+  }
+
+  /** One tap: turn the written note into an open item for the next visit. */
+  function remindNextVisit() {
+    const text = notes.trim().slice(0, 200);
+    if (!text || reminded === text) return;
+    setReminded(text);
+    flushNotes();
+    void run(() => leaveOpenItem(id, "other", text, "")).then((ok) => {
+      if (!ok) setReminded(null);
+    });
   }
 
   function flushNotes() {
@@ -266,6 +278,43 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
       </div>
 
       <LeftOpen items={earlier} onSetStatus={setItem} />
+      {snap.previous?.notes && (
+        <section
+          aria-label="Last visit's note"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            padding: 16,
+            borderRadius: "var(--tt-radius-card)",
+            background: "var(--tt-surface)",
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 600,
+              color: "#C4C8CF",
+            }}
+          >
+            Last visit&apos;s note
+            <span style={{ fontWeight: 400, color: "var(--tt-text-3)" }}>
+              {` · ${formatShortDate(snap.previous.visitedOn)}`}
+            </span>
+          </h3>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 16,
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {snap.previous.notes}
+          </p>
+        </section>
+      )}
 
       <Section n={1} title="Before you touch it">
         <div style={grid2}>
@@ -383,13 +432,6 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
         </div>
       </Section>
 
-      <LeaveForNext
-        left={leftHere}
-        suggestions={recheckSuggestions(snap.left, snap.openItems)}
-        onLeave={leave}
-        onSetStatus={setItem}
-      />
-
       <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <label
           htmlFor="visit-notes"
@@ -415,8 +457,43 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
             resize: "none",
           }}
         />
-        <OwnerFlag flag={snap.flag} onSave={changeFlag} />
+        <button
+          type="button"
+          onClick={remindNextVisit}
+          disabled={notes.trim() === ""}
+          style={{
+            minHeight: 48,
+            borderRadius: 999,
+            border: 0,
+            background: "var(--tt-raised)",
+            color: "var(--tt-text)",
+            fontSize: 16,
+            fontWeight: 600,
+            fontFamily: "inherit",
+            opacity: notes.trim() === "" ? 0.5 : 1,
+          }}
+        >
+          Remind me next visit
+        </button>
+        {reminded !== null && reminded === notes.trim().slice(0, 200) ? (
+          <p role="status" style={{ ...hint, color: "var(--tt-ok)" }}>
+            ✓ Will show at the next visit
+          </p>
+        ) : (
+          <p style={hint}>
+            Notes stay on this record. Tap to also show this at the next visit.
+          </p>
+        )}
       </section>
+
+      <LeaveForNext
+        left={leftHere}
+        suggestions={recheckSuggestions(snap.left, snap.openItems)}
+        onLeave={leave}
+        onSetStatus={setItem}
+      />
+
+      <OwnerFlag flag={snap.flag} onSave={changeFlag} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button
