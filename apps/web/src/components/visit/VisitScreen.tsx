@@ -16,7 +16,7 @@ import {
   saveWork,
 } from "@/lib/actions/visit";
 import { recordPath, tubPath } from "@/lib/app-routes";
-import { compressPhoto } from "@/lib/compress-photo";
+import { compressPhoto, PHOTO_FAILED_MESSAGE } from "@/lib/compress-photo";
 import {
   READING_FIELDS,
   READING_TARGETS,
@@ -70,6 +70,9 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   const [viewing, setViewing] = useState<PhotoKind | null>(null);
   const [uploading, setUploading] = useState<
     Partial<Record<PhotoKind, string>>
+  >({});
+  const [photoFailed, setPhotoFailed] = useState<
+    Partial<Record<PhotoKind, boolean>>
   >({});
   const [finishing, setFinishing] = useState(false);
   const [reminded, setReminded] = useState<string | null>(null);
@@ -184,21 +187,32 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   }
 
   async function capture(kind: PhotoKind, file: File, capturedAt: string) {
+    setPhotoFailed((f) => ({ ...f, [kind]: false }));
     const preview = URL.createObjectURL(file);
     setUploading((u) => ({ ...u, [kind]: preview }));
-    const blob = await compressPhoto(file);
-    const fd = new FormData();
-    fd.set("visitId", id);
-    fd.set("kind", kind);
-    fd.set("file", blob, `${kind}.jpg`);
-    fd.set("capturedAt", capturedAt);
-    await run(() => savePhoto(fd));
-    setUploading((u) => {
-      const next = { ...u };
-      delete next[kind];
-      return next;
-    });
-    URL.revokeObjectURL(preview);
+    try {
+      let blob: Blob;
+      try {
+        blob = await compressPhoto(file);
+      } catch {
+        // Never upload the unprocessed original: it still has location data.
+        setPhotoFailed((f) => ({ ...f, [kind]: true }));
+        return;
+      }
+      const fd = new FormData();
+      fd.set("visitId", id);
+      fd.set("kind", kind);
+      fd.set("file", blob, `${kind}.jpg`);
+      fd.set("capturedAt", capturedAt);
+      await run(() => savePhoto(fd));
+    } finally {
+      setUploading((u) => {
+        const next = { ...u };
+        delete next[kind];
+        return next;
+      });
+      URL.revokeObjectURL(preview);
+    }
   }
 
   async function finish() {
@@ -368,6 +382,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
             kind="before"
             photo={photo("before")}
             preview={uploading.before}
+            failed={photoFailed.before}
             lastShot={null}
             onCaptured={(f, at) => void capture("before", f, at)}
             onViewLast={() => setViewing("before")}
@@ -470,6 +485,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
               kind={k}
               photo={photo(k)}
               preview={uploading[k]}
+              failed={photoFailed[k]}
               lastShot={lastShot(k)}
               onCaptured={(f, at) => void capture(k, f, at)}
               onViewLast={() => setViewing(k)}
@@ -809,6 +825,7 @@ function PhotoTile({
   kind,
   photo,
   preview,
+  failed,
   lastShot,
   onCaptured,
   onViewLast,
@@ -816,6 +833,7 @@ function PhotoTile({
   kind: PhotoKind;
   photo: VisitPhoto | null;
   preview?: string;
+  failed?: boolean;
   lastShot: VisitPhoto | null;
   onCaptured: (file: File, capturedAt: string) => void;
   onViewLast: () => void;
@@ -895,6 +913,36 @@ function PhotoTile({
             <circle cx="12" cy="13" r="3.5" />
           </svg>
           <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
+          {input}
+        </label>
+      )}
+      {failed && (
+        <label
+          role="alert"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            minHeight: 44,
+            marginTop: 8,
+            padding: "8px 12px",
+            boxSizing: "border-box",
+            borderRadius: 12,
+            background: "var(--tt-raised)",
+            color: "var(--tt-text)",
+            fontSize: 14,
+            fontWeight: 500,
+            lineHeight: 1.35,
+            overflowWrap: "anywhere",
+            cursor: "pointer",
+            position: "relative",
+          }}
+        >
+          <span>
+            {PHOTO_FAILED_MESSAGE}{" "}
+            <span style={{ textDecoration: "underline", fontWeight: 600 }}>
+              Retake
+            </span>
+          </span>
           {input}
         </label>
       )}
