@@ -104,9 +104,9 @@ export default async function BlogPostPage({ params }: Props) {
             when it was taken, locks the record, and gives you a share link when
             an owner or guest asks.
           </p>
-          <a href="/landing#join" className="btn">
+          <Link href="/#join" className="btn">
             Get early access
-          </a>
+          </Link>
         </div>
       </article>
     </MarketingFrame>

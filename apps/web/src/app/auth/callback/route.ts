@@ -21,7 +21,7 @@ async function rejectNonAdmin(
   } = await supabase.auth.getUser();
   if (user && !isAdminEmail(user.email)) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(`${origin}/landing`);
+    return NextResponse.redirect(`${origin}/`);
   }
   return null;
 }

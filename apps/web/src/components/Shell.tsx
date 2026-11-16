@@ -18,10 +18,18 @@ function startsWithAny(pathname: string, prefixes: string[]): boolean {
  * signed-out request to /login before it renders — so it gets the four-tab
  * app shell. Single user (spec): no role branches.
  */
-export function Shell({ children }: { children: React.ReactNode }) {
+export function Shell({
+  children,
+  landingHome = false,
+}: {
+  children: React.ReactNode;
+  /** `/` serves the public landing page for this visitor (see middleware). */
+  landingHome?: boolean;
+}) {
   const pathname = usePathname() ?? "/";
 
   if (
+    (landingHome && pathname === "/") ||
     startsWithAny(pathname, PUBLIC_PREFIXES) ||
     startsWithAny(pathname, SIGNED_OUT_PREFIXES)
   )

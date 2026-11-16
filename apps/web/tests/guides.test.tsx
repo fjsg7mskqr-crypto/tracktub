@@ -102,9 +102,7 @@ describe("/guides/[slug]", () => {
       expect(box.textContent).toContain(
         "TrackTub records this on every visit, and the owner gets a link."
       );
-      expect(within(box).getByRole("link").getAttribute("href")).toBe(
-        "/landing"
-      );
+      expect(within(box).getByRole("link").getAttribute("href")).toBe("/");
       expect(screen.getByRole("heading", { name: "Related" })).toBeTruthy();
 
       const ld = Array.from(

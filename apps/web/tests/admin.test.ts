@@ -48,7 +48,7 @@ describe("appAccessDecision (pre-launch gate matrix)", () => {
     }
   });
 
-  it("sends a logged-out visitor on the root to /landing, deeper paths to /login", () => {
+  it("gives a logged-out visitor on the root the landing decision, deeper paths to /login", () => {
     expect(appAccessDecision({ ...base, path: "/" })).toBe("landing");
     expect(appAccessDecision({ ...base, path: "/team" })).toBe("login");
     expect(appAccessDecision({ ...base, path: "/insights" })).toBe("login");

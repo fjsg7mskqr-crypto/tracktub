@@ -20,7 +20,7 @@ const DESCRIPTION =
 export const metadata: Metadata = marketingMetadata({
   title: "Hot tub turnover reports for short-term rentals | TrackTub",
   description: DESCRIPTION,
-  pathname: "/landing",
+  pathname: "/",
 });
 
 const COVER = "/landing/report-cover-on.jpg";
