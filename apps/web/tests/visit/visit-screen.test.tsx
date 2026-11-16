@@ -41,6 +41,7 @@ function snap(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
     leftAt: null,
     work: [],
     added: [],
+    productSuggestions: [],
     notes: "",
     flag: null,
     openItems: [],
@@ -88,6 +89,19 @@ describe("VisitScreen", () => {
     ).toBe("true");
   });
 
+  it("keeps loaded product suggestions after a save response", async () => {
+    const productSuggestions = [
+      { product: "Chlorine granules", amount: "3 oz" },
+    ];
+    actions.saveWork.mockResolvedValue(snap());
+    render(<VisitScreen initial={snap({ productSuggestions })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Wiped down" }));
+    await screen.findByText(/^Saved \d{1,2}:\d{2}/);
+    expect(
+      screen.getByRole("button", { name: "Chlorine granules" })
+    ).toBeTruthy();
+  });
+
   it("Saved hh:mm appears after a save", async () => {
     actions.saveWork.mockResolvedValue(snap({ work: ["wiped"] }));
     render(<VisitScreen initial={snap()} />);
@@ -107,13 +121,95 @@ describe("VisitScreen", () => {
     ).toBe("true");
   });
 
-  it("camera input is capture-only", () => {
+  it("each photo step is one tap: a label around a capture-only input, no sheet", () => {
     const { container } = render(<VisitScreen initial={snap()} />);
-    fireEvent.click(screen.getByRole("button", { name: /Before/ }));
-    const inputs = container.ownerDocument.querySelectorAll("input[type=file]");
-    expect(inputs).toHaveLength(1);
-    expect(inputs[0].getAttribute("capture")).toBe("environment");
-    expect(inputs[0].getAttribute("accept")).toBe("image/*");
+    const doc = container.ownerDocument;
+    const inputs = doc.querySelectorAll("input[type=file]");
+    expect(inputs).toHaveLength(3);
+    for (const input of Array.from(inputs)) {
+      expect(input.getAttribute("capture")).toBe("environment");
+      expect(input.getAttribute("accept")).toBe("image/*");
+      expect(input.closest("label")).toBeTruthy();
+    }
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("captured photo uploads with the capture time", async () => {
+    actions.savePhoto.mockResolvedValue(snap());
+    URL.createObjectURL = vi.fn(() => "blob:x");
+    URL.revokeObjectURL = vi.fn();
+    const { container } = render(<VisitScreen initial={snap()} />);
+    const input = container.ownerDocument.querySelectorAll(
+      "input[type=file]"
+    )[0] as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+    await waitFor(() => expect(actions.savePhoto).toHaveBeenCalled());
+    const fd = actions.savePhoto.mock.calls[0][0] as FormData;
+    expect(fd.get("kind")).toBe("before");
+    expect(fd.get("visitId")).toBe("v1");
+    expect(typeof fd.get("capturedAt")).toBe("string");
+  });
+
+  it("a taken photo is still a one-tap retake", () => {
+    render(
+      <VisitScreen
+        initial={snap({
+          photos: [
+            {
+              id: "ph1",
+              kind: "before",
+              storagePath: "u/before.jpg",
+              capturedAt: "2026-10-27T09:45:00.000Z",
+            },
+          ],
+        })}
+      />
+    );
+    const retake = screen.getByLabelText("Before — retake");
+    expect(retake.tagName).toBe("LABEL");
+    expect(retake.querySelector("input[capture=environment]")).toBeTruthy();
+  });
+
+  it("last visit's shot is a thumbnail that opens large; none when absent", () => {
+    const first = render(<VisitScreen initial={snap()} />);
+    expect(screen.queryByLabelText(/Last visit's .* photo — view/)).toBeNull();
+    first.unmount();
+    render(
+      <VisitScreen
+        initial={snap({
+          previous: {
+            visitId: "v0",
+            visitedOn: "2026-10-20T09:00:00.000Z",
+            found: null,
+            photos: [
+              {
+                id: "ph0",
+                kind: "after",
+                storagePath: "u/old-after.jpg",
+                capturedAt: null,
+              },
+            ],
+          },
+        })}
+      />
+    );
+    expect(
+      screen.queryByLabelText("Last visit's Before photo — view")
+    ).toBeNull();
+    const thumb = screen.getByLabelText(
+      "Last visit's After · full tub photo — view"
+    );
+    expect(thumb.closest("label")).toBeNull();
+    expect(screen.getByText(/Side by side/)).toBeTruthy();
+    fireEvent.click(thumb);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(
+      screen.getByAltText("Last visit's After · full tub photo")
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("finish is enabled with nothing logged and lists what is missing", async () => {
@@ -246,7 +342,7 @@ describe("VisitScreen — open items", () => {
       total_alkalinity: 100,
       ph: 7.9,
       calcium_hardness: 200,
-      sanitizer_ppm: 2,
+      sanitizer_ppm: 4,
     };
     render(<VisitScreen initial={snap({ left })} />);
     fireEvent.click(screen.getByRole("button", { name: /Re-check pH/ }));

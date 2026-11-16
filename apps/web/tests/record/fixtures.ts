@@ -53,7 +53,7 @@ export function mockupRow(overrides: Partial<RecordRow> = {}): RecordRow {
       left_total_alkalinity: 100,
       left_ph: 7.5,
       left_calcium_hardness: 190,
-      left_sanitizer_ppm: 2.5,
+      left_sanitizer_ppm: 4,
       recorded_at: "2026-10-26T13:45:00Z",
       found_recorded_at: "2026-10-26T13:45:00Z",
       left_recorded_at: "2026-10-26T14:52:00Z",
