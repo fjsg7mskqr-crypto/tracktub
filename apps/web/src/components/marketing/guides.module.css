@@ -3,8 +3,8 @@
    `legacy` layer element styles. */
 .root {
   --ink: #111827;
-  --body: #374151;
-  --mute: #6b7487;
+  --body: #1f2937;
+  --mute: #4b5565;
   --line: #e6e8ec;
   --soft: #f4f6f9;
   --blue: #2563eb;
@@ -29,8 +29,17 @@
 .root :is(h1, h2, h3, p, ul, ol, table) {
   margin: 0;
 }
+/* The app's global heading/link colours are for the dark app theme; pin them
+   to the light guides palette so nothing renders light grey on white. */
+.root :is(h1, h2, h3, h4) {
+  color: var(--ink);
+  font-family: inherit;
+}
 .root a {
   color: inherit;
+}
+.root strong {
+  color: var(--ink);
 }
 .root :is(a, [tabindex="0"]):focus-visible {
   outline: 2px solid var(--blue);
