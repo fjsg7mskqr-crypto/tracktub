@@ -26,6 +26,12 @@ const actions = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/actions/visit", () => actions);
 
+const compress = vi.hoisted(() => ({ compressPhoto: vi.fn() }));
+vi.mock("@/lib/compress-photo", async (orig) => ({
+  ...(await orig<typeof import("@/lib/compress-photo")>()),
+  compressPhoto: compress.compressPhoto,
+}));
+
 import { VisitScreen } from "@/components/visit/VisitScreen";
 
 function snap(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
@@ -56,6 +62,8 @@ function snap(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
 beforeEach(() => {
   for (const fn of Object.values(actions)) fn.mockReset();
   push.mockReset();
+  compress.compressPhoto.mockReset();
+  compress.compressPhoto.mockImplementation(async (f: File) => f);
 });
 afterEach(cleanup);
 
@@ -153,6 +161,34 @@ describe("VisitScreen", () => {
     expect(fd.get("kind")).toBe("before");
     expect(fd.get("visitId")).toBe("v1");
     expect(typeof fd.get("capturedAt")).toBe("string");
+  });
+
+  it("a photo that can't be processed is never uploaded; retake is right there", async () => {
+    compress.compressPhoto.mockRejectedValue(new Error("nope"));
+    URL.createObjectURL = vi.fn(() => "blob:x");
+    URL.revokeObjectURL = vi.fn();
+    const { container } = render(<VisitScreen initial={snap()} />);
+    const input = container.ownerDocument.querySelectorAll(
+      "input[type=file]"
+    )[0] as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain(
+      "Couldn't process that photo. Please retake it."
+    );
+    expect(alert.tagName).toBe("LABEL");
+    expect(alert.querySelector("input[type=file][capture]")).toBeTruthy();
+    expect(actions.savePhoto).not.toHaveBeenCalled();
+    // A fresh capture clears the message and uploads.
+    actions.savePhoto.mockResolvedValue(snap());
+    compress.compressPhoto.mockImplementation(async (f: File) => f);
+    fireEvent.change(alert.querySelector("input") as HTMLInputElement, {
+      target: { files: [new File(["x"], "b.jpg", { type: "image/jpeg" })] },
+    });
+    await waitFor(() => expect(actions.savePhoto).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
   it("a taken photo is still a one-tap retake", () => {
