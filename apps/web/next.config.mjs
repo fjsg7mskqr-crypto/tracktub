@@ -67,6 +67,17 @@ const nextConfig = {
   reactStrictMode: true,
   // Monorepo file tracing must anchor at the repo root (not apps/web).
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
+  // The turnover checklist graduated from a dated post to an evergreen guide.
+  // Permanent (308) so search engines move the old URL's ranking over.
+  async redirects() {
+    return [
+      {
+        source: "/blog/str-hot-tub-turnover-checklist",
+        destination: "/guides/turnover",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
