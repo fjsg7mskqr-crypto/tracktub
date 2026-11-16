@@ -2,7 +2,7 @@
  * Admin allowlist + pre-launch access-gate decision.
  *
  * During the pre-launch window the public may reach ONLY the marketing surface
- * (`/landing`, `/blog`) and the auth plumbing needed to sign in (`/login`,
+ * (`/` — the landing page —, `/guides`, `/blog`) and the auth plumbing needed to sign in (`/login`,
  * `/auth/callback`). Every other route is the founder's alone: reachable only by
  * a signed-in user whose email is on the `ADMIN_EMAILS` allowlist. This is the
  * single source of truth for "is this email an admin" (also used by
@@ -33,10 +33,11 @@ export type AccessDecision = "allow" | "landing" | "login";
  * without a live request.
  *
  * - Public paths are always allowed.
- * - A logged-out visitor to a protected path is sent to `/landing` (from the
- *   root) or `/login` (deeper paths — so the founder can still sign in).
+ * - A logged-out visitor on the root gets the "landing" decision (the middleware
+ *   serves the landing page AT `/`, #425); deeper paths get "login" so the
+ *   founder can still sign in.
  * - When `enforceAdmin` is on (production builds only), a signed-in NON-admin is
- *   bounced to `/landing`. In local dev the gate is off so the seeded demo and
+ *   sent to the landing page. In local dev the gate is off so the seeded demo and
  *   `/dev` login bypass keep working.
  */
 export function appAccessDecision(opts: {

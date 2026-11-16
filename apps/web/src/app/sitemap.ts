@@ -4,7 +4,7 @@ import { getAllPosts, getLatestPostDate, postLastModified } from "@/lib/blog";
 import { getURL } from "@/lib/url";
 
 /**
- * Last real content change to `/landing`. Bump it when the landing copy
+ * Last real content change to the landing page (`/`). Bump it when the landing copy
  * changes. A constant (not `new Date()`) because Google only trusts `lastmod`
  * that is consistently accurate; "modified on every request" teaches it to
  * ignore the field for the whole sitemap.
@@ -12,7 +12,7 @@ import { getURL } from "@/lib/url";
 const LANDING_LAST_MODIFIED = "2026-11-16";
 
 /**
- * sitemap.xml — indexable public marketing URLs (`/landing`, `/guides/*`, `/blog/*`).
+ * sitemap.xml — indexable public marketing URLs (`/`, `/guides/*`, `/blog/*`).
  * Built off the canonical base URL (`getURL()`). Submit to Google Search Console.
  * New markdown posts in `content/blog/` are picked up automatically.
  */
@@ -23,7 +23,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     {
-      url: `${base}/landing`,
+      url: `${base}/`,
       lastModified: new Date(LANDING_LAST_MODIFIED),
       changeFrequency: "weekly",
       priority: 1,

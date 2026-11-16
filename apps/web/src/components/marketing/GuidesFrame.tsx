@@ -6,7 +6,7 @@ export function GuidesFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <Link href="/landing" className={styles.logo}>
+        <Link href="/" className={styles.logo}>
           Track<span className={styles.blue}>Tub</span>
         </Link>
         <nav className={styles.nav} aria-label="Main">
@@ -16,20 +16,20 @@ export function GuidesFrame({ children }: { children: React.ReactNode }) {
           <Link href="/blog" className={styles.navA}>
             Blog
           </Link>
-          <Link href="/landing" className={styles.navCta}>
+          <Link href="/" className={styles.navCta}>
             Get early access
           </Link>
         </nav>
       </header>
       <main className={styles.main}>{children}</main>
       <footer className={styles.footer}>
-        <Link href="/landing" className={styles.logo}>
+        <Link href="/" className={styles.logo}>
           Track<span className={styles.blue}>Tub</span>
         </Link>
         <nav className={styles.footNav} aria-label="Footer">
           <Link href="/guides">Guides</Link>
           <Link href="/blog">Blog</Link>
-          <Link href="/landing">Home</Link>
+          <Link href="/">Home</Link>
         </nav>
       </footer>
     </div>
