@@ -6,6 +6,7 @@ import { careDue, type DueItem } from "@/lib/care-due";
 import { READING_FIELDS, READING_TARGETS } from "@/lib/readings";
 import { formatTime, APP_TIME_ZONE } from "@/lib/time";
 import { foundStreak, type HistoryVisit } from "@/lib/tub-history";
+import type { NextVisit } from "@/lib/next-visit";
 import { recordPath, tubPath } from "@/lib/app-routes";
 import { DUE_SOON_DAYS, type TubCareInput } from "@/components/tub/tub-status";
 import { addDays, dayKey, dayParts, daysBetween, weekStart } from "./days";
@@ -20,7 +21,7 @@ export type LoggedVisit = HistoryVisit & {
 
 export type CalItem = {
   id: string;
-  kind: "logged" | "due";
+  kind: "logged" | "due" | "scheduled";
   tubId: string;
   tubName: string;
   href: string;
@@ -58,7 +59,8 @@ export function calendarItems(
   tubs: readonly CareTub[],
   visits: readonly LoggedVisit[],
   now: Date,
-  tz: string = APP_TIME_ZONE
+  tz: string = APP_TIME_ZONE,
+  scheduled: readonly NextVisit[] = []
 ): Map<string, CalItem[]> {
   const today = dayKey(now, tz);
   const names = new Map(tubs.map((t) => [t.id, t.name]));
@@ -102,6 +104,25 @@ export function calendarItems(
         sent: false,
       });
     }
+  }
+
+  // Re-checks scheduled from a visit's finish step. One per tub; an overdue
+  // one sits on today, like overdue care.
+  for (const n of scheduled) {
+    const name = names.get(n.tubId);
+    if (!name) continue;
+    const over = daysBetween(n.dueOn, today);
+    const what = n.reason ? `Next visit · ${n.reason}` : "Next visit";
+    put(over > 0 ? today : n.dueOn, {
+      id: `n-${n.tubId}`,
+      kind: "scheduled",
+      tubId: n.tubId,
+      tubName: name,
+      href: tubPath(n.tubId),
+      what: over > 0 ? `${what} · ${plural(over, "day")} over` : what,
+      short: n.reason || "Next visit",
+      sent: false,
+    });
   }
   return out;
 }

@@ -324,6 +324,25 @@ describe("boardState + boardOrder (worst first)", () => {
 describe("todaysRoute", () => {
   const base = { tubs: [ASPEN, CEDAR, PINE, RIDGE], now: NOW, tz: TZ };
 
+  it("a re-check scheduled for today or overdue puts the tub on the route", () => {
+    const route = todaysRoute({
+      ...base,
+      visits: [],
+      drafts: [],
+      added: [],
+      scheduled: [
+        { tubId: "cedar", dueOn: "2026-11-04", reason: "Re-check foaming" },
+        { tubId: "pine", dueOn: "2026-11-02", reason: "" },
+        { tubId: "aspen", dueOn: "2026-11-05", reason: "tomorrow" },
+      ],
+    });
+    // Overdue first (the current stop), then due today; tomorrow's isn't on today's route.
+    expect(route.map((r) => [r.tubId, r.label])).toEqual([
+      ["pine", "up next"],
+      ["cedar", "re-check"],
+    ]);
+  });
+
   it("no visits, nothing due, nothing added → no route", () => {
     expect(todaysRoute({ ...base, visits: [], drafts: [], added: [] })).toEqual(
       []

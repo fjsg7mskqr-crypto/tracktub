@@ -37,6 +37,8 @@ function snapshot(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
     notes: "",
     flag: null,
     openItems: [],
+    nextVisit: null,
+    scheduledHere: null,
     previous: {
       visitId: "old",
       visitedOn: "2026-10-17T09:00:00.000Z",

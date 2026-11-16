@@ -417,6 +417,68 @@ export type Database = {
           },
         ];
       };
+      next_visit: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          due_on: string;
+          org_id: string;
+          property_id: string;
+          reason: string | null;
+          set_at_visit_id: string | null;
+          started_visit_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          due_on: string;
+          org_id: string;
+          property_id: string;
+          reason?: string | null;
+          set_at_visit_id?: string | null;
+          started_visit_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          due_on?: string;
+          org_id?: string;
+          property_id?: string;
+          reason?: string | null;
+          set_at_visit_id?: string | null;
+          started_visit_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "next_visit_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "org";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "next_visit_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: true;
+            referencedRelation: "property";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "next_visit_set_at_visit_id_fkey";
+            columns: ["set_at_visit_id"];
+            isOneToOne: false;
+            referencedRelation: "turnover";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "next_visit_started_visit_id_fkey";
+            columns: ["started_visit_id"];
+            isOneToOne: false;
+            referencedRelation: "turnover";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       notification: {
         Row: {
           created_at: string;

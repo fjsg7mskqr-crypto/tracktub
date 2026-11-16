@@ -21,6 +21,8 @@ import {
   type ReportState,
   type RouteStop,
 } from "@/components/home/home-model";
+import { loadNextVisits } from "@/lib/visit-data";
+import type { NextVisit } from "@/lib/next-visit";
 import { bringList, type OpenItem } from "@/components/home/open-items";
 import {
   loadHomeDrafts,
@@ -111,9 +113,10 @@ function stopFocus(
     now: Date;
     today: string;
     problem: ReturnType<typeof boardState>["problem"];
+    recheck: NextVisit | undefined;
   }
 ): StopFocus {
-  const { visits, items, draft, now, today, problem } = ctx;
+  const { visits, items, draft, now, today, problem, recheck } = ctx;
   const done = visits.find((v) => v.id === stop.doneVisitId);
   const base = {
     tubId: tub.id,
@@ -152,7 +155,11 @@ function stopFocus(
     kicker: stop.state === "current" ? "Up next" : "Later today",
     chip: problem ? { text: problem.chipWithDay, tone: "alert" } : null,
     progress: null,
-    subline: [tub.clientName, lastVisitText(visits, today)]
+    subline: [
+      tub.clientName,
+      recheck ? `Re-check${recheck.reason ? `: ${recheck.reason}` : ""}` : null,
+      lastVisitText(visits, today),
+    ]
       .filter(Boolean)
       .join(" · "),
     bring: bringList(items, lastReading(visits)),
@@ -196,6 +203,7 @@ export default async function Home() {
     allItems,
     allAdded,
     fullName,
+    allScheduled,
   ] = await Promise.all([
     getCurrentMembership(),
     loadTubs(supabase),
@@ -204,6 +212,7 @@ export default async function Home() {
     loadOpenItems(supabase),
     loadRouteStops(supabase, today),
     loadProfileName(supabase),
+    loadNextVisits(supabase),
   ]);
   if (!membership) redirect("/login");
 
@@ -323,7 +332,8 @@ export default async function Home() {
   ))
     if (!draftOf.has(d.tubId)) draftOf.set(d.tubId, d);
 
-  const route = todaysRoute({ tubs, visits, drafts, added, now });
+  const scheduled = allScheduled.filter((n) => ids.has(n.tubId));
+  const route = todaysRoute({ tubs, visits, drafts, added, scheduled, now });
   const focus = focusCard(route);
   const onRoute = new Set(route.map((s) => s.tubId));
   const entries = tubs.map((t) =>
@@ -341,6 +351,9 @@ export default async function Home() {
       now,
       today,
       problem: entries.find((e) => e.tubId === s.tubId)?.problem ?? null,
+      recheck: scheduled.find(
+        (n) => n.tubId === s.tubId && daysBetween(n.dueOn, today) >= 0
+      ),
     });
   }
 
