@@ -18,6 +18,7 @@ import type {
   CareTub,
   LoggedVisit,
 } from "@/components/calendar/calendar-model";
+import type { NextVisit } from "@/lib/next-visit";
 import { dayKey, dayParts, daysBetween } from "@/components/calendar/days";
 import { itemsChip, type OpenItem, type Reading } from "./open-items";
 
@@ -302,10 +303,13 @@ export function todaysRoute(input: {
   visits: readonly HomeVisit[];
   drafts: readonly HomeDraft[];
   added: readonly string[];
+  /** Re-checks scheduled from a visit's finish step. */
+  scheduled?: readonly NextVisit[];
   now: Date;
   tz?: string;
 }): RouteStop[] {
   const { tubs, visits, drafts, added, now, tz = APP_TIME_ZONE } = input;
+  const scheduled = input.scheduled ?? [];
   const today = dayKey(now, tz);
   const draftOf = new Map<string, HomeDraft>();
   for (const d of [...drafts].sort(
@@ -324,7 +328,12 @@ export function todaysRoute(input: {
       (d) => daysBetween(dayKey(d.dueOn, tz), today) >= 0
     );
     const isAdded = added.includes(tub.id);
-    if (!draft && !doneToday && due.length === 0 && !isAdded) continue;
+    // A re-check due today or overdue puts the tub on the route.
+    const recheck = scheduled.find(
+      (n) => n.tubId === tub.id && daysBetween(n.dueOn, today) >= 0
+    );
+    if (!draft && !doneToday && due.length === 0 && !isAdded && !recheck)
+      continue;
 
     const stop = {
       tubId: tub.id,
@@ -354,7 +363,14 @@ export function todaysRoute(input: {
       const overdue = due.some(
         (d) => daysBetween(dayKey(d.dueOn, tz), today) > 0
       );
-      const urgency = problem ? 0 : overdue ? 1 : due.length ? 2 : 3;
+      const recheckLate = recheck && daysBetween(recheck.dueOn, today) > 0;
+      const urgency = problem
+        ? 0
+        : overdue || recheckLate
+          ? 1
+          : due.length || recheck
+            ? 2
+            : 3;
       rows.push({
         ...stop,
         state: "todo",
@@ -362,7 +378,11 @@ export function todaysRoute(input: {
           ? problem.chip
           : due.length
             ? `${due[0].kind} ${overdue ? "overdue" : "due"}`
-            : "added",
+            : recheck
+              ? recheckLate
+                ? "re-check overdue"
+                : "re-check"
+              : "added",
         group: 2 + urgency,
         sortKey: 0,
       });

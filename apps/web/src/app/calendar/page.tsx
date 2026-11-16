@@ -17,6 +17,8 @@ import { loadCareData } from "@/components/calendar/load";
 
 const DOT = { due: "var(--tt-due)", logged: "var(--tt-brand)" } as const;
 
+// A scheduled next visit is a hollow ring: distinct from a finished visit
+// (filled blue) and from computed care (filled amber).
 const Dot = ({ kind, size }: { kind: CalItem["kind"]; size: number }) => (
   <span
     aria-hidden="true"
@@ -24,8 +26,11 @@ const Dot = ({ kind, size }: { kind: CalItem["kind"]; size: number }) => (
       width: size,
       height: size,
       borderRadius: 999,
-      background: DOT[kind],
       flex: "none",
+      boxSizing: "border-box",
+      ...(kind === "scheduled"
+        ? { border: "2px solid var(--tt-link)", background: "transparent" }
+        : { background: DOT[kind] }),
     }}
   />
 );
@@ -65,12 +70,12 @@ export default async function CalendarPage({
   const isMonth = range.view === "month";
 
   const supabase = await createClient();
-  const [membership, { tubs, visits }] = await Promise.all([
+  const [membership, { tubs, visits, scheduled }] = await Promise.all([
     getCurrentMembership(),
     loadCareData(supabase),
   ]);
   if (!membership) redirect("/login");
-  const byDay = calendarItems(tubs, visits, now);
+  const byDay = calendarItems(tubs, visits, now, undefined, scheduled);
   const shown = range.cells.flatMap((k) => (k ? (byDay.get(k) ?? []) : []));
 
   return (
@@ -173,6 +178,10 @@ export default async function CalendarPage({
             <Dot kind="logged" size={8} />
             Visit logged
           </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Dot kind="scheduled" size={8} />
+            Next visit
+          </span>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           <Link href={range.prev} aria-label="Previous" style={navLink}>
@@ -221,14 +230,17 @@ export default async function CalendarPage({
               const items = byDay.get(k) ?? [];
               const isToday = k === today;
               const logged = items.filter((x) => x.kind === "logged").length;
-              const due = items.length - logged;
+              const sched = items.filter((x) => x.kind === "scheduled").length;
+              const due = items.length - logged - sched;
               const p = dayParts(k);
               return (
                 <Link
                   key={k}
                   href={calendarHref("day", k)}
                   aria-label={`${p.weekday}, ${p.month} ${p.num}${
-                    items.length ? `: ${due} due, ${logged} logged` : ""
+                    items.length
+                      ? `: ${due} due, ${sched ? `${sched} next visit, ` : ""}${logged} logged`
+                      : ""
                   }`}
                   style={{
                     minHeight: 52,
@@ -341,7 +353,9 @@ export default async function CalendarPage({
                           textDecoration: "none",
                           color: "var(--tt-text)",
                           background:
-                            it.kind === "due" ? "var(--tt-surface)" : "#0F1012",
+                            it.kind === "logged"
+                              ? "#0F1012"
+                              : "var(--tt-surface)",
                         }}
                       >
                         <span style={{ marginTop: 5, display: "flex" }}>

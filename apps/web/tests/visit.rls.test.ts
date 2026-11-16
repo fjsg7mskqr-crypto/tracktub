@@ -7,8 +7,11 @@ import {
   findOpenDraft,
   finishVisit,
   loadVisitSnapshot,
+  loadNextVisits,
   logReading,
+  markNextVisitStarted,
   saveAdded,
+  saveNextVisit,
   saveFlag,
   saveNotes,
   savePhoto,
@@ -507,6 +510,83 @@ describe.skipIf(!ready)("visit data", () => {
         .select("locked_at")
         .single();
       if (!fErr) expect(recent(forged?.locked_at)).toBe(true);
+    });
+  });
+
+  describe("next visit (#401)", () => {
+    const soon = (days: number) =>
+      new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+
+    it("scheduling replaces the tub's pending one; None clears it", async () => {
+      const tub = await newTub("Next visit replace");
+      const v = await createDraft(db, tub, userId);
+      await saveNextVisit(db, v, soon(2), "  Re-check foaming ");
+      await saveNextVisit(db, v, soon(7), "");
+      const mine = (await loadNextVisits(db)).filter((n) => n.tubId === tub);
+      expect(mine).toEqual([{ tubId: tub, dueOn: soon(7), reason: "" }]);
+      expect((await loadVisitSnapshot(db, v)).nextVisit).toEqual({
+        dueOn: soon(7),
+        reason: "",
+      });
+
+      await saveNextVisit(db, v, null, "");
+      expect((await loadNextVisits(db)).some((n) => n.tubId === tub)).toBe(
+        false
+      );
+      expect((await loadVisitSnapshot(db, v)).nextVisit).toBeNull();
+    });
+
+    it("refuses a past or malformed date", async () => {
+      const tub = await newTub("Next visit past");
+      const v = await createDraft(db, tub, userId);
+      await expect(saveNextVisit(db, v, "2020-01-01", "")).rejects.toThrow();
+      await expect(saveNextVisit(db, v, "soon", "")).rejects.toThrow();
+    });
+
+    it("can't be scheduled from a locked visit", async () => {
+      const tub = await newTub("Next visit locked");
+      const v = await createDraft(db, tub, userId);
+      await finishVisit(db, v);
+      await expect(saveNextVisit(db, v, soon(2), "")).rejects.toThrow(
+        "Visit is locked"
+      );
+    });
+
+    it("starting the next visit marks it done and carries the reason into the brief", async () => {
+      const tub = await newTub("Next visit start");
+      const first = await createDraft(db, tub, userId);
+      await saveNextVisit(db, first, soon(3), "Re-check foaming");
+      await finishVisit(db, first);
+
+      const second = await createDraft(db, tub, userId);
+      await markNextVisitStarted(db, tub, second);
+
+      // No longer upcoming or overdue anywhere...
+      expect((await loadNextVisits(db)).some((n) => n.tubId === tub)).toBe(
+        false
+      );
+      // ...but its reason shows in this visit's brief, not as a pending one.
+      const snap = await loadVisitSnapshot(db, second);
+      expect(snap.nextVisit).toBeNull();
+      expect(snap.scheduledHere).toEqual({
+        dueOn: soon(3),
+        reason: "Re-check foaming",
+      });
+
+      // Scheduling again from this visit starts a fresh pending one.
+      await saveNextVisit(db, second, soon(7), "Still foaming");
+      const after = await loadVisitSnapshot(db, second);
+      expect(after.nextVisit).toEqual({
+        dueOn: soon(7),
+        reason: "Still foaming",
+      });
+      expect(after.scheduledHere).toBeNull();
+
+      // Clearing doesn't touch an answered one.
+      const third = await createDraft(db, tub, userId);
+      await markNextVisitStarted(db, tub, third);
+      await saveNextVisit(db, third, null, "");
+      expect((await loadVisitSnapshot(db, third)).scheduledHere).not.toBeNull();
     });
   });
 });

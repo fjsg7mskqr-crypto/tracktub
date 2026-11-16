@@ -125,6 +125,10 @@ export type VisitSnapshot = {
     /** The note written at that visit (trimmed; "" when none). */
     notes: string;
   } | null;
+  /** The re-check scheduled from this visit's finish step (pending). */
+  nextVisit: { dueOn: string; reason: string } | null;
+  /** A scheduled re-check this visit answers, for the brief at the top. */
+  scheduledHere: { dueOn: string; reason: string } | null;
 };
 
 /** Work chips in the mockup's order, with its field labels. */
