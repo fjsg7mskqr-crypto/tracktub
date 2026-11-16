@@ -88,7 +88,7 @@ export function getLatestGuideDate(): string | null {
   return (
     getAllGuides()
       .map((g) => g.lastReviewed)
-      .sort()
+      .sort((x, y) => x.localeCompare(y))
       .at(-1) ?? null
   );
 }
