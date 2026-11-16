@@ -32,6 +32,8 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/landing",
   "/blog",
+  "/privacy",
+  "/terms",
   "/proof",
   "/invite",
 ];
