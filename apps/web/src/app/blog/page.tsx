@@ -17,15 +17,22 @@ export default function BlogIndexPage() {
   return (
     <MarketingFrame active="blog">
       <div className="bhero">
-        <span className="eyebrow">Resources</span>
+        <span className="eyebrow">Blog</span>
         <h1>Hot tub operations for STR hosts</h1>
         <p>
           Practical guides on turnover routines, documentation, and keeping your
           rental hot tub guest-ready — written for self-managed operators, not
-          spa hobbyists.
+          spa hobbyists. Evergreen reference lives in the{" "}
+          <Link href="/guides">guides</Link>.
         </p>
       </div>
 
+      {posts.length === 0 && (
+        <p className="bhero">
+          No posts yet. The <Link href="/guides">guides</Link> cover the
+          between-guest routine and water chemistry.
+        </p>
+      )}
       <div className="blist">
         {posts.map((post) => (
           <Link

@@ -20,7 +20,7 @@ const DESCRIPTION =
 export const metadata: Metadata = marketingMetadata({
   title: "Hot tub turnover reports for short-term rentals | TrackTub",
   description: DESCRIPTION,
-  pathname: "/landing",
+  pathname: "/",
 });
 
 const COVER = "/landing/report-cover-on.jpg";
@@ -112,7 +112,7 @@ export default function Landing() {
           <a className={styles.navA} href="#b-report">
             The report
           </a>
-          <Link className={styles.navA} href="/blog">
+          <Link className={styles.navA} href="/guides">
             Guides
           </Link>
           <a className={styles.navA} href="#b-faq">
@@ -618,7 +618,7 @@ export default function Landing() {
         <footer className={`${styles.wrap} ${styles.footer}`}>
           <Wordmark className={styles.footMark} />
           <nav className={styles.footNav} aria-label="Footer">
-            <Link href="/blog">Guides</Link>
+            <Link href="/guides">Guides</Link>
             <a href="https://x.com/tracktub">@tracktub on X</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>

@@ -73,13 +73,13 @@ describe("updateSession pre-launch admin lockdown", () => {
     vi.resetModules();
   });
 
-  it("bounces a signed-in NON-admin off a protected route to /landing (prod)", async () => {
+  it("bounces a signed-in NON-admin off a protected route to / (the landing page) (prod)", async () => {
     const response = await userRequest(
       "https://tracktub.vercel.app/team",
       "stranger@gmail.com"
     );
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/landing");
+    expect(new URL(response.headers.get("location")!).pathname).toBe("/");
   });
 
   it("lets a signed-in admin through to a protected route (prod)", async () => {
@@ -108,6 +108,17 @@ describe("updateSession pre-launch admin lockdown", () => {
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("keeps /guides public even for a non-admin", async () => {
+    for (const path of ["/guides", "/guides/turnover"]) {
+      const response = await userRequest(
+        `https://tracktub.vercel.app${path}`,
+        "stranger@gmail.com"
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+    }
   });
 });
 
@@ -214,5 +225,72 @@ describe("updateSession when Supabase env is present but invalid", () => {
     expect(response.headers.get("location")).toBeNull();
     // The failure is logged loudly rather than swallowed silently.
     expect(errSpy).toHaveBeenCalled();
+  });
+});
+
+// #425: the landing page is served AT `/` (no redirect), `/landing` is a
+// permanent redirect to `/`, and a signed-in admin still gets the app home.
+describe("updateSession serves the landing page at / (#425)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock("@supabase/ssr");
+    vi.resetModules();
+  });
+
+  it("rewrites a signed-out `/` to the landing page: 200, no redirect", async () => {
+    const response = await anonRequest("https://tracktub.com/");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      "https://tracktub.com/landing"
+    );
+  });
+
+  it("rewrites `/` for a signed-in non-admin in production too", async () => {
+    const response = await userRequest(
+      "https://tracktub.com/",
+      "stranger@gmail.com"
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      "https://tracktub.com/landing"
+    );
+  });
+
+  it("leaves a signed-in admin's `/` alone (the app home, as today)", async () => {
+    const response = await userRequest(
+      "https://tracktub.com/",
+      "ethan@nhs-llc.com"
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("flags landing-at-root to the layout for signed-out visitors, not the admin", async () => {
+    const flag = "x-middleware-request-x-tt-landing-home";
+    const anon = await anonRequest("https://tracktub.com/guides");
+    expect(anon.headers.get(flag)).toBe("1");
+    const admin = await userRequest(
+      "https://tracktub.com/",
+      "ethan@nhs-llc.com"
+    );
+    expect(admin.headers.get(flag)).toBeNull();
+  });
+
+  it("308-redirects /landing to / and keeps the query string", async () => {
+    const response = await anonRequest(
+      "https://tracktub.com/landing?utm_source=x&utm_medium=y"
+    );
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      "https://tracktub.com/?utm_source=x&utm_medium=y"
+    );
+  });
+
+  it("does not redirect the waitlist endpoint under /landing", async () => {
+    const response = await anonRequest("https://tracktub.com/landing/waitlist");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
   });
 });

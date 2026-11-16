@@ -83,3 +83,37 @@ export function articleMetadata(post: {
     },
   };
 }
+
+export function guideMetadata(guide: {
+  title: string;
+  description: string;
+  slug: string;
+  publishedAt: string;
+  lastReviewed: string;
+}): Metadata {
+  const url = absoluteUrl(`/guides/${guide.slug}`);
+  const image = absoluteUrl(OG_IMAGE_PATH);
+
+  return {
+    title: `${guide.title} | TrackTub`,
+    description: guide.description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: guide.title,
+      description: guide.description,
+      url,
+      siteName: "TrackTub",
+      type: "article",
+      publishedTime: guide.publishedAt,
+      modifiedTime: guide.lastReviewed,
+      authors: ["TrackTub Team"],
+      images: [{ url: image, width: 1200, height: 630, alt: "TrackTub" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: guide.title,
+      description: guide.description,
+      images: [image],
+    },
+  };
+}

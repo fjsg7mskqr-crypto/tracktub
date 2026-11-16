@@ -81,7 +81,13 @@ describe("CSP nonce coverage over prerendered routes (#281)", () => {
       const rels = (await findHtml(APP_DIR)).map((f) => relative(APP_DIR, f));
       expect(rels).not.toContain("login.html");
       expect(rels).not.toContain("landing.html");
+      // `/` serves the landing page for signed-out visitors (#425): if it were
+      // prerendered it would ship frozen, nonce-less HTML (index.html).
+      expect(rels).not.toContain("index.html");
       expect(rels).not.toContain("blog.html");
+      expect(rels).not.toContain("guides.html");
+      expect(rels).not.toContain("guides/turnover.html");
+      expect(rels).not.toContain("guides/water-chemistry.html");
     }
   );
 });

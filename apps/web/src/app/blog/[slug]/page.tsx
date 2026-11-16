@@ -65,7 +65,7 @@ export default async function BlogPostPage({ params }: Props) {
       />
       <article className="barticle">
         <Link href="/blog" className="bback">
-          ← All resources
+          ← All posts
         </Link>
         <span className="eyebrow">{post.pillar ?? "Guide"}</span>
         <h1>{post.title}</h1>
@@ -104,9 +104,9 @@ export default async function BlogPostPage({ params }: Props) {
             when it was taken, locks the record, and gives you a share link when
             an owner or guest asks.
           </p>
-          <a href="/landing#join" className="btn">
+          <Link href="/#join" className="btn">
             Get early access
-          </a>
+          </Link>
         </div>
       </article>
     </MarketingFrame>

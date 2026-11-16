@@ -12,40 +12,44 @@ export function MarketingFrame({ children, active }: Props) {
   return (
     <div className="wrap">
       <div className="nav">
-        <Link href="/landing" className="brandlink">
+        <Link href="/" className="brandlink">
           <Lockup className="brandlockup" />
         </Link>
         <div className="navlinks">
-          <a href="/landing#why">Why it matters</a>
-          <a href="/landing#how">How it works</a>
+          <Link href="/#why">Why it matters</Link>
+          <Link href="/#how">How it works</Link>
+          <Link href="/guides">Guides</Link>
           <Link
             href="/blog"
             className={active === "blog" ? "active" : undefined}
           >
-            Resources
+            Blog
           </Link>
-          <a href="/landing#pricing">Pricing</a>
-          <a href="/landing#faq">FAQ</a>
+          <Link href="/#pricing">Pricing</Link>
+          <Link href="/#faq">FAQ</Link>
         </div>
         <div className="sp">
-          <a href="/landing#join" className="btn sm">
+          <Link href="/#join" className="btn sm">
             Get early access
-          </a>
+          </Link>
         </div>
       </div>
 
       {children}
 
       <footer>
-        <Link href="/landing" className="brandlink">
+        <Link href="/" className="brandlink">
           <Lockup className="flock" />
         </Link>
         <div className="fwater">
           <Waterline strokeWidth={1.4} />
         </div>
         <div className="fcopy">© 2026 TrackTub</div>
+        <Link href="/guides" className="flink">
+          Guides
+        </Link>
         <Link href="/blog" className="flink">
-          Resources
+          Blog
         </Link>
         <a
           className="fx"

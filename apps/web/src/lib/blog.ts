@@ -41,15 +41,15 @@ function parseFile(slug: string, raw: string): BlogPost {
 }
 
 /** All published posts, newest first. */
-export function getAllPosts(): BlogPostMeta[] {
-  if (!fs.existsSync(CONTENT_DIR)) return [];
+export function getAllPosts(dir: string = CONTENT_DIR): BlogPostMeta[] {
+  if (!fs.existsSync(dir)) return [];
 
   return fs
-    .readdirSync(CONTENT_DIR)
+    .readdirSync(dir)
     .filter((name) => name.endsWith(".md"))
     .map((name) => {
       const slug = name.replace(/\.md$/, "");
-      const raw = fs.readFileSync(path.join(CONTENT_DIR, name), "utf8");
+      const raw = fs.readFileSync(path.join(dir, name), "utf8");
       const post = parseFile(slug, raw);
       const { content: _content, ...meta } = post;
       return meta;
