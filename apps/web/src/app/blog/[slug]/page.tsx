@@ -65,7 +65,7 @@ export default async function BlogPostPage({ params }: Props) {
       />
       <article className="barticle">
         <Link href="/blog" className="bback">
-          ← All resources
+          ← All posts
         </Link>
         <span className="eyebrow">{post.pillar ?? "Guide"}</span>
         <h1>{post.title}</h1>

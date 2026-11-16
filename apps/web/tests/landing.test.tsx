@@ -51,7 +51,7 @@ describe("/landing (Round 6)", () => {
       a.getAttribute("href")
     );
     expect(hrefs).toEqual([
-      "/blog",
+      "/guides",
       "https://x.com/tracktub",
       "/privacy",
       "/terms",
