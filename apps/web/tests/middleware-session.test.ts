@@ -109,6 +109,17 @@ describe("updateSession pre-launch admin lockdown", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("keeps /guides public even for a non-admin", async () => {
+    for (const path of ["/guides", "/guides/turnover"]) {
+      const response = await userRequest(
+        `https://tracktub.vercel.app${path}`,
+        "stranger@gmail.com"
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+    }
+  });
 });
 
 // Regression guard for #104: a shared /proof/<token> link must be openable by an

@@ -1,0 +1,360 @@
+/* Public /guides pages. Light and Inter-based, matching the Round 6 landing
+   (tokens copied from landing.module.css). Unlayered so it beats the global
+   `legacy` layer element styles. */
+.root {
+  --ink: #111827;
+  --body: #374151;
+  --mute: #6b7487;
+  --line: #e6e8ec;
+  --soft: #f4f6f9;
+  --blue: #2563eb;
+  min-height: 100dvh;
+  background: #fff;
+  color: var(--ink);
+  font-family:
+    var(--font-inter),
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: border-box;
+}
+.root :is(h1, h2, h3, p, ul, ol, table) {
+  margin: 0;
+}
+.root a {
+  color: inherit;
+}
+.root :is(a, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.blue {
+  color: var(--blue);
+}
+.header,
+.footer,
+.main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-left: max(16px, 4vw);
+  padding-right: max(16px, 4vw);
+}
+.header {
+  padding-top: 20px;
+  padding-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.logo {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 15px;
+}
+.navA {
+  color: var(--body);
+  text-decoration: none;
+  padding: 10px 2px;
+}
+.navA:hover {
+  color: var(--ink);
+}
+.navCta {
+  background: var(--blue);
+  color: #fff !important;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+.navCta:hover {
+  background: #1d4ed8;
+}
+.main {
+  padding-top: 24px;
+  padding-bottom: 72px;
+}
+.footer {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  padding-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 14px;
+}
+.footNav {
+  display: flex;
+  gap: 20px;
+}
+.footNav a {
+  color: var(--mute);
+  text-decoration: none;
+}
+.footNav a:hover {
+  color: var(--ink);
+}
+
+/* breadcrumbs */
+.crumbs {
+  font-size: 13px;
+  color: var(--mute);
+  margin-bottom: 20px;
+}
+.crumbs ol {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.crumbs li + li::before {
+  content: "›";
+  margin-right: 8px;
+}
+.crumbs a {
+  text-decoration: none;
+}
+.crumbs a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* hub */
+.hubHead {
+  max-width: 680px;
+  margin-bottom: 36px;
+}
+.eyebrow {
+  font-family: var(--font-jbmono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 10px;
+  display: block;
+}
+.hubHead h1,
+.article h1 {
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+.hubHead p {
+  margin-top: 14px;
+  color: var(--body);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+.section {
+  margin-bottom: 32px;
+}
+.section h2 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin-bottom: 12px;
+}
+.cards {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+.card {
+  display: block;
+  height: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+.card:hover {
+  border-color: var(--blue);
+}
+.card h3 {
+  font-size: 1.1rem;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.card p {
+  color: var(--body);
+  font-size: 0.95rem;
+}
+.cardMeta {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--mute);
+}
+.blogNote {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  color: var(--body);
+}
+.blogNote a {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+/* article */
+.article {
+  max-width: 700px;
+  margin: 0 auto;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--mute);
+}
+.byline {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--mute);
+}
+.lede {
+  margin-top: 16px;
+  color: var(--body);
+}
+
+/* markdown body (65-70 characters per line at 700px / 17px) */
+.prose {
+  margin-top: 28px;
+  color: var(--body);
+  font-size: 17px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.prose h2 {
+  color: var(--ink);
+  font-size: 1.45rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin: 2.2rem 0 0.7rem;
+}
+.prose :is(p, ul, ol) {
+  margin: 0 0 1rem;
+}
+.prose :is(ul, ol) {
+  padding-left: 1.3rem;
+}
+.prose li {
+  margin-bottom: 0.35rem;
+}
+.prose a {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 0 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 460px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.prose :is(th, td) {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.prose th {
+  background: var(--soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+.prose tr:last-child td {
+  border-bottom: 0;
+}
+
+/* closing box + related */
+.doBox {
+  margin-top: 40px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--blue);
+  border-radius: 12px;
+  background: var(--soft);
+}
+.doBox h2 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+.doBox ul {
+  padding-left: 1.2rem;
+  margin: 0 0 14px;
+  color: var(--body);
+}
+.doBox p {
+  color: var(--ink);
+  font-size: 0.97rem;
+}
+.doBox a {
+  color: var(--blue);
+  font-weight: 600;
+}
+.related {
+  margin-top: 36px;
+}
+.related h2 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+.related ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.related a {
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+.related a:hover {
+  text-decoration: underline;
+}
+.related p {
+  color: var(--mute);
+  font-size: 0.93rem;
+  margin-top: 2px;
+}
+@media (max-width: 480px) {
+  .navA {
+    display: none;
+  }
+}

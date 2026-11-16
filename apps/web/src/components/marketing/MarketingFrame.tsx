@@ -18,11 +18,12 @@ export function MarketingFrame({ children, active }: Props) {
         <div className="navlinks">
           <a href="/landing#why">Why it matters</a>
           <a href="/landing#how">How it works</a>
+          <Link href="/guides">Guides</Link>
           <Link
             href="/blog"
             className={active === "blog" ? "active" : undefined}
           >
-            Resources
+            Blog
           </Link>
           <a href="/landing#pricing">Pricing</a>
           <a href="/landing#faq">FAQ</a>
@@ -44,8 +45,11 @@ export function MarketingFrame({ children, active }: Props) {
           <Waterline strokeWidth={1.4} />
         </div>
         <div className="fcopy">© 2026 TrackTub</div>
+        <Link href="/guides" className="flink">
+          Guides
+        </Link>
         <Link href="/blog" className="flink">
-          Resources
+          Blog
         </Link>
         <a
           className="fx"

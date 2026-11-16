@@ -82,6 +82,9 @@ describe("CSP nonce coverage over prerendered routes (#281)", () => {
       expect(rels).not.toContain("login.html");
       expect(rels).not.toContain("landing.html");
       expect(rels).not.toContain("blog.html");
+      expect(rels).not.toContain("guides.html");
+      expect(rels).not.toContain("guides/turnover.html");
+      expect(rels).not.toContain("guides/water-chemistry.html");
     }
   );
 });
