@@ -17,6 +17,7 @@ import {
   openItemTitle,
   type OpenItemKind,
 } from "@/components/home/open-items";
+import { cleanReason, validDueOn, type NextVisit } from "@/lib/next-visit";
 import {
   PHOTO_KINDS,
   buildProductSuggestions,
@@ -55,6 +56,21 @@ export async function findOpenDraft(
     .maybeSingle();
   if (error) throw new Error(`Failed to look up open visit: ${error.message}`);
   return data?.id ?? null;
+}
+
+/** Starting a visit answers the tub's scheduled re-check: it stops showing as
+ *  upcoming or overdue, and its reason stays on this visit's brief. */
+export async function markNextVisitStarted(
+  db: Db,
+  propertyId: string,
+  visitId: string
+): Promise<void> {
+  const { error } = await db
+    .from("next_visit")
+    .update({ started_visit_id: visitId })
+    .eq("property_id", propertyId)
+    .is("started_visit_id", null);
+  if (error) throw new Error(`Failed to update schedule: ${error.message}`);
 }
 
 /** Insert a new draft turnover for this tub and return its id. */
@@ -147,13 +163,19 @@ export async function loadVisitSnapshot(
   const left = readingFrom(water, "left");
   const orgId = one(t.property)?.org_id;
   if (!orgId) throw new Error("Visit not found");
-  const [previous, openItems, productHistory] = await Promise.all([
+  const [previous, openItems, productHistory, nextRow] = await Promise.all([
     loadPrevious(db, t.property_id, t.id, t.created_at),
     loadVisitItems(db, t.property_id, t.id),
     includeProductHistory
       ? loadProductHistory(db, orgId, t.id)
       : Promise.resolve([]),
+    db
+      .from("next_visit")
+      .select("due_on, reason, started_visit_id")
+      .eq("property_id", t.property_id)
+      .maybeSingle(),
   ]);
+  const nv = nextRow.data;
 
   return {
     visitId: t.id,
@@ -182,6 +204,16 @@ export async function loadVisitSnapshot(
     flag: t.owner_flag ?? null,
     openItems,
     previous,
+    // Scheduled for later (still pending) vs. the re-check this very visit
+    // answers (shown in the brief at the top).
+    nextVisit:
+      nv && nv.started_visit_id === null
+        ? { dueOn: nv.due_on, reason: nv.reason ?? "" }
+        : null,
+    scheduledHere:
+      nv && nv.started_visit_id === t.id
+        ? { dueOn: nv.due_on, reason: nv.reason ?? "" }
+        : null,
   };
 }
 
@@ -459,6 +491,59 @@ export async function saveFlag(
     .update({ owner_flag: text, urgent: text !== null })
     .eq("id", visitId);
   fail("flag", error);
+}
+
+/**
+ * Schedule the tub's next visit from this visit's finish step. One per tub:
+ * scheduling again replaces it; null clears it. A past or malformed date is
+ * refused.
+ */
+export async function saveNextVisit(
+  db: Db,
+  visitId: string,
+  dueOn: string | null,
+  reason: string,
+  now: Date = new Date()
+): Promise<void> {
+  const { propertyId, orgId } = await requireDraft(db, visitId);
+  if (dueOn === null) {
+    // Only a pending entry: the one this visit answered stays on its brief.
+    const { error } = await db
+      .from("next_visit")
+      .delete()
+      .eq("property_id", propertyId)
+      .is("started_visit_id", null);
+    fail("next visit", error);
+    return;
+  }
+  const day = validDueOn(dueOn, now);
+  if (!day) throw new Error("Pick a date from today on");
+  const { error } = await db.from("next_visit").upsert(
+    {
+      property_id: propertyId,
+      org_id: orgId,
+      due_on: day,
+      reason: cleanReason(reason) || null,
+      started_visit_id: null,
+      set_at_visit_id: visitId,
+    },
+    { onConflict: "property_id" }
+  );
+  fail("next visit", error);
+}
+
+/** Every tub's pending scheduled visit (RLS limits it to the caller's tubs). */
+export async function loadNextVisits(db: Db): Promise<NextVisit[]> {
+  const { data, error } = await db
+    .from("next_visit")
+    .select("property_id, due_on, reason")
+    .is("started_visit_id", null);
+  if (error) throw new Error(`Failed to load next visits: ${error.message}`);
+  return (data ?? []).map((r) => ({
+    tubId: r.property_id,
+    dueOn: r.due_on,
+    reason: r.reason ?? "",
+  }));
 }
 
 // --- Open items ("Leave for next time") ---------------------------------------

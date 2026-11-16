@@ -1,5 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
 import { loadTubs } from "@/app/tubs/load";
+import { loadNextVisits } from "@/lib/visit-data";
+import type { NextVisit } from "@/lib/next-visit";
 import type {
   CareTub,
   LoggedVisit,
@@ -19,20 +21,24 @@ export type CareData = {
   visits: LoggedVisit[];
   /** Open draft per tub: tub id → visit id. */
   drafts: Map<string, string>;
+  /** Re-checks scheduled from a visit's finish step (pending only). */
+  scheduled: NextVisit[];
 };
 
 export async function loadCareData(supabase: Supabase): Promise<CareData> {
   // Both RLS-scoped to the caller's org, so the visits needn't wait for the
   // tub ids; the id filter below keeps the result the same.
-  const [tubs, { data, error }] = await Promise.all([
+  const [tubs, { data, error }, scheduled] = await Promise.all([
     loadTubs(supabase),
     supabase.from("turnover").select(
       `id, property_id, status, submitted_at_server, cleaning_steps, share_token,
        water:water_reading(total_alkalinity, ph, calcium_hardness, sanitizer_ppm)`
     ),
+    loadNextVisits(supabase),
   ]);
   if (error) throw new Error(`Failed to load visits: ${error.message}`);
-  if (tubs.length === 0) return { tubs: [], visits: [], drafts: new Map() };
+  if (tubs.length === 0)
+    return { tubs: [], visits: [], drafts: new Map(), scheduled: [] };
   const tubIds = new Set(tubs.map((t) => t.id));
 
   const visits: LoggedVisit[] = [];
@@ -52,5 +58,10 @@ export async function loadCareData(supabase: Supabase): Promise<CareData> {
       sent: t.share_token !== null,
     });
   }
-  return { tubs, visits, drafts };
+  return {
+    tubs,
+    visits,
+    drafts,
+    scheduled: scheduled.filter((n) => tubIds.has(n.tubId)),
+  };
 }

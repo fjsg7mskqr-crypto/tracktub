@@ -24,7 +24,16 @@ export function fakeSupabase(
       ? entry[Math.min(n, entry.length - 1)]
       : entry;
     const chain: Record<string, unknown> = {};
-    for (const m of ["select", "eq", "in", "order", "limit", "not", "gte"])
+    for (const m of [
+      "select",
+      "eq",
+      "in",
+      "order",
+      "limit",
+      "not",
+      "gte",
+      "is",
+    ])
       chain[m] = vi.fn(() => chain);
     chain.maybeSingle = vi.fn(() => Promise.resolve(result));
     chain.single = vi.fn(() => Promise.resolve(result));

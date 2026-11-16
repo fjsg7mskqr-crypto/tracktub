@@ -17,6 +17,7 @@ const actions = vi.hoisted(() => ({
   saveAdded: vi.fn(),
   saveFlag: vi.fn(),
   saveNotes: vi.fn(),
+  saveNextVisit: vi.fn(),
   logReading: vi.fn(),
   savePhoto: vi.fn(),
   finishVisit: vi.fn(),
@@ -45,6 +46,8 @@ function snap(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
     notes: "",
     flag: null,
     openItems: [],
+    nextVisit: null,
+    scheduledHere: null,
     previous: null,
     ...over,
   };
@@ -426,5 +429,98 @@ describe("VisitScreen — open items", () => {
       "Leave for next time",
       "Finish & lock record",
     ]);
+  });
+
+  describe("next visit (#401)", () => {
+    const radio = (name: string) => screen.getByRole("radio", { name });
+
+    it("defaults to None and offers the quick picks as 48px+ targets", () => {
+      render(<VisitScreen initial={snap()} />);
+      const group = screen.getByRole("radiogroup", { name: "When" });
+      expect(
+        Array.from(group.querySelectorAll("button")).map((b) => b.textContent)
+      ).toEqual(["None", "In 2 days", "In 3 days", "In 1 week", "Pick a date"]);
+      expect(radio("None").getAttribute("aria-checked")).toBe("true");
+      expect(screen.queryByLabelText("Reason for the next visit")).toBeNull();
+      expect((radio("In 2 days") as HTMLElement).style.minHeight).toBe("48px");
+      expect(actions.saveNextVisit).not.toHaveBeenCalled();
+    });
+
+    it("a quick pick saves the day; the reason saves on blur", async () => {
+      actions.saveNextVisit.mockResolvedValue(snap());
+      render(<VisitScreen initial={snap()} />);
+      fireEvent.click(radio("In 3 days"));
+      expect(actions.saveNextVisit).toHaveBeenCalledTimes(1);
+      const [vid, dueOn, reason] = actions.saveNextVisit.mock.calls[0];
+      expect(vid).toBe("v1");
+      expect(dueOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(reason).toBe("");
+
+      const input = screen.getByLabelText("Reason for the next visit");
+      expect(input.getAttribute("maxlength")).toBe("120");
+      fireEvent.change(input, { target: { value: "Re-check foaming" } });
+      fireEvent.blur(input);
+      await waitFor(() =>
+        expect(actions.saveNextVisit).toHaveBeenLastCalledWith(
+          "v1",
+          dueOn,
+          "Re-check foaming"
+        )
+      );
+      expect(screen.getByRole("status").textContent).toContain("Scheduled for");
+    });
+
+    it("Pick a date waits for a date, then saves it", () => {
+      actions.saveNextVisit.mockResolvedValue(snap());
+      render(<VisitScreen initial={snap()} />);
+      fireEvent.click(radio("Pick a date"));
+      expect(actions.saveNextVisit).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText("Next visit date"), {
+        target: { value: "2099-01-05" },
+      });
+      expect(actions.saveNextVisit).toHaveBeenCalledWith(
+        "v1",
+        "2099-01-05",
+        ""
+      );
+    });
+
+    it("None clears a scheduled visit", () => {
+      actions.saveNextVisit.mockResolvedValue(snap());
+      render(
+        <VisitScreen
+          initial={snap({
+            nextVisit: { dueOn: "2099-01-05", reason: "Re-check foaming" },
+          })}
+        />
+      );
+      expect(radio("Pick a date").getAttribute("aria-checked")).toBe("true");
+      expect(
+        (screen.getByLabelText("Reason for the next visit") as HTMLInputElement)
+          .value
+      ).toBe("Re-check foaming");
+      fireEvent.click(radio("None"));
+      expect(actions.saveNextVisit).toHaveBeenCalledWith("v1", null, "");
+    });
+
+    it("shows the scheduled reason in the brief at the next visit", () => {
+      render(
+        <VisitScreen
+          initial={snap({
+            scheduledHere: { dueOn: "2026-10-30", reason: "Re-check foaming" },
+          })}
+        />
+      );
+      const region = screen.getByRole("region", { name: "Scheduled re-check" });
+      expect(region.textContent).toContain("Re-check foaming");
+      expect(region.textContent).toContain("Fri, Oct 30");
+    });
+
+    it("has no brief section when nothing was scheduled", () => {
+      render(<VisitScreen initial={snap()} />);
+      expect(
+        screen.queryByRole("region", { name: "Scheduled re-check" })
+      ).toBeNull();
+    });
   });
 });

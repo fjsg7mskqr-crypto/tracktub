@@ -134,3 +134,48 @@ describe("weekCounts", () => {
     expect(counts).toEqual({ logged: 2, sent: 1, opened: 1 });
   });
 });
+
+describe("calendarItems: scheduled next visits (#401)", () => {
+  const sched = (tubId: string, dueOn: string, reason = "") => ({
+    tubId,
+    dueOn,
+    reason,
+  });
+
+  it("puts a scheduled visit on its day, distinct from logged and due", () => {
+    const items = calendarItems([CEDAR], [], NOW, TZ, [
+      sched("cedar", "2026-10-30", "Re-check foaming"),
+    ]);
+    expect(items.get("2026-10-30")).toEqual([
+      {
+        id: "n-cedar",
+        kind: "scheduled",
+        tubId: "cedar",
+        tubName: "Cedar Cabin",
+        href: "/tubs/cedar",
+        what: "Next visit · Re-check foaming",
+        short: "Re-check foaming",
+        sent: false,
+      },
+    ]);
+  });
+
+  it("an overdue one sits on today, worded as overdue", () => {
+    const items = calendarItems([CEDAR], [], NOW, TZ, [
+      sched("cedar", "2026-10-25"),
+    ]);
+    expect(items.get("2026-10-27")?.[0]).toMatchObject({
+      kind: "scheduled",
+      what: "Next visit · 2 days over",
+      short: "Next visit",
+    });
+    expect(items.has("2026-10-25")).toBe(false);
+  });
+
+  it("ignores a tub that isn't in the list", () => {
+    const items = calendarItems([CEDAR], [], NOW, TZ, [
+      sched("ghost", "2026-10-30"),
+    ]);
+    expect(items.size).toBe(0);
+  });
+});
