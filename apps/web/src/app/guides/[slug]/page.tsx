@@ -119,7 +119,7 @@ export default async function GuidePage({ params }: Props) {
           </ul>
           <p>
             TrackTub records this on every visit, and the owner gets a link.{" "}
-            <Link href="/landing">See how it works</Link>
+            <Link href="/">See how it works</Link>
           </p>
         </aside>
         {related.length > 0 && (

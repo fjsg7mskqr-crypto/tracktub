@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./app-tokens.css";
@@ -6,6 +7,7 @@ import { Shell } from "@/components/Shell";
 import { Analytics } from "@/components/Analytics";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { getURL } from "@/lib/url";
+import { LANDING_HOME_HEADER } from "@/lib/landing-home";
 
 // Self-hosted (Fontsource variable builds, latin, OFL — see ./fonts) so the
 // build never fetches from Google Fonts; that fetch flaked CI and blocked a
@@ -67,11 +69,13 @@ export const viewport: Viewport = {
   themeColor: "#08090A",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Set by the proxy when `/` serves the public landing page for this visitor.
+  const landingHome = (await headers()).get(LANDING_HOME_HEADER) === "1";
   return (
     <html
       lang="en"
@@ -79,7 +83,7 @@ export default function RootLayout({
     >
       <body>
         <Analytics />
-        <Shell>{children}</Shell>
+        <Shell landingHome={landingHome}>{children}</Shell>
         <VercelAnalytics />
       </body>
     </html>

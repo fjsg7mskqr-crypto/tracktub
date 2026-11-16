@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnvSafe } from "@/lib/env";
+import { LANDING_HOME_HEADER } from "@/lib/landing-home";
 import { appAccessDecision, isAdminEmail } from "@/lib/admin";
 import {
   bucketForPath,
@@ -14,7 +15,11 @@ import {
  *  the login form, the auth callback, shared proof links, and the invite-accept
  *  page. Everything else requires a signed-in user — and, in production, a user
  *  on the `ADMIN_EMAILS` allowlist (the pre-launch lockdown; see `@/lib/admin`).
- *  `/landing` + `/blog` are the only browsable public pages pre-launch.
+ *  The marketing surface is the only browsable public pages pre-launch. The
+ *  landing page lives at `/` (#425): a request for `/` that the gate would
+ *  bounce is REWRITTEN to the internal `/landing` route (200, no redirect), and
+ *  `/landing` itself permanently redirects to `/`. `/landing` stays listed here
+ *  because the waitlist endpoint `/landing/waitlist` sits under it.
  *  `/proof/*` is public by design — a recipient opens a shared turnover's proof
  *  link with no account ("No login required to view"). The page reads through
  *  the anonymous `share_token` RLS policies (`turnover_public_proof` /
@@ -58,6 +63,16 @@ export async function updateSession(
     for (const [k, v] of Object.entries(extraRequestHeaders)) {
       forwardHeaders.set(k, v);
     }
+  }
+
+  // `/landing` is no longer a page of its own: the landing page is served at `/`
+  // (#425). Permanent (308) so search engines move the ranking signals to `/`;
+  // the query string (UTM links) rides along. Only the exact path — the waitlist
+  // endpoint under `/landing/` keeps working.
+  if (request.nextUrl.pathname === "/landing") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url, 308);
   }
 
   let response = NextResponse.next({ request: { headers: forwardHeaders } });
@@ -139,12 +154,47 @@ export async function updateSession(
       enforceAdmin: process.env.NODE_ENV === "production",
     });
 
+    // Would this visitor see the landing page at `/`? True for logged-out
+    // traffic and (in production) a signed-in non-admin; false for the founder.
+    const landingAtRoot =
+      appAccessDecision({
+        path: "/",
+        isPublic: false,
+        hasUser: Boolean(claims?.sub),
+        isAdmin: isAdminEmail(claims?.email),
+        enforceAdmin: process.env.NODE_ENV === "production",
+      }) === "landing";
+    if (landingAtRoot) {
+      // Rebuild the pass-through response with the flag on the forwarded request
+      // (the first one was built before the auth check), keeping any cookies
+      // the session refresh just wrote.
+      forwardHeaders.set(LANDING_HOME_HEADER, "1");
+      const withFlag = NextResponse.next({
+        request: { headers: forwardHeaders },
+      });
+      response.cookies.getAll().forEach((c) => withFlag.cookies.set(c));
+      response = withFlag;
+    }
+
+    if (decision === "landing" && path === "/") {
+      // Serve the landing page AT `/` (200, canonical https://tracktub.com/):
+      // an internal rewrite, not a redirect. Rewrites don't re-run the proxy, so
+      // this can't loop with the `/landing` → `/` redirect above.
+      const url = request.nextUrl.clone();
+      url.pathname = "/landing";
+      const rewrite = NextResponse.rewrite(url, {
+        request: { headers: forwardHeaders },
+      });
+      response.cookies.getAll().forEach((c) => rewrite.cookies.set(c));
+      return rewrite;
+    }
+
     if (decision !== "allow") {
       const url = request.nextUrl.clone();
-      // "landing" — logged-out marketing traffic on the root, or a non-admin who
-      // signed in but isn't permitted past the public surface. "login" — a
+      // "landing" — a non-admin who signed in but isn't permitted past the public
+      // surface (sent to `/`, which serves the landing page). "login" — a
       // logged-out visitor on a deeper app path, so the founder can sign in.
-      url.pathname = decision === "landing" ? "/landing" : "/login";
+      url.pathname = decision === "landing" ? "/" : "/login";
       // Carry any cookies refreshed above onto the redirect, matching the
       // canonical Supabase middleware (harmless today, correct if logic changes).
       const redirect = NextResponse.redirect(url);
