@@ -122,6 +122,8 @@ export type VisitSnapshot = {
     visitedOn: string;
     found: ReadingValues | null;
     photos: VisitPhoto[];
+    /** The note written at that visit (trimmed; "" when none). */
+    notes: string;
   } | null;
 };
 

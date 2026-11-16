@@ -247,11 +247,12 @@ export function LeaveForNext({
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <h3
-        style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#C4C8CF" }}
-      >
+      <h3 style={{ margin: 0, fontSize: 19, fontWeight: 600 }}>
         Leave for next time
       </h3>
+      <p style={{ margin: 0, fontSize: 14, color: "var(--tt-text-2)" }}>
+        Anything to check or finish at the next visit shows up at the top then.
+      </p>
       {suggestions.map((s) => (
         <button
           key={s.field}

@@ -183,6 +183,7 @@ describe("VisitScreen", () => {
             visitId: "v0",
             visitedOn: "2026-10-20T09:00:00.000Z",
             found: null,
+            notes: "",
             photos: [
               {
                 id: "ph0",
@@ -363,5 +364,67 @@ describe("VisitScreen — open items", () => {
       screen.getByRole("button", { name: "Finish & lock record" })
     );
     await waitFor(() => expect(actions.finishVisit).toHaveBeenCalledWith("v1"));
+  });
+
+  it("'Remind me next visit' turns the note into an open item and confirms", async () => {
+    actions.leaveOpenItem.mockResolvedValue(snap());
+    actions.saveNotes.mockResolvedValue(snap());
+    render(
+      <VisitScreen initial={snap({ notes: "Slight foaming, used vac" })} />
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remind me next visit" })
+    );
+    await waitFor(() =>
+      expect(actions.leaveOpenItem).toHaveBeenCalledWith(
+        "v1",
+        "other",
+        "Slight foaming, used vac",
+        ""
+      )
+    );
+    expect(screen.getByText(/Will show at the next visit/)).toBeTruthy();
+  });
+
+  it("'Remind me next visit' is disabled while the note is empty", () => {
+    render(<VisitScreen initial={snap()} />);
+    const b = screen.getByRole("button", { name: "Remind me next visit" });
+    expect((b as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("shows last visit's note at the top, and nothing when there is none", () => {
+    const prev = {
+      visitId: "v0",
+      visitedOn: "2026-10-20T09:00:00.000Z",
+      found: null,
+      photos: [],
+      notes: "Slight foaming, used vac",
+    };
+    const first = render(<VisitScreen initial={snap({ previous: prev })} />);
+    const region = screen.getByRole("region", { name: "Last visit's note" });
+    expect(region.textContent).toContain("Slight foaming, used vac");
+    first.unmount();
+    render(
+      <VisitScreen initial={snap({ previous: { ...prev, notes: "" } })} />
+    );
+    expect(screen.queryByText("Last visit's note")).toBeNull();
+  });
+
+  it("puts Notes and Leave for next time right above Finish", () => {
+    render(<VisitScreen initial={snap()} />);
+    const order = Array.from(document.body.querySelectorAll("h3, button"))
+      .map((e) => e.textContent ?? "")
+      .filter((t) =>
+        [
+          "Leave for next time",
+          "Remind me next visit",
+          "Finish & lock record",
+        ].includes(t)
+      );
+    expect(order).toEqual([
+      "Remind me next visit",
+      "Leave for next time",
+      "Finish & lock record",
+    ]);
   });
 });
