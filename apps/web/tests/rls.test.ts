@@ -2336,6 +2336,116 @@ describe.skipIf(!ready)("RLS isolation", () => {
     });
   });
 
+  // ── next_visit (#401): re-check scheduled from the finish step ─────────────
+  describe("next_visit", () => {
+    const anonClient = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as ReturnType<typeof createClient<Database>>);
+    const dueOn = "2026-11-20";
+
+    it("a team member schedules, replaces and clears one per tub", async () => {
+      const { error } = await staffA.client.from("next_visit").insert({
+        org_id: orgA,
+        property_id: propAssigned,
+        due_on: dueOn,
+        reason: "Re-check foaming",
+      });
+      expect(error).toBeNull();
+      // One per tub: a second insert collides; an upsert replaces.
+      const { error: dup } = await staffA.client.from("next_visit").insert({
+        org_id: orgA,
+        property_id: propAssigned,
+        due_on: "2026-11-21",
+      });
+      expect(dup).not.toBeNull();
+      const { error: up } = await staffA.client.from("next_visit").upsert(
+        {
+          org_id: orgA,
+          property_id: propAssigned,
+          due_on: "2026-11-22",
+          reason: null,
+        },
+        { onConflict: "property_id" }
+      );
+      expect(up).toBeNull();
+      const { data: rows } = await operatorA.client
+        .from("next_visit")
+        .select("due_on, reason, created_by")
+        .eq("property_id", propAssigned);
+      expect(rows).toEqual([
+        { due_on: "2026-11-22", reason: null, created_by: staffA.id },
+      ]);
+    });
+
+    it("caps the reason at 120 characters", async () => {
+      const { error } = await operatorA.client
+        .from("next_visit")
+        .update({ reason: "x".repeat(121) })
+        .eq("property_id", propAssigned);
+      expect(error).not.toBeNull();
+    });
+
+    it("narrowed staff can't schedule an unassigned tub", async () => {
+      const { error } = await staffA.client.from("next_visit").insert({
+        org_id: orgA,
+        property_id: propUnassigned,
+        due_on: dueOn,
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("another org can't read, change, clear or spoof one", async () => {
+      const { data } = await operatorB.client
+        .from("next_visit")
+        .select("property_id")
+        .eq("property_id", propAssigned);
+      expect(data ?? []).toHaveLength(0);
+      const { data: upd } = await operatorB.client
+        .from("next_visit")
+        .update({ due_on: "2026-12-01" })
+        .eq("property_id", propAssigned)
+        .select("property_id");
+      expect(upd ?? []).toHaveLength(0);
+      const { data: del } = await operatorB.client
+        .from("next_visit")
+        .delete()
+        .eq("property_id", propAssigned)
+        .select("property_id");
+      expect(del ?? []).toHaveLength(0);
+      const { error: spoof } = await operatorB.client
+        .from("next_visit")
+        .insert({ org_id: orgB, property_id: propUnassigned, due_on: dueOn });
+      expect(spoof).not.toBeNull();
+      const { error: wrongOrg } = await operatorA.client
+        .from("next_visit")
+        .insert({ org_id: orgB, property_id: propUnassigned, due_on: dueOn });
+      expect(wrongOrg).not.toBeNull();
+    });
+
+    it("anon can't read or write", async () => {
+      const { data } = await anonClient
+        .from("next_visit")
+        .select("property_id");
+      expect(data ?? []).toHaveLength(0);
+      const { error } = await anonClient
+        .from("next_visit")
+        .insert({ org_id: orgA, property_id: propAssigned, due_on: dueOn });
+      expect(error).not.toBeNull();
+    });
+
+    it("a team member clears it", async () => {
+      const { data, error } = await staffA.client
+        .from("next_visit")
+        .delete()
+        .eq("property_id", propAssigned)
+        .select("property_id");
+      expect(error).toBeNull();
+      expect(data ?? []).toHaveLength(1);
+    });
+  });
+
   // ── Logins and property access (D29) ───────────────────────────────────────
   describe("Logins and property access (D29)", () => {
     let staffAll: AuthedUser;

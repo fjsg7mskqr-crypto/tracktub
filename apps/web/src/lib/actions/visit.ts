@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   createDraft,
+  markNextVisitStarted,
+  saveNextVisit as saveNextVisitData,
   findOpenDraft,
   finishVisit as finishVisitData,
   leaveOpenItem as leaveOpenItemData,
@@ -53,9 +55,10 @@ export async function startVisit(
   propertyId: string
 ): Promise<{ visitId: string }> {
   const { db, userId } = await requireCapturer(propertyId);
-  const visitId =
-    (await findOpenDraft(db, propertyId, userId)) ??
-    (await createDraft(db, propertyId, userId));
+  const existing = await findOpenDraft(db, propertyId, userId);
+  if (existing) return { visitId: existing };
+  const visitId = await createDraft(db, propertyId, userId);
+  await markNextVisitStarted(db, propertyId, visitId);
   return { visitId };
 }
 
@@ -109,6 +112,15 @@ export async function logReading(
 ): Promise<VisitSnapshot> {
   if (kind !== "found" && kind !== "left") throw new Error("Unknown reading");
   return write(visitId, (db) => logReadingData(db, visitId, kind, values));
+}
+
+/** Finish step: schedule the tub's next visit (null clears it). */
+export async function saveNextVisit(
+  visitId: string,
+  dueOn: string | null,
+  reason: string
+): Promise<VisitSnapshot> {
+  return write(visitId, (db) => saveNextVisitData(db, visitId, dueOn, reason));
 }
 
 export async function saveFlag(

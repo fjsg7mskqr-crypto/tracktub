@@ -10,6 +10,7 @@ import {
   saveAdded,
   setOpenItemStatus,
   saveFlag,
+  saveNextVisit,
   saveNotes,
   savePhoto,
   saveWork,
@@ -42,6 +43,7 @@ import {
 } from "@/components/home/open-items";
 import { AddedList } from "./AddedList";
 import { LeaveForNext, LeftOpen } from "./OpenItems";
+import { NextVisitPicker, dayLabel } from "./NextVisitPicker";
 import { OwnerFlag } from "./OwnerFlag";
 import { ReadingSheet } from "./ReadingSheet";
 
@@ -134,6 +136,14 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
             ),
     }));
     void run(() => setOpenItemStatus(id, taskId, status));
+  }
+
+  function scheduleNext(dueOn: string | null, reason: string) {
+    setSnap((s) => ({
+      ...s,
+      nextVisit: dueOn ? { dueOn, reason: reason.trim() } : null,
+    }));
+    void run(() => saveNextVisit(id, dueOn, reason));
   }
 
   function leave(kind: OpenItemKind, text: string, note: string) {
@@ -277,6 +287,42 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
         </p>
       </div>
 
+      {snap.scheduledHere && (
+        <section
+          aria-label="Scheduled re-check"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            padding: 16,
+            borderRadius: "var(--tt-radius-card)",
+            background: "var(--tt-surface)",
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 600,
+              color: "var(--tt-link)",
+            }}
+          >
+            Scheduled re-check
+            <span style={{ fontWeight: 400, color: "var(--tt-text-3)" }}>
+              {` · for ${dayLabel(snap.scheduledHere.dueOn)}`}
+            </span>
+          </h3>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 16,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {snap.scheduledHere.reason || "Check this tub again."}
+          </p>
+        </section>
+      )}
       <LeftOpen items={earlier} onSetStatus={setItem} />
       {snap.previous?.notes && (
         <section
@@ -494,6 +540,8 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
       />
 
       <OwnerFlag flag={snap.flag} onSave={changeFlag} />
+
+      <NextVisitPicker value={snap.nextVisit} onSave={scheduleNext} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button
