@@ -8,7 +8,7 @@ import { getURL } from "@/lib/url";
  * that is consistently accurate; "modified on every request" teaches it to
  * ignore the field for the whole sitemap.
  */
-const LANDING_LAST_MODIFIED = "2026-11-13";
+const LANDING_LAST_MODIFIED = "2026-11-16";
 
 /**
  * sitemap.xml — indexable public marketing URLs (`/landing`, `/blog/*`).

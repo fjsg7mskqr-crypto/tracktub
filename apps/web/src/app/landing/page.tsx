@@ -1,588 +1,632 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import "./landing.css";
-import { Lockup, Mark, Waterline } from "./_marks";
-import { LandingWaitlist } from "./LandingWaitlist";
-import { Faq, LANDING_FAQS } from "./Faq";
 import { marketingMetadata } from "@/lib/marketing-seo";
+import { LandingWaitlist } from "./LandingWaitlist";
+import { Faq } from "./Faq";
+import { BARS, FAQS, GROUPS, PHONES, ROWS, SHOTS } from "./content";
+import styles from "./landing.module.css";
 
 // MUST stay dynamic — see the note in src/app/login/layout.tsx (#41, #271, #281).
 // The enforcing CSP is nonce-based with 'strict-dynamic', so a prerendered page
 // is served as frozen, nonce-less HTML and every script on it is blocked. On
-// this page that killed the waitlist form: LandingWaitlist is a client component
-// using useActionState with no `permalink`, which React does not progressively
-// enhance on a statically rendered page, so with JS blocked it cannot submit.
+// this page that killed the waitlist form (tests/csp-nonce-coverage.test.ts
+// guards it). Do not remove.
 export const dynamic = "force-dynamic";
 
+const DESCRIPTION =
+  "Photos and a water test from every turnover, in one link. Hot tub turnover reports for Airbnb and vacation rental hosts. Free for your first property.";
+
 export const metadata: Metadata = marketingMetadata({
-  title: "TrackTub — know your hot tub was guest-ready",
-  description:
-    "For self-managed STR hosts: capture each hot-tub turnover with in-app camera photos, see the time on every shot, lock it after submit, and share it in one tap. Free for your first property.",
+  title: "Hot tub turnover reports for short-term rentals | TrackTub",
+  description: DESCRIPTION,
   pathname: "/landing",
 });
 
-const PLATES = [
-  { src: "/landing/full-frame.jpg", label: "Full frame" },
-  { src: "/landing/water-level.jpg", label: "Water level/clarity" },
-  { src: "/landing/control-panel.jpg", label: "Control panel" },
-  { src: "/landing/water-chemistry.jpg", label: "Water chemistry" },
-];
+const COVER = "/landing/report-cover-on.jpg";
 
-/** Small green check used across the proof card + pricing. */
-function Check({
-  size = 11,
-  color = "#04240f",
-  w = 3.2,
+/** A next/image that fills a positioned, rounded box. */
+function Photo({
+  src,
+  alt,
+  sizes,
+  className,
+  priority,
 }: {
-  size?: number;
-  color?: string;
-  w?: number;
+  src: string;
+  alt: string;
+  sizes: string;
+  className?: string;
+  priority?: boolean;
 }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M5 12.5l4 4 9-10"
-        stroke={color}
-        strokeWidth={w}
-        strokeLinecap="round"
-        strokeLinejoin="round"
+    <span className={`${styles.photo} ${className ?? ""}`}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        priority={priority}
+        className={styles.photoImg}
       />
-    </svg>
+    </span>
   );
 }
 
-/** Mini timestamped log used inside the feature-showcase cards. */
-function UiLog({ rows }: { rows: [string, string][] }) {
+function Wordmark({ className }: { className?: string }) {
   return (
-    <div className="uilog">
-      {rows.map(([t, label]) => (
-        <div key={label} className="uirow">
-          <span className="t">{t}</span>
-          {label}
-          <span className="ok">✓</span>
-        </div>
-      ))}
-    </div>
+    <span className={className}>
+      Track<span className={styles.blue}>Tub</span>
+    </span>
   );
 }
+
+function Swatches() {
+  return (
+    <span className={styles.swatches} aria-hidden="true">
+      <span style={{ background: "#1f8f96" }} />
+      <span style={{ background: "#f2b52f" }} />
+      <span style={{ background: "#6d8bd6" }} />
+      <span style={{ background: "#8a4fbf" }} />
+    </span>
+  );
+}
+
+const JSON_LD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "TrackTub",
+    applicationCategory: "BusinessApplication",
+    description: DESCRIPTION,
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  },
+];
 
 export default function Landing() {
   return (
-    <div className="tt-landing">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            name: "TrackTub",
-            applicationCategory: "BusinessApplication",
-            description:
-              "Guest-ready hot tub proof for self-managed short-term-rental hosts.",
-            offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-          }),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: LANDING_FAQS.map((f) => ({
-              "@type": "Question",
-              name: f.q,
-              acceptedAnswer: { "@type": "Answer", text: f.a },
-            })),
-          }),
-        }}
-      />
-      <div className="wrap">
-        {/* NAV */}
-        <div className="nav">
-          <Lockup className="brandlockup" />
-          <div className="navlinks">
-            <a href="#why">Why it matters</a>
-            <a href="#how">How it works</a>
-            <Link href="/blog">Resources</Link>
-            <a href="#faq">FAQ</a>
-          </div>
-          <div className="sp">
-            <a href="#join" className="btn sm">
-              Get early access
-            </a>
-          </div>
-        </div>
+    <div className={styles.root}>
+      {JSON_LD.map((ld) => (
+        <script
+          key={ld["@type"]}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+        />
+      ))}
 
-        {/* HERO */}
-        <div className="hero">
-          <svg
-            className="wmark"
-            viewBox="0 0 256 16"
-            preserveAspectRatio="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <path
-              d="M0 8 q8 -4 16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0"
-              stroke="#3B82F6"
-              strokeWidth="1.2"
-              fill="none"
+      <header className={styles.header}>
+        <Wordmark className={styles.logo} />
+        <nav className={styles.nav} aria-label="Main">
+          <a className={styles.navA} href="#b-app">
+            The app
+          </a>
+          <a className={styles.navA} href="#b-report">
+            The report
+          </a>
+          <Link className={styles.navA} href="/blog">
+            Guides
+          </Link>
+          <a className={styles.navA} href="#b-faq">
+            Questions
+          </a>
+          <a className={styles.navCta} href="#b-join">
+            Get early access
+          </a>
+        </nav>
+      </header>
+
+      <main>
+        {/* Hero: text left, the owner's report on a phone over the tub photo */}
+        <section className={`${styles.wrap} ${styles.hero}`}>
+          <div className={styles.heroText}>
+            <Swatches />
+            <h1 className={styles.h1}>Know the tub was ready</h1>
+            <p className={styles.lede}>
+              Photos and a water test from every turnover, in one link. For
+              Airbnb and vacation rental hot tubs.
+            </p>
+            <div className={styles.row}>
+              <a href="#b-join" className={styles.btnPrimary}>
+                Get early access
+              </a>
+              <a href="#b-report" className={styles.btnSecondary}>
+                See a report
+              </a>
+            </div>
+            <p className={styles.fine}>
+              Free for your first property. Join the early access list.
+            </p>
+          </div>
+          <div className={styles.heroArt}>
+            <Photo
+              src="/landing/hero-cabin.jpg"
+              alt="A vacation rental cabin"
+              sizes="(max-width: 900px) 80vw, 480px"
+              className={styles.heroPhoto}
+              priority
             />
-          </svg>
-          <div>
-            <h1>
-              Know your hot <span className="tub">tub</span> was guest-ready —
-              without being there.
-            </h1>
-            <p className="sub">
-              Every turnover, you or your cleaner snap a quick guided photo set.
-              Every photo shows the time it was taken, and the record locks once
-              it&rsquo;s submitted — so you have a record the tub was clean,
-              safe, and ready, and a link to share the moment anyone asks.
-            </p>
-            <LandingWaitlist />
-            <div className="trust">
-              <span className="vchip">
-                <Check color="#34D399" w={3} />
-                Free for your first property
-              </span>
-              <span>No app to install</span>
-            </div>
-          </div>
-
-          <div className="proofwrap">
-            <div className="glow" />
-            <div className="glass proof" id="proof">
-              <div className="ph">
-                <span className="pid">Lakeside Cottage · Jun 7, 2026</span>
-                <Mark className="markseal" label="TrackTub record" />
-              </div>
-              <div className="plates">
-                {PLATES.map((p) => (
-                  <div
-                    key={p.label}
-                    className="plate photo"
-                    style={{ backgroundImage: `url(${p.src})` }}
-                  >
-                    <span className="ck">
-                      <Check />
-                    </span>
-                    <b>{p.label}</b>
+            <div className={`${styles.heroCard} ${styles.fCard}`}>
+              <div className={styles.heroCardInner}>
+                <div className={styles.between}>
+                  <Wordmark className={styles.cardMark} />
+                  <span className={styles.badge}>Ready</span>
+                </div>
+                <span className={styles.cardEyebrow}>Example report</span>
+                <span className={styles.cardTitle}>Pine Chalet hot tub</span>
+                <span className={styles.cardMeta}>
+                  Fri, Nov 14 · finished 2:14 PM
+                </span>
+                <div className={styles.thumbs}>
+                  <Photo
+                    src="/landing/hero-report-before.jpg"
+                    alt=""
+                    sizes="80px"
+                    className={styles.thumb8}
+                  />
+                  <Photo
+                    src="/landing/clear-water.jpg"
+                    alt=""
+                    sizes="80px"
+                    className={styles.thumb8}
+                  />
+                  <Photo
+                    src={COVER}
+                    alt=""
+                    sizes="80px"
+                    className={styles.thumb8}
+                  />
+                </div>
+                <dl className={styles.cardReadings}>
+                  <div>
+                    <dt>pH</dt>
+                    <dd>7.4</dd>
                   </div>
-                ))}
-              </div>
-              <div className="meta">
-                <span>
-                  Camera capture <b>✓</b>
-                </span>
-                <span>·</span>
-                <span>
-                  Photo times <b>✓</b>
-                </span>
-                <span>·</span>
-                <span>
-                  Locked <b>✓</b>
-                </span>
-              </div>
-              <div className="pfoot">
-                <span className="vtag">
-                  <Check size={12} w={3} />
-                  TrackTub record
-                </span>
-                <span className="ts">2026-06-07 · 14:22 UTC</span>
+                  <div>
+                    <dt>Chlorine</dt>
+                    <dd>4.0 ppm</dd>
+                  </div>
+                  <div>
+                    <dt>Alkalinity</dt>
+                    <dd>90 ppm</dd>
+                  </div>
+                </dl>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* WHY IT MATTERS */}
-        <div className="section" id="why">
-          <span className="eyebrow">Peace of mind</span>
-          <div className="sechead">
-            <h2>
-              You can&rsquo;t be at every check-in. Now you don&rsquo;t have to
-              be.
-            </h2>
-          </div>
-          <div className="feat">
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#60A5FA,#2563EB)",
-                }}
-              >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <path d="M5 12.5l4 4 9-10" />
-                </svg>
-              </div>
-              <h3>Know it got done</h3>
-              <p>
-                A clear, guided routine every turnover, so nothing gets skipped
-                — even when someone else does the clean.
-              </p>
-            </div>
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#3B82F6,#1D4ED8)",
-                }}
-              >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z" />
-                  <circle cx="12" cy="10" r="2.6" />
-                </svg>
-              </div>
-              <h3>Know it was safe &amp; ready</h3>
-              <p>
-                Water level, clarity, and the control panel, captured every
-                time.
-              </p>
-            </div>
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#93C5FD,#3B82F6)",
-                }}
-              >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <path d="M7 3.5h7l4 4v13H7z" />
-                  <path d="M9.5 13l2 2 3.5-4" />
-                </svg>
-              </div>
-              <h3>Prove it if anyone asks</h3>
-              <p>
-                A timestamped, locked record and a share link — for the owner,
-                the guest, or anyone who asks.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* HOW IT WORKS */}
-        <div className="section" id="how">
-          <span className="eyebrow">How it works</span>
-          <div className="sechead">
-            <h2>Three steps. Under ten minutes.</h2>
-          </div>
-          <div className="feat">
-            <div className="glass fcard">
-              <div className="ichip num">1</div>
-              <h3>Snap the guided set</h3>
-              <p>
-                The same guided shots every turnover, taken with your
-                phone&rsquo;s camera. No app to install.
-              </p>
-            </div>
-            <div className="glass fcard">
-              <div className="ichip num">2</div>
-              <h3>Timestamped and locked</h3>
-              <p>
-                Every photo shows the time it was taken. Once the record is
-                submitted, it locks so it can&rsquo;t be edited in the app.
-              </p>
-            </div>
-            <div className="glass fcard">
-              <div className="ichip num">3</div>
-              <h3>Share it or just relax</h3>
-              <p>
-                Keep it as peace of mind, or send a one-tap link to an owner,
-                guest, or Airbnb. They open it — no login.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* LIFESTYLE BAND */}
-        <div className="section">
+        {/* Turnover clock: the real window between guests */}
+        <section
+          aria-label="A turnover day"
+          className={`${styles.wrap} ${styles.clockSec}`}
+        >
           <div
-            className="glass band"
-            style={{ backgroundImage: "url(/landing/cabin.jpg)" }}
+            className={styles.clockBand}
+            role="region"
+            aria-label="A turnover day, scrolls sideways on small screens"
+            tabIndex={0}
           >
-            <div className="bandcopy">
-              <h2>Built for the way you actually host.</h2>
-              <p>
-                One person, a few places, a tub that has to be right before
-                every guest checks in.
+            <div className={styles.clock}>
+              <div className={styles.clockEnd}>
+                <span className={styles.clockTime}>11:00</span>
+                <span className={styles.clockLabel}>Guests check out</span>
+              </div>
+              <div className={styles.track}>
+                <div className={styles.trackLine} />
+                <div className={styles.dotL} />
+                <div className={styles.dotR} />
+                <div className={styles.techBar} />
+                <div className={styles.techLabel}>Your tech, 1:52 to 2:14</div>
+                <div className={styles.openDot} />
+                <div className={styles.openLabel}>
+                  2:31 · You open the report
+                </div>
+              </div>
+              <div className={`${styles.clockEnd} ${styles.right}`}>
+                <span className={styles.clockTime}>4:00</span>
+                <span className={styles.clockLabel}>Next guests arrive</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${styles.wrap} ${styles.stakes}`}>
+          <p className={styles.stakesText}>
+            Guests notice the hot tub first.{" "}
+            <span className={styles.mute}>
+              Refunds can come out of your payout.
+            </span>
+          </p>
+        </section>
+
+        {/* Three steps: a real sequence, so numbered */}
+        <section className={`${styles.wrap} ${styles.steps}`}>
+          <h2 className={styles.h2}>Checkout to check-in</h2>
+          <div className={styles.stepGrid}>
+            <div className={styles.step}>
+              <div className={`${styles.stepArt} ${styles.stepArt1}`}>
+                <div className={styles.miniPhone}>
+                  <Photo
+                    src="/landing/screen-visit.png"
+                    alt="TrackTub visit screen with the photo steps"
+                    sizes="190px"
+                    className={`${styles.miniScreen} ${styles.top}`}
+                  />
+                </div>
+                <div className={styles.chips}>
+                  <span className={styles.chip}>✓ Before photo</span>
+                  <span className={styles.chip}>✓ Water test</span>
+                  <span className={styles.chip}>✓ After photos</span>
+                  <span className={`${styles.chip} ${styles.mute}`}>
+                    Finish visit
+                  </span>
+                </div>
+              </div>
+              <span
+                className={styles.num}
+                style={{ background: "#1f8f96", color: "#fff" }}
+              >
+                1
+              </span>
+              <h3 className={styles.h3}>Tech visits</h3>
+              <p className={styles.stepP}>
+                Before and after photos, then the water test. The app walks them
+                through it.
+              </p>
+            </div>
+
+            <div className={styles.step}>
+              <div className={`${styles.stepArt} ${styles.stepArt2}`}>
+                <div className={styles.msg}>
+                  <span className={styles.avatar}>A</span>
+                  <span className={styles.msgText}>
+                    <span className={styles.msgName}>Alex (hot tub tech)</span>
+                    <span className={styles.msgBody}>
+                      Pine Chalet is ready. Here’s the report.
+                    </span>
+                  </span>
+                  <span className={styles.msgTime}>2:14 PM</span>
+                </div>
+                <div className={styles.miniReport}>
+                  <div className={styles.between}>
+                    <span className={styles.miniMark}>
+                      Track<span className={styles.blue}>Tub</span> report
+                    </span>
+                    <span className={`${styles.badge} ${styles.badgeSm}`}>
+                      Ready
+                    </span>
+                  </div>
+                  <span className={styles.miniTitle}>Pine Chalet hot tub</span>
+                  <div className={styles.thumbs}>
+                    <Photo
+                      src="/landing/report-before.jpg"
+                      alt=""
+                      sizes="80px"
+                      className={styles.thumb7}
+                    />
+                    <Photo
+                      src="/landing/report-after.jpg"
+                      alt=""
+                      sizes="80px"
+                      className={styles.thumb7}
+                    />
+                    <Photo
+                      src={COVER}
+                      alt=""
+                      sizes="80px"
+                      className={styles.thumb7}
+                    />
+                  </div>
+                  <span className={styles.cardMeta}>
+                    Fri 2:14 PM · water in range
+                  </span>
+                </div>
+              </div>
+              <span
+                className={styles.num}
+                style={{ background: "#f2b52f", color: "#3b2a00" }}
+              >
+                2
+              </span>
+              <h3 className={styles.h3}>You get a link</h3>
+              <p className={styles.stepP}>
+                Your tech shares the link when the visit is finished. Forward it
+                to the owner.
+              </p>
+            </div>
+
+            <div className={styles.step}>
+              <div className={`${styles.stepArt} ${styles.stepArt3}`}>
+                <span className={styles.chatFrom}>Guest · Airbnb message</span>
+                <div className={styles.bubbleIn}>
+                  The hot tub was cloudy when we arrived. Can we get a refund?
+                </div>
+                <div className={styles.bubbleOut}>
+                  <div className={styles.proofPhoto}>
+                    <Photo
+                      src="/landing/clear-water.jpg"
+                      alt="Clear water at the turnover"
+                      sizes="260px"
+                      className={styles.fillBox}
+                    />
+                    <span className={styles.proofTime}>
+                      Fri 2:11 PM · After
+                    </span>
+                    <div className={styles.proofReadings}>
+                      <span className={styles.pill}>pH 7.4</span>
+                      <span className={styles.pill}>Cl 4.0</span>
+                      <span className={`${styles.pill} ${styles.pillOk}`}>
+                        Locked
+                      </span>
+                    </div>
+                  </div>
+                  <span className={styles.proofNote}>
+                    Photo and water test at 2:11 PM on your check-in day.
+                  </span>
+                </div>
+              </div>
+              <span
+                className={styles.num}
+                style={{ background: "#8a4fbf", color: "#fff" }}
+              >
+                3
+              </span>
+              <h3 className={styles.h3}>Proof, if you need it</h3>
+              <p className={styles.stepP}>
+                A guest complains? Send them the report, or include it with your
+                reply to Airbnb support.
               </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* FEATURE SHOWCASE */}
-        <div className="section" id="record">
-          <span className="eyebrow">What&rsquo;s in the record</span>
-          <div className="sechead">
-            <h2>Everything that rides along with every turnover</h2>
-            <p>
-              A guided photo set becomes a record you can actually stand behind.
+        <section id="b-app" className={styles.appSec}>
+          <div className={`${styles.wrap} ${styles.center}`}>
+            <h2 className={styles.h2Big}>One step at a time</h2>
+            <p className={styles.sub}>
+              Real screens from the app your tech uses at the tub.
             </p>
           </div>
-          <div className="feat">
-            {/* 1 — Guided photos */}
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#60A5FA,#2563EB)",
-                }}
+          <div
+            className={styles.phones}
+            tabIndex={0}
+            role="region"
+            aria-label="App screens, scroll sideways"
+          >
+            {PHONES.map((p) => (
+              <figure
+                key={p.src}
+                className={styles.phoneFig}
+                style={p.offset ? { marginTop: 56 } : undefined}
               >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z" />
-                  <circle cx="12" cy="13" r="3.2" />
-                </svg>
-              </div>
-              <h3>Guided photos</h3>
-              <p>
-                Full frame, water level, control panel, water chemistry — the
-                same set every clean.
+                <div className={styles.phone}>
+                  <Photo
+                    src={p.src}
+                    alt={p.alt}
+                    sizes="230px"
+                    className={`${styles.phoneScreen} ${styles.top}`}
+                  />
+                </div>
+                <figcaption className={styles.cap}>
+                  <span className={styles.capT}>{p.title}</span>
+                  <span className={styles.capS}>{p.sub}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+
+        {/* Anatomy of a report */}
+        <section id="b-report" className={styles.reportSec}>
+          <div className={`${styles.wrap} ${styles.reportInner}`}>
+            <div className={styles.reportHead}>
+              <h2 className={styles.h2Big}>One link. The whole visit</h2>
+              <p className={styles.reportSub}>
+                The owner opens it on any phone. No app, no login. This example
+                uses photos from real visits.
               </p>
-              <div className="ui">
-                <div className="uigrid">
-                  {[
-                    "Full frame",
-                    "Water level",
-                    "Control panel",
-                    "Water chemistry",
-                  ].map((l) => (
-                    <div key={l} className="uichk">
-                      <Check size={13} color="#34D399" w={3} />
-                      {l}
+            </div>
+            <div className={styles.reportBody}>
+              <div className={styles.report}>
+                <div className={styles.between}>
+                  <span className={styles.reportBrand}>
+                    <Swatches />
+                    <span className={styles.reportBrandT}>Example report</span>
+                  </span>
+                  <span className={styles.lockedTag}>Locked</span>
+                </div>
+                <div className={styles.reportTitleBlock}>
+                  <span className={styles.reportTitle}>
+                    Pine Chalet hot tub
+                  </span>
+                  <span className={styles.reportMeta}>
+                    Fri, Nov 14 · 1:52 to 2:14 PM · Alex R.
+                  </span>
+                </div>
+                <div className={styles.shots}>
+                  {SHOTS.map((s) => (
+                    <div key={s.label} className={styles.shot}>
+                      <Photo
+                        src={s.src}
+                        alt={s.label}
+                        sizes="(max-width: 520px) 28vw, 140px"
+                        className={styles.shotImg}
+                      />
+                      <span className={styles.shotLabel}>{s.label}</span>
+                      <span className={`${styles.mono} ${styles.shotTime}`}>
+                        {s.time}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div
+                  className={styles.table}
+                  role="table"
+                  aria-label="Water readings"
+                >
+                  <div className={`${styles.tr} ${styles.th}`} role="row">
+                    <span role="columnheader">Water</span>
+                    <span role="columnheader">As found</span>
+                    <span role="columnheader">As left</span>
+                    <span role="columnheader">Target</span>
+                  </div>
+                  {ROWS.map((r) => (
+                    <div
+                      key={r.label}
+                      className={`${styles.tr} ${styles.td}`}
+                      role="row"
+                    >
+                      <span className={styles.rowLabel} role="cell">
+                        <span
+                          className={styles.sw}
+                          style={{ background: r.sw }}
+                        />
+                        {r.label}
+                      </span>
+                      <span
+                        role="cell"
+                        style={{
+                          color: r.off ? "#b45309" : "#111827",
+                          fontWeight: r.off ? 700 : 400,
+                        }}
+                      >
+                        {r.found}
+                      </span>
+                      <span role="cell" className={styles.strong}>
+                        {r.left}
+                      </span>
+                      <span role="cell" className={styles.mute}>
+                        {r.target}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.note}>
+                  <span className={styles.noteH}>Added</span>
+                  <span>Alkalinity up · 3 oz</span>
+                  <span>Chlorine granules · 2 tsp</span>
+                </div>
+                <div className={styles.note}>
+                  <span className={styles.noteH}>Left for next visit</span>
+                  <span>Filter due in 9 days</span>
+                </div>
+              </div>
+
+              <div className={styles.record}>
+                <h3 className={styles.h3}>What’s on the record</h3>
+                <div className={styles.groups}>
+                  {GROUPS.map((g) => (
+                    <div key={g.title} className={styles.group}>
+                      <h4 className={styles.h4}>{g.title}</h4>
+                      <ul className={styles.list}>
+                        {g.items.map((it) => (
+                          <li key={it.k}>
+                            <strong>{it.k}</strong> {it.v}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* 2 — Time on every photo */}
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#3B82F6,#1D4ED8)",
-                }}
-              >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <circle cx="12" cy="12" r="8.5" />
-                  <path d="M12 7.5V12l3 2" />
-                </svg>
-              </div>
-              <h3>Time on every photo</h3>
-              <p>
-                Each shot shows the time it was taken, right on the record the
-                owner sees.
-              </p>
-              <div className="ui">
-                <UiLog
-                  rows={[
-                    ["14:08", "Before · full frame"],
-                    ["14:21", "After · water level"],
-                    ["14:22", "After · cover on"],
-                  ]}
-                />
-              </div>
-            </div>
-
-            {/* 3 — Locked after submit */}
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#93C5FD,#3B82F6)",
-                }}
-              >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <rect x="5" y="11" width="14" height="9" rx="2.2" />
-                  <path d="M8 11V8a4 4 0 018 0v3" />
-                </svg>
-              </div>
-              <h3>Locked after submit</h3>
-              <p>
-                Once it&rsquo;s submitted, the record locks and can&rsquo;t be
-                edited in TrackTub.
-              </p>
-              <div className="ui">
-                <div className="uifield">
-                  <span className="l">
-                    <svg
-                      className="uiic"
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                    >
-                      <rect x="5" y="11" width="14" height="9" rx="2" />
-                      <path d="M8 11V8a4 4 0 018 0v3" />
-                    </svg>
-                    <span className="mono">Record locked</span>
+            <div className={styles.chart}>
+              <div className={styles.chartHead}>
+                <h3 className={styles.h3}>Water at Pine Chalet, Nov 14</h3>
+                <div className={styles.legend}>
+                  <span>
+                    <span className={styles.lgFound} />
+                    As found
                   </span>
-                  <span className="uiok">no edits ✓</span>
+                  <span>
+                    <span className={styles.lgLeft} />
+                    As left
+                  </span>
+                  <span>
+                    <Swatches />
+                    Target range
+                  </span>
                 </div>
               </div>
-            </div>
-
-            {/* 4 — One-tap share link */}
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#60A5FA,#3B82F6)",
-                }}
-              >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <circle cx="6.5" cy="12" r="2.4" />
-                  <circle cx="17.5" cy="6.5" r="2.4" />
-                  <circle cx="17.5" cy="17.5" r="2.4" />
-                  <path d="M8.7 10.9l6.6-3.3M8.7 13.1l6.6 3.3" />
-                </svg>
-              </div>
-              <h3>One-tap share link</h3>
-              <p>
-                Send the record to an owner, guest, or anyone who asks. They
-                open it — no login, nothing to install.
-              </p>
-              <div className="ui">
-                <div className="uifield">
-                  <span className="mono">tracktub.app/p/lakeside</span>
-                  <span className="uib pri xs">Copy</span>
+              {BARS.map((b) => (
+                <div key={b.label} className={styles.barRow}>
+                  <span className={styles.bL}>{b.label}</span>
+                  <div className={styles.bT}>
+                    <div className={styles.bLine} />
+                    <div
+                      className={styles.bBand}
+                      style={{
+                        left: `${b.lo}%`,
+                        width: `${b.w}%`,
+                        background: b.band,
+                      }}
+                    />
+                    <span
+                      title="As found"
+                      className={styles.bFound}
+                      style={{ left: `calc(${b.found}% - 8px)` }}
+                    />
+                    <span
+                      title="As left"
+                      className={styles.bLeft}
+                      style={{
+                        left: `calc(${b.left}% - 8px)`,
+                        background: b.dot,
+                      }}
+                    />
+                  </div>
+                  <span className={`${styles.bV} ${styles.mono}`}>
+                    {b.text}
+                  </span>
                 </div>
-                <div className="uibtns">
-                  <span className="uib sec">Owner</span>
-                  <span className="uib sec">Guest</span>
-                  <span className="uib sec">Airbnb</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 5 — Camera capture */}
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#3B82F6,#2563EB)",
-                }}
-              >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <path d="M3 8.5A1.5 1.5 0 014.5 7H7l1.2-1.8h7.6L17 7h2.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z" />
-                  <circle cx="12" cy="13" r="3.2" />
-                </svg>
-              </div>
-              <h3>Taken, not uploaded</h3>
-              <p>
-                Photos come straight from the phone&rsquo;s camera at the tub —
-                not picked out of an old camera roll.
-              </p>
-              <div className="ui">
-                <div className="uifield">
-                  <span className="mono">Source: camera</span>
-                  <span className="uiok">live capture ✓</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 6 — Audit trail */}
-            <div className="glass fcard">
-              <div
-                className="ichip"
-                style={{
-                  background: "linear-gradient(135deg,#93C5FD,#2563EB)",
-                }}
-              >
-                <svg width="23" height="23" viewBox="0 0 24 24" className="ic">
-                  <path d="M7 3.5h7l4 4v13H7z" />
-                  <path d="M14 3.5v4h4" />
-                  <path d="M9.5 12.5h5M9.5 16h5" />
-                </svg>
-              </div>
-              <h3>Audit trail</h3>
-              <p>
-                Every photo and every change is logged with who and when — and
-                the log itself can&rsquo;t be edited.
-              </p>
-              <div className="ui">
-                <UiLog
-                  rows={[
-                    ["14:22:07", "Turnover created"],
-                    ["14:22:08", "Photos added"],
-                    ["14:22:08", "Submitted & locked"],
-                  ]}
-                />
-              </div>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* FAQ */}
-        <div className="section" id="faq">
-          <span className="eyebrow">Questions</span>
-          <div className="sechead">
-            <h2>The stuff hosts ask first.</h2>
-          </div>
+        <section id="b-faq" className={styles.faqSec}>
+          <h2 className={styles.h2}>Questions hosts ask</h2>
           <Faq />
-        </div>
+        </section>
+      </main>
 
-        {/* LAUNCH / CTA */}
-        <div className="glass cta" id="join">
-          <Mark className="markbig" />
-          <span
-            className="eyebrow"
-            style={{ display: "block", marginBottom: 9 }}
-          >
-            Launching soon · building in public
-          </span>
-          <h2>Be one of the first hosts on TrackTub.</h2>
-          <p>
-            We&rsquo;re onboarding hosts in small batches and shipping in the
-            open. Join the early-access list, then follow the build on X.
-          </p>
-          <LandingWaitlist />
-          <a
-            className="xfollow"
-            href="https://x.com/tracktub"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-              <path
-                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
-                fill="currentColor"
-              />
-            </svg>
-            Follow @tracktub on X
-          </a>
-        </div>
-
-        {/* FOOTER */}
-        <footer>
-          <Lockup className="flock" />
-          <div className="fwater">
-            <Waterline strokeWidth={1.4} />
+      <section id="b-join" className={styles.join}>
+        <div className={`${styles.wrap} ${styles.joinInner}`}>
+          <div className={styles.joinCopy}>
+            <h2 className={styles.h2Join}>Stop wondering</h2>
+            <p className={styles.joinP}>
+              Join the early access list. We’ll email you when it’s your turn.
+              Free for your first property.
+            </p>
+            <p className={styles.joinSmall}>
+              Built by a working hot tub tech who services short-term rental
+              tubs.
+            </p>
           </div>
-          <div className="fcopy">© 2026 TrackTub</div>
-          <Link href="/blog" className="flink">
-            Resources
-          </Link>
-          <a
-            className="fx"
-            href="https://x.com/tracktub"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="TrackTub on X"
-          >
-            <svg viewBox="0 0 24 24" width="15" height="15">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-            </svg>
-          </a>
+          <LandingWaitlist />
+        </div>
+        <footer className={`${styles.wrap} ${styles.footer}`}>
+          <Wordmark className={styles.footMark} />
+          <nav className={styles.footNav} aria-label="Footer">
+            <Link href="/blog">Guides</Link>
+            <a href="https://x.com/tracktub">@tracktub on X</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/terms">Terms</a>
+            <a href="mailto:tracktubapp@gmail.com">Contact</a>
+          </nav>
+          <span>Hot tub turnover reports for short-term rentals.</span>
         </footer>
-      </div>
+      </section>
     </div>
   );
 }
