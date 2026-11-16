@@ -6,6 +6,7 @@
 import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { isJpeg } from "@/lib/compress-photo";
 import {
   READING_FIELDS,
   readingColumn,
@@ -417,6 +418,9 @@ export async function savePhoto(
   capturedAt: string
 ): Promise<void> {
   const { orgId } = await requireDraft(db, visitId);
+  // The client always re-encodes to JPEG (dropping EXIF). Refuse anything
+  // else, e.g. an unprocessed original that still carries location data.
+  if (!(await isJpeg(file))) throw new Error("Photo must be a processed JPEG");
   const { phase, slot } = PHOTO_KINDS[kind];
   // A fresh path per shot: the bucket is public, so reusing a path would let a
   // cached copy of the old shot show after a retake.
