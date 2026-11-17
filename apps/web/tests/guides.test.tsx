@@ -234,7 +234,8 @@ describe("discovery", () => {
       expect(entry?.lastModified).toEqual(new Date(g.lastReviewed));
     }
     expect(urls.some((u) => u.includes("/blog"))).toBe(false);
-    expect(urls).toHaveLength(2 + getAllGuides().length);
+    // `/`, `/guides`, `/privacy`, plus one URL per guide.
+    expect(urls).toHaveLength(3 + getAllGuides().length);
   });
 
   it("robots allows /guides", () => {

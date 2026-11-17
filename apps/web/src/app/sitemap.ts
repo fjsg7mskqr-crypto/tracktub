@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllGuides, getLatestGuideDate } from "@/lib/guides";
+import { PRIVACY_UPDATED } from "@/lib/privacy";
 import { getURL } from "@/lib/url";
 
 /**
@@ -31,6 +32,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(getLatestGuideDate() ?? LANDING_LAST_MODIFIED),
       changeFrequency: "monthly",
       priority: 0.9,
+    },
+    {
+      url: `${base}/privacy`,
+      lastModified: new Date(PRIVACY_UPDATED),
+      changeFrequency: "yearly",
+      priority: 0.3,
     },
     ...guides.map((g) => ({
       url: `${base}/guides/${g.slug}`,
