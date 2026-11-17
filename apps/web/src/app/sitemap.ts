@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 import { getAllGuides, getLatestGuideDate } from "@/lib/guides";
-import { getAllPosts, getLatestPostDate, postLastModified } from "@/lib/blog";
 import { getURL } from "@/lib/url";
 
 /**
@@ -12,13 +11,12 @@ import { getURL } from "@/lib/url";
 const LANDING_LAST_MODIFIED = "2026-11-16";
 
 /**
- * sitemap.xml — indexable public marketing URLs (`/`, `/guides/*`, `/blog/*`).
+ * sitemap.xml — indexable public marketing URLs (`/` and `/guides/*`).
  * Built off the canonical base URL (`getURL()`). Submit to Google Search Console.
- * New markdown posts in `content/blog/` are picked up automatically.
+ * New markdown guides in `content/guides/` are picked up automatically.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = getURL();
-  const posts = getAllPosts();
   const guides = getAllGuides();
 
   return [
@@ -37,18 +35,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...guides.map((g) => ({
       url: `${base}/guides/${g.slug}`,
       lastModified: new Date(g.lastReviewed),
-      changeFrequency: "monthly" as const,
-      priority: 0.8,
-    })),
-    {
-      url: `${base}/blog`,
-      lastModified: new Date(getLatestPostDate() ?? LANDING_LAST_MODIFIED),
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    ...posts.map((post) => ({
-      url: `${base}/blog/${post.slug}`,
-      lastModified: new Date(postLastModified(post)),
       changeFrequency: "monthly" as const,
       priority: 0.8,
     })),

@@ -5,7 +5,7 @@ section: "Turnover"
 publishedAt: "2026-06-24"
 lastReviewed: "2026-11-16"
 order: 1
-related: ["water-chemistry"]
+related: ["water-chemistry", "drain-between-guests", "guest-says-tub-was-dirty"]
 record:
   - "Date and time of the visit, and who did it"
   - "Readings as found: alkalinity, pH, calcium hardness, chlorine"
@@ -89,8 +89,8 @@ TrackTub walks this routine on your phone: before, after, cover on, and readings
 
 ## When to drain instead
 
-A routine visit does not need a drain. Drain and clean the tub when:
+A routine visit does not need a drain (see [should you drain between every guest](/guides/drain-between-guests)). Drain and clean the tub when:
 
 - The water stays cloudy or smells off after the chemistry is correct and the filter is clean.
-- A guest reports illness or a rash. Document the water first (readings and photos), then follow your manufacturer's and local health department's guidance. Do not re-clean before you have recorded the state of the tub.
+- A guest reports illness or a rash. Document the water first (readings and photos), then follow your manufacturer's and local health department's guidance. Do not re-clean before you have recorded the state of the tub. For the complaint itself, see [guest says the hot tub was dirty](/guides/guest-says-tub-was-dirty).
 - It is due. The Short Term Shop suggests draining and cleaning every 3 to 4 months, or more often with heavy use. Your manual may say otherwise.

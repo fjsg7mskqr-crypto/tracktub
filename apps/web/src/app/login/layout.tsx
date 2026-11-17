@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 // (its onClick is never bound). This was live on prod.
 //
 // Correction (#281): /login was NOT the only user-facing prerendered route, as
-// this note originally claimed. /landing and /blog were prerendered too and had
+// this note originally claimed. /landing and /blog (since removed) were prerendered too and had
 // the same dead-JS failure — it just wasn't noticed, because unlike sign-in
 // those pages still *look* fine without JS. They are now force-dynamic as well,
 // and tests/csp-nonce-coverage.test.ts fails the build if any scripted route

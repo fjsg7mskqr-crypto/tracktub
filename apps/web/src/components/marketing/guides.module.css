@@ -219,16 +219,6 @@
   font-size: 12px;
   color: var(--mute);
 }
-.blogNote {
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 1px solid var(--line);
-  color: var(--body);
-}
-.blogNote a {
-  color: var(--blue);
-  font-weight: 600;
-}
 
 /* article */
 .article {

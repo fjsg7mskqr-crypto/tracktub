@@ -5,7 +5,7 @@ section: "Water chemistry"
 publishedAt: "2026-11-16"
 lastReviewed: "2026-11-16"
 order: 2
-related: ["turnover"]
+related: ["turnover", "drain-between-guests", "guest-says-tub-was-dirty"]
 record:
   - "Alkalinity, pH, calcium hardness and chlorine, as found"
   - "Products added, with amounts"

@@ -1,5 +1,5 @@
 /* Signed-in app design tokens (app rebuild, 2026-10-27).
-   Scoped to `.tt-app` so /landing and /blog keep their own type and colours.
+   Scoped to `.tt-app` so /landing and /guides keep their own type and colours.
    Source: docs/superpowers/specs/2026-10-27-app-rebuild-design.md "Visual system".
    Green (--tt-ok) is for success, locked or in-range ONLY. Red (--tt-alert)
    is for a tub with a problem waiting (Home status board, 2026-11-04). */

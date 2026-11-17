@@ -8,7 +8,7 @@ import { marketingMetadata } from "@/lib/marketing-seo";
 export const metadata: Metadata = marketingMetadata({
   title: "Hot tub help for rental hosts and techs | TrackTub",
   description:
-    "Evergreen reference for rental hot tubs: the between-guest turnover routine, water chemistry targets, and what to record on every visit.",
+    "Evergreen reference for rental hot tubs: the between-guest turnover routine, water chemistry targets, when to drain, what to do when a guest complains, and what to record on every visit.",
   pathname: "/guides",
 });
 
@@ -56,10 +56,6 @@ export default function GuidesHubPage() {
           </ul>
         </section>
       ))}
-      <p className={styles.blogNote}>
-        Looking for news and dated pieces? They are on the{" "}
-        <Link href="/blog">TrackTub blog</Link>.
-      </p>
     </GuidesFrame>
   );
 }
