@@ -11,7 +11,7 @@ import {
   tooManyRequests,
 } from "@/lib/ratelimit";
 
-/** Paths reachable without a session: the marketing surface (landing + guides),
+/** Paths reachable without a session: the marketing surface (landing + guides + privacy),
  *  the login form, the auth callback, shared proof links, and the invite-accept
  *  page. Everything else requires a signed-in user — and, in production, a user
  *  on the `ADMIN_EMAILS` allowlist (the pre-launch lockdown; see `@/lib/admin`).
@@ -37,6 +37,7 @@ const PUBLIC_PATHS = [
   "/auth/callback",
   "/landing",
   "/guides",
+  "/privacy",
   "/proof",
   "/invite",
 ];

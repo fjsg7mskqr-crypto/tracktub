@@ -2,7 +2,7 @@
  * Admin allowlist + pre-launch access-gate decision.
  *
  * During the pre-launch window the public may reach ONLY the marketing surface
- * (`/` — the landing page —, `/guides`) and the auth plumbing needed to sign in (`/login`,
+ * (`/` — the landing page —, `/guides`, `/privacy`) and the auth plumbing needed to sign in (`/login`,
  * `/auth/callback`). Every other route is the founder's alone: reachable only by
  * a signed-in user whose email is on the `ADMIN_EMAILS` allowlist. This is the
  * single source of truth for "is this email an admin" (also used by

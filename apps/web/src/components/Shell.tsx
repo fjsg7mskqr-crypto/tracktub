@@ -4,7 +4,13 @@ import { usePathname } from "next/navigation";
 import { AppShell } from "@/components/app/AppShell";
 
 /** Capability-link / unauthenticated surfaces render without app chrome. */
-const PUBLIC_PREFIXES = ["/proof", "/landing", "/guides", "/invite"];
+const PUBLIC_PREFIXES = [
+  "/proof",
+  "/landing",
+  "/guides",
+  "/privacy",
+  "/invite",
+];
 
 /** Signed-out entry points: no tab bar before there's an app to navigate. */
 const SIGNED_OUT_PREFIXES = ["/login", "/auth"];
