@@ -17,8 +17,22 @@ vi.mock("next/navigation", () => ({
 
 const params = (token = "tok") => ({ params: Promise.resolve({ token }) });
 
-function client(row: unknown, rpc?: Parameters<typeof fakeSupabase>[1]) {
-  const fake = fakeSupabase({ turnover: { data: row, error: null } }, rpc);
+// Anon reads no tables: the record comes from proof_record(token), which
+// returns the visit (plus the tub's locked visits) or nothing. `rpc` overrides
+// every other function (views, client name).
+function client(
+  row: unknown,
+  rpc: Parameters<typeof fakeSupabase>[1] = () =>
+    Promise.resolve({ data: null, error: null })
+) {
+  const fake = fakeSupabase({}, (name, args) =>
+    name === "proof_record"
+      ? Promise.resolve({
+          data: row ? { ...(row as object), tub_visits: [] } : null,
+          error: null,
+        })
+      : rpc(name, args)
+  );
   vi.mocked(createClient).mockResolvedValue(fake as never);
   return fake;
 }
@@ -29,6 +43,8 @@ describe("/proof/[token]", () => {
   it("records a view once for a locked turnover", async () => {
     const fake = client(mockupRow());
     render(await ProofPage(params("tok")));
+    expect(fake.rpc).toHaveBeenCalledWith("proof_record", { p_token: "tok" });
+    expect(fake.from).not.toHaveBeenCalled(); // anon touches no table
     const views = fake.rpc.mock.calls.filter(
       ([name]) => name === "record_share_view"
     );
@@ -63,7 +79,7 @@ describe("/proof/[token]", () => {
     const fake = client(null);
     await expect(ProofPage(params())).rejects.toThrow("NEXT_NOT_FOUND");
     expect(notFound).toHaveBeenCalled();
-    expect(fake.rpc).not.toHaveBeenCalled();
+    expect(fake.rpc.mock.calls.map(([name]) => name)).toEqual(["proof_record"]);
   });
 
   it("no banned words", async () => {

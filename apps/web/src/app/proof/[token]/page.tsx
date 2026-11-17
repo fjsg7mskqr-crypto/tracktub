@@ -16,9 +16,10 @@ export const metadata: Metadata = {
 };
 
 // The record, owner view (screen 9): what the share link opens, no login.
-// Anon reads work through the *_public_proof RLS policies on a locked,
-// shared turnover; the client name through proof_client_name(). Dynamic: it
-// reads per-request data and records the open.
+// Anon has no table access: the record loads through proof_record(token), the
+// client name through proof_client_name(token). Both return data only for the
+// exact token of a locked, shared visit. Dynamic: it reads per-request data
+// and records the open.
 export default async function ProofPage({
   params,
 }: {
@@ -27,8 +28,9 @@ export default async function ProofPage({
   const { token } = await params;
   const supabase = await createClient();
 
-  const row = await loadRecordByToken(supabase, token);
-  if (!row) notFound();
+  const proof = await loadRecordByToken(supabase, token);
+  if (!proof) notFound();
+  const { row, tubVisits } = proof;
 
   // Record the open (Reports' "Opened"). share_view is its own append-only
   // table because turnover_lock_guard rejects updates to a locked turnover.
@@ -59,7 +61,7 @@ export default async function ProofPage({
   return (
     <RecordView
       visit={visit}
-      nextDue={await loadNextDue(supabase, row)}
+      nextDue={await loadNextDue(supabase, row, tubVisits)}
       audience="owner"
       shareUrl={proofUrl(getURL(), token)}
     />
