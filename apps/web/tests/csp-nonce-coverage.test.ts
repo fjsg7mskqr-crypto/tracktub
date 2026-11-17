@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { getGuideSlugs } from "@/lib/guides";
 
 /**
  * Regression guard for #281 (and #271 before it).
@@ -76,7 +77,7 @@ describe("CSP nonce coverage over prerendered routes (#281)", () => {
   it.skipIf(!existsSync(APP_DIR))(
     "the routes that broke in production stay dynamic",
     async () => {
-      // /login (#271), /landing and /blog (#281). If any of these reappears as
+      // /login (#271), /landing and the former /blog (#281). If any of these reappears as
       // prerendered HTML, the corresponding outage has regressed.
       const rels = (await findHtml(APP_DIR)).map((f) => relative(APP_DIR, f));
       expect(rels).not.toContain("login.html");
@@ -84,10 +85,11 @@ describe("CSP nonce coverage over prerendered routes (#281)", () => {
       // `/` serves the landing page for signed-out visitors (#425): if it were
       // prerendered it would ship frozen, nonce-less HTML (index.html).
       expect(rels).not.toContain("index.html");
-      expect(rels).not.toContain("blog.html");
       expect(rels).not.toContain("guides.html");
-      expect(rels).not.toContain("guides/turnover.html");
-      expect(rels).not.toContain("guides/water-chemistry.html");
+      // Every guide route (one per content/guides/*.md) must stay dynamic.
+      for (const slug of getGuideSlugs()) {
+        expect(rels).not.toContain(`guides/${slug}.html`);
+      }
     }
   );
 });

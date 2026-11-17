@@ -65,7 +65,7 @@ async function userRequest(
 
 // Pre-launch lockdown (epic #133): in production the app is reachable only by an
 // ADMIN_EMAILS-allowlisted user; everyone else lands on /landing. The marketing
-// surface (/landing, /blog) stays public. Local dev keeps the gate off.
+// surface (/landing, /guides) stays public. Local dev keeps the gate off.
 describe("updateSession pre-launch admin lockdown", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -101,9 +101,9 @@ describe("updateSession pre-launch admin lockdown", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
-  it("keeps the marketing surface (/blog) public even for a non-admin", async () => {
+  it("keeps the marketing surface (/guides) public even for a non-admin", async () => {
     const response = await userRequest(
-      "https://tracktub.vercel.app/blog",
+      "https://tracktub.vercel.app/guides",
       "stranger@gmail.com"
     );
     expect(response.status).toBe(200);

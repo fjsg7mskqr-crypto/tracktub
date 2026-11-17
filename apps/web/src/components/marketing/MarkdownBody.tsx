@@ -1,10 +1,10 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-/** Renders in-repo blog markdown with accessible external links. */
+/** Renders in-repo guide markdown with accessible external links. */
 export function MarkdownBody({
   content,
-  className = "bprose",
+  className,
 }: {
   content: string;
   className?: string;

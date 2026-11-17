@@ -14,7 +14,7 @@ export function absoluteUrl(pathname: string): string {
   return `${base}${path}`;
 }
 
-/** Metadata helpers for public marketing routes (`/landing`, `/blog/*`). */
+/** Metadata helpers for public marketing routes (`/`, `/guides/*`). */
 export function marketingMetadata({
   title,
   description,
@@ -43,42 +43,6 @@ export function marketingMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: [image],
-    },
-  };
-}
-
-export function articleMetadata(post: {
-  title: string;
-  description: string;
-  slug: string;
-  publishedAt: string;
-  updatedAt?: string;
-  author?: string;
-}): Metadata {
-  const pathname = `/blog/${post.slug}`;
-  const url = absoluteUrl(pathname);
-  const image = absoluteUrl(OG_IMAGE_PATH);
-
-  return {
-    title: `${post.title} — TrackTub`,
-    description: post.description,
-    alternates: { canonical: url },
-    openGraph: {
-      title: post.title,
-      description: post.description,
-      url,
-      siteName: "TrackTub",
-      type: "article",
-      publishedTime: post.publishedAt,
-      modifiedTime: post.updatedAt ?? post.publishedAt,
-      authors: [post.author ?? "TrackTub Team"],
-      images: [{ url: image, width: 1200, height: 630, alt: "TrackTub" }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: post.title,
-      description: post.description,
       images: [image],
     },
   };

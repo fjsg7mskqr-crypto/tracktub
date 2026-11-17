@@ -62,21 +62,29 @@ const securityHeaders = [
   },
 ];
 
+/** Old `/blog/*` URLs -> the guides that replaced them. Order matters. */
+const BLOG_REDIRECTS = [
+  ["/blog/str-hot-tub-turnover-checklist", "/guides/turnover"],
+  ["/blog/drain-rental-hot-tub-between-guests", "/guides/drain-between-guests"],
+  [
+    "/blog/guest-says-hot-tub-was-dirty-airbnb-refunds-claims",
+    "/guides/guest-says-tub-was-dirty",
+  ],
+  ["/blog", "/guides"],
+  ["/blog/:path*", "/guides"],
+].map(([source, destination]) => ({ source, destination, permanent: true }));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   // Monorepo file tracing must anchor at the repo root (not apps/web).
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
-  // The turnover checklist graduated from a dated post to an evergreen guide.
-  // Permanent (308) so search engines move the old URL's ranking over.
+  // The blog was folded into /guides (founder decision 2026-11-16). Permanent
+  // (308) so search engines move the old URLs' ranking over. Specific slugs
+  // first, then a catch-all so no /blog/* URL 404s. Query strings are kept
+  // (Next forwards them on redirects).
   async redirects() {
-    return [
-      {
-        source: "/blog/str-hot-tub-turnover-checklist",
-        destination: "/guides/turnover",
-        permanent: true,
-      },
-    ];
+    return BLOG_REDIRECTS;
   },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
