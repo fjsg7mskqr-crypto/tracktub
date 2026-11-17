@@ -901,7 +901,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(Number(after?.ph)).toBe(7.5);
     });
 
-    it("anon reads a reading only through a locked + shared turnover", async () => {
+    it("anon reads a reading only through proof_record on a locked + shared turnover", async () => {
       const token = randomUUID();
       const { data: shared } = await admin
         .from("turnover")
@@ -935,11 +935,18 @@ describe.skipIf(!ready)("RLS isolation", () => {
         ph: 7.6,
       });
 
+      // No direct table read, even for the shared visit.
       const okRead = await anonClient
         .from("water_reading")
         .select("ph")
         .eq("turnover_id", shared!.id);
-      expect((okRead.data ?? []).length).toBeGreaterThan(0);
+      expect(okRead.data ?? []).toHaveLength(0);
+
+      // The reading arrives only through the token-checked function.
+      const viaFn = await anonClient.rpc("proof_record", { p_token: token });
+      expect(
+        (viaFn.data as unknown as { water: { ph: number } | null }).water?.ph
+      ).toBe(7.6);
 
       const denyRead = await anonClient
         .from("water_reading")
