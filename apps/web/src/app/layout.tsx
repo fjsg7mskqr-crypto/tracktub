@@ -31,7 +31,7 @@ const spaceGrotesk = localFont({
   display: "swap",
 });
 // Signed-in app only — applied via `.tt-app` (app-tokens.css), so /landing and
-// /blog keep their own type.
+// /guides keep their own type.
 const archivo = localFont({
   src: "./fonts/archivo-latin-wght-normal.woff2",
   weight: "100 900",

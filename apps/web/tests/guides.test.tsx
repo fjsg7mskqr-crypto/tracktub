@@ -22,9 +22,14 @@ async function renderGuide(slug: string) {
 }
 
 describe("guides content", () => {
-  it("has the turnover and water chemistry guides with required frontmatter", () => {
+  it("has the four guides with required frontmatter", () => {
     const guides = getAllGuides();
-    expect(guides.map((g) => g.slug)).toEqual(["turnover", "water-chemistry"]);
+    expect(guides.map((g) => g.slug)).toEqual([
+      "turnover",
+      "water-chemistry",
+      "drain-between-guests",
+      "guest-says-tub-was-dirty",
+    ]);
     for (const g of guides) {
       expect(g.lastReviewed).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(g.section).not.toBe("");
@@ -39,7 +44,36 @@ describe("guides content", () => {
 
   it("links related guides both ways", () => {
     const t = getAllGuides().find((g) => g.slug === "turnover")!;
-    expect(getRelatedGuides(t).map((g) => g.slug)).toEqual(["water-chemistry"]);
+    expect(getRelatedGuides(t).map((g) => g.slug)).toEqual([
+      "water-chemistry",
+      "drain-between-guests",
+      "guest-says-tub-was-dirty",
+    ]);
+    // Every related slug is a real guide, and the link goes both ways.
+    const slugs = getAllGuides().map((g) => g.slug);
+    for (const g of getAllGuides()) {
+      for (const r of g.related) {
+        expect(slugs).toContain(r);
+        const other = getAllGuides().find((x) => x.slug === r)!;
+        expect(other.related).toContain(g.slug);
+      }
+    }
+  });
+
+  it("every internal /guides link in guide content resolves to a guide", () => {
+    const slugs = new Set(getAllGuides().map((g) => g.slug));
+    for (const g of getAllGuides()) {
+      const text = getGuideBySlug(g.slug)!.content;
+      const links = [...text.matchAll(/\]\((\/[^)\s]*)\)/g)].map((m) => m[1]);
+      for (const href of links) {
+        expect(href, `${g.slug} links to ${href}`).not.toMatch(/^\/blog/);
+        if (href.startsWith("/guides/")) {
+          expect(slugs, `${g.slug} links to ${href}`).toContain(
+            href.replace("/guides/", "").split("#")[0]
+          );
+        }
+      }
+    }
   });
 
   it("makes no claim the app or the sources don't back", () => {
@@ -63,7 +97,7 @@ describe("/guides hub", () => {
     expect(dynamic).toBe("force-dynamic");
   });
 
-  it("lists both guides and links to the blog", () => {
+  it("lists every guide and no longer links to the blog", () => {
     render(<GuidesHub />);
     expect(String(hubMeta.title)).toContain("Hot tub help");
     const hrefs = screen
@@ -71,13 +105,15 @@ describe("/guides hub", () => {
       .map((a) => a.getAttribute("href"));
     expect(hrefs).toContain("/guides/turnover");
     expect(hrefs).toContain("/guides/water-chemistry");
-    expect(hrefs).toContain("/blog");
+    for (const g of getAllGuides())
+      expect(hrefs).toContain(`/guides/${g.slug}`);
+    expect(hrefs.some((h) => h?.startsWith("/blog"))).toBe(false);
     expect(document.body.textContent).toContain(GUIDES_BYLINE_NOTE);
   });
 });
 
 describe("/guides/[slug]", () => {
-  it.each(["turnover", "water-chemistry"])(
+  it.each(getAllGuides().map((g) => g.slug))(
     "%s renders byline, last-reviewed, breadcrumbs, related and the closing box",
     async (slug) => {
       const { container } = await renderGuide(slug);
@@ -144,14 +180,46 @@ describe("/guides/[slug]", () => {
   });
 });
 
-describe("old turnover post redirect", () => {
-  it("permanently redirects the blog post to /guides/turnover", async () => {
+describe("old /blog redirects", () => {
+  // First-match-wins, like Next. `:path*` is the only pattern we use.
+  async function resolve(pathname: string) {
     const redirects = await nextConfig.redirects!();
-    expect(redirects).toContainEqual({
-      source: "/blog/str-hot-tub-turnover-checklist",
-      destination: "/guides/turnover",
-      permanent: true,
-    });
+    for (const r of redirects) {
+      const hit = r.source.endsWith("/:path*")
+        ? pathname === r.source.replace("/:path*", "") ||
+          pathname.startsWith(r.source.replace(":path*", ""))
+        : pathname === r.source;
+      if (hit) return r;
+    }
+    return null;
+  }
+
+  it.each([
+    ["/blog", "/guides"],
+    ["/blog/str-hot-tub-turnover-checklist", "/guides/turnover"],
+    [
+      "/blog/drain-rental-hot-tub-between-guests",
+      "/guides/drain-between-guests",
+    ],
+    [
+      "/blog/guest-says-hot-tub-was-dirty-airbnb-refunds-claims",
+      "/guides/guest-says-tub-was-dirty",
+    ],
+    ["/blog/x", "/guides"],
+    ["/blog/x/y", "/guides"],
+  ])("permanently redirects %s to %s", async (from, to) => {
+    const r = await resolve(from);
+    expect(r?.destination).toBe(to);
+    expect(r?.permanent).toBe(true);
+  });
+
+  it("only redirects to real guides", async () => {
+    const slugs = new Set(getAllGuides().map((g) => g.slug));
+    for (const r of await nextConfig.redirects!()) {
+      if (r.destination !== "/guides") {
+        expect(slugs).toContain(r.destination.replace("/guides/", ""));
+      }
+    }
   });
 });
 
@@ -165,14 +233,14 @@ describe("discovery", () => {
       expect(entry).toBeTruthy();
       expect(entry?.lastModified).toEqual(new Date(g.lastReviewed));
     }
-    expect(urls.some((u) => u.includes("str-hot-tub-turnover-checklist"))).toBe(
-      false
-    );
+    expect(urls.some((u) => u.includes("/blog"))).toBe(false);
+    expect(urls).toHaveLength(2 + getAllGuides().length);
   });
 
   it("robots allows /guides", () => {
     const rule = robots().rules;
     const allow = (Array.isArray(rule) ? rule[0] : rule).allow;
     expect(allow).toContain("/guides");
+    expect(allow).not.toContain("/blog");
   });
 });
