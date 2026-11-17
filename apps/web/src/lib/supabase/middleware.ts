@@ -22,8 +22,8 @@ import {
  *  because the waitlist endpoint `/landing/waitlist` sits under it.
  *  `/proof/*` is public by design — a recipient opens a shared turnover's proof
  *  link with no account ("No login required to view"). The page reads through
- *  the anonymous `share_token` RLS policies (`turnover_public_proof` /
- *  `photo_public_proof`, migration `20260610120000`) and records the open via
+ *  the token-checked `proof_record(token)` function (anon has no table
+ *  access; migration `20261116130000`) and records the open via
  *  `record_proof_open`. Gating it here redirected recipients to /login and made
  *  the PRD wedge metric (shared links opened by recipients) unmeasurable (#104).
  *  It stays public through the lockdown: it is a capability link (an unguessable

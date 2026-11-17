@@ -410,7 +410,6 @@ describe.skipIf(!ready)("RLS isolation", () => {
     let proofTurnoverLockedId: string;
     let proofShareToken: string;
     let proofTurnoverDraftId: string;
-    let proofPhotoId: string;
     let proofOperator: AuthedUser;
 
     beforeAll(async () => {
@@ -464,12 +463,9 @@ describe.skipIf(!ready)("RLS isolation", () => {
         .single();
       proofTurnoverLockedId = locked!.id;
 
-      const { data: ph } = await admin
+      await admin
         .from("photo")
-        .insert({ turnover_id: proofTurnoverLockedId, slot: "wide" })
-        .select("id")
-        .single();
-      proofPhotoId = ph!.id;
+        .insert({ turnover_id: proofTurnoverLockedId, slot: "wide" });
 
       await admin.from("issue_tag").insert({
         turnover_id: proofTurnoverLockedId,
@@ -492,58 +488,75 @@ describe.skipIf(!ready)("RLS isolation", () => {
       proofTurnoverDraftId = draft!.id;
     });
 
-    it("anon can read a locked turnover via its share_token", async () => {
-      const { data, error } = await anonClient
-        .from("turnover")
-        .select("id, share_token, status")
-        .eq("share_token", proofShareToken)
-        .single();
-      expect(error).toBeNull();
-      expect(data?.id).toBe(proofTurnoverLockedId);
-      expect(data?.status).toBe("submitted_locked");
-    });
+    // The share link is a capability: anon reads NO table directly, even with
+    // a locked shared visit present, and gets a record only via proof_record()
+    // with that visit's exact token.
+    it.each([
+      "turnover",
+      "photo",
+      "water_reading",
+      "issue_tag",
+      "profile",
+      "property",
+    ] as const)(
+      "anon cannot select %s, even with a locked shared visit present",
+      async (table) => {
+        const { data } = await anonClient.from(table).select("*");
+        expect(data ?? []).toHaveLength(0);
+      }
+    );
 
-    it("anon cannot read a draft turnover (no share_token)", async () => {
+    it("anon cannot list share tokens or find a visit by its token", async () => {
       const { data } = await anonClient
         .from("turnover")
-        .select("id")
+        .select("id, share_token")
+        .eq("share_token", proofShareToken);
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it("proof_record returns exactly that visit for the right token", async () => {
+      const { data, error } = await anonClient.rpc("proof_record", {
+        p_token: proofShareToken,
+      });
+      expect(error).toBeNull();
+      const rec = data as unknown as {
+        id: string;
+        status: string;
+        photos: { storage_path: string | null }[];
+        property: { name: string } | null;
+        tub_visits: unknown[];
+      };
+      expect(rec.id).toBe(proofTurnoverLockedId);
+      expect(rec.status).toBe("submitted_locked");
+      expect(rec.photos).toHaveLength(1);
+      expect(rec.property?.name).toBe("Proof Test Property");
+      expect(rec.tub_visits).toHaveLength(1); // the locked visit, not the draft
+    });
+
+    it("proof_record returns nothing for a wrong, short or null token", async () => {
+      for (const tok of [randomUUID(), "abc", "", null]) {
+        const { data, error } = await anonClient.rpc("proof_record", {
+          p_token: tok as unknown as string,
+        });
+        expect(error).toBeNull();
+        expect(data).toBeNull();
+      }
+    });
+
+    it("proof_record returns nothing for a draft visit's token", async () => {
+      const draftToken = randomUUID();
+      await admin
+        .from("turnover")
+        .update({ share_token: draftToken })
         .eq("id", proofTurnoverDraftId);
-      expect(data).toHaveLength(0);
-    });
-
-    it("anon can read photos of a locked shared turnover", async () => {
-      const { data, error } = await anonClient
-        .from("photo")
-        .select("id")
-        .eq("turnover_id", proofTurnoverLockedId);
-      expect(error).toBeNull();
-      expect(data?.length).toBeGreaterThan(0);
-      expect(data?.[0].id).toBe(proofPhotoId);
-    });
-
-    it("anon cannot read photos of a draft/non-shared turnover", async () => {
-      const { data } = await anonClient
-        .from("photo")
-        .select("id")
-        .eq("turnover_id", proofTurnoverDraftId);
-      expect(data).toHaveLength(0);
-    });
-
-    it("anon can read issue tags of a locked shared turnover", async () => {
-      const { data, error } = await anonClient
-        .from("issue_tag")
-        .select("tag")
-        .eq("turnover_id", proofTurnoverLockedId);
-      expect(error).toBeNull();
-      expect(data?.map((i) => i.tag)).toContain("foam");
-    });
-
-    it("anon cannot read issue tags of a draft/non-shared turnover", async () => {
-      const { data } = await anonClient
-        .from("issue_tag")
-        .select("tag")
-        .eq("turnover_id", proofTurnoverDraftId);
-      expect(data).toHaveLength(0);
+      const { data } = await anonClient.rpc("proof_record", {
+        p_token: draftToken,
+      });
+      expect(data).toBeNull();
+      await admin
+        .from("turnover")
+        .update({ share_token: null })
+        .eq("id", proofTurnoverDraftId);
     });
 
     // ── proof_client_name: client name on the owner record, token-checked ──
@@ -888,7 +901,7 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(Number(after?.ph)).toBe(7.5);
     });
 
-    it("anon reads a reading only through a locked + shared turnover", async () => {
+    it("anon reads a reading only through proof_record on a locked + shared turnover", async () => {
       const token = randomUUID();
       const { data: shared } = await admin
         .from("turnover")
@@ -922,11 +935,18 @@ describe.skipIf(!ready)("RLS isolation", () => {
         ph: 7.6,
       });
 
+      // No direct table read, even for the shared visit.
       const okRead = await anonClient
         .from("water_reading")
         .select("ph")
         .eq("turnover_id", shared!.id);
-      expect((okRead.data ?? []).length).toBeGreaterThan(0);
+      expect(okRead.data ?? []).toHaveLength(0);
+
+      // The reading arrives only through the token-checked function.
+      const viaFn = await anonClient.rpc("proof_record", { p_token: token });
+      expect(
+        (viaFn.data as unknown as { water: { ph: number } | null }).water?.ph
+      ).toBe(7.6);
 
       const denyRead = await anonClient
         .from("water_reading")
