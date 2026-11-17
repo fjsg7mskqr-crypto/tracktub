@@ -13,9 +13,6 @@ export function GuidesFrame({ children }: { children: React.ReactNode }) {
           <Link href="/guides" className={styles.navA}>
             Guides
           </Link>
-          <Link href="/blog" className={styles.navA}>
-            Blog
-          </Link>
           <Link href="/" className={styles.navCta}>
             Get early access
           </Link>
@@ -28,7 +25,6 @@ export function GuidesFrame({ children }: { children: React.ReactNode }) {
         </Link>
         <nav className={styles.footNav} aria-label="Footer">
           <Link href="/guides">Guides</Link>
-          <Link href="/blog">Blog</Link>
           <Link href="/">Home</Link>
         </nav>
       </footer>

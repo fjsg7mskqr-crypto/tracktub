@@ -41,7 +41,7 @@ describe("appAccessDecision (pre-launch gate matrix)", () => {
   };
 
   it("always allows public paths", () => {
-    for (const path of ["/landing", "/blog", "/login", "/auth/callback"]) {
+    for (const path of ["/landing", "/guides", "/login", "/auth/callback"]) {
       expect(appAccessDecision({ ...base, path, isPublic: true })).toBe(
         "allow"
       );
