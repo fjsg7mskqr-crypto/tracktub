@@ -8,7 +8,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Are photos taken during the visit?",
-    a: "That is the idea. On a phone, the app opens the camera, not the photo library. Each photo also shows the time it was taken.",
+    a: "On a phone, the app opens the camera, not the photo library, and each photo shows the time it was taken.",
   },
   {
     q: "Can a finished report be changed?",
@@ -134,7 +134,7 @@ export const GROUPS = [
     title: "Water",
     items: [
       {
-        k: "Chlorine tubs.",
+        k: "Four tests.",
         v: "Alkalinity, pH, hardness and chlorine.",
       },
       {
