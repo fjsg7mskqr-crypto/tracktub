@@ -399,6 +399,52 @@ describe.skipIf(!ready)("RLS isolation", () => {
   });
 
   // ── Anon proof link access ─────────────────────────────────────────────────
+  describe("Waitlist — anon insert-only (role, tub_count)", () => {
+    const anonWl = ready
+      ? createClient<Database>(url!, anon!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : (null as unknown as SupabaseClient<Database>);
+    const emails: string[] = [];
+    const mail = () => {
+      const e = `rls-wl-${randomUUID()}@tracktub.test`;
+      emails.push(e);
+      return e;
+    };
+
+    afterAll(async () => {
+      if (emails.length)
+        await admin.from("waitlist").delete().in("email", emails);
+    });
+
+    it("anon can insert email-only and email + role + tub_count", async () => {
+      const a = await anonWl.from("waitlist").insert({ email: mail() });
+      expect(a.error).toBeNull();
+      const b = await anonWl.from("waitlist").insert({
+        email: mail(),
+        role: "hot_tub_tech",
+        tub_count: 8,
+      });
+      expect(b.error).toBeNull();
+    });
+
+    it("rejects a bad role or an out-of-range tub_count", async () => {
+      const r = await anonWl
+        .from("waitlist")
+        .insert({ email: mail(), role: "landlord" });
+      expect(r.error).not.toBeNull();
+      const t = await anonWl
+        .from("waitlist")
+        .insert({ email: mail(), tub_count: 1001 });
+      expect(t.error).not.toBeNull();
+    });
+
+    it("anon still cannot select the list", async () => {
+      const { data } = await anonWl.from("waitlist").select("*");
+      expect(data ?? []).toEqual([]);
+    });
+  });
+
   describe("Proof link — anon access", () => {
     const anonClient = ready
       ? createClient<Database>(url!, anon!, {

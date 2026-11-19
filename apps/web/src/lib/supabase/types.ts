@@ -1181,19 +1181,25 @@ export type Database = {
           created_at: string;
           email: string;
           id: string;
+          role: string | null;
           source: string;
+          tub_count: number | null;
         };
         Insert: {
           created_at?: string;
           email: string;
           id?: string;
+          role?: string | null;
           source?: string;
+          tub_count?: number | null;
         };
         Update: {
           created_at?: string;
           email?: string;
           id?: string;
+          role?: string | null;
           source?: string;
+          tub_count?: number | null;
         };
         Relationships: [];
       };

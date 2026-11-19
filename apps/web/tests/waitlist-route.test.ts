@@ -88,6 +88,51 @@ describe("POST /landing/waitlist", () => {
     });
   });
 
+  it("accepts email + role + tub count and persists them", async () => {
+    const { res, json, insert } = await post({
+      email: "pm@example.com",
+      role: "property_manager",
+      tubs: "12",
+    });
+    expect(res.status).toBe(200);
+    expect(json).toEqual({ status: "ok" });
+    expect(insert).toHaveBeenCalledWith({
+      email: "pm@example.com",
+      source: "landing",
+      role: "property_manager",
+      tub_count: 12,
+    });
+  });
+
+  it("treats empty optional fields like the old email-only payload", async () => {
+    const { res, insert } = await post({
+      email: "pm@example.com",
+      role: "",
+      tubs: "",
+    });
+    expect(res.status).toBe(200);
+    expect(insert).toHaveBeenCalledWith({
+      email: "pm@example.com",
+      source: "landing",
+    });
+  });
+
+  it.each([
+    ["unknown role", { role: "landlord" }],
+    ["negative tub count", { tubs: "-1" }],
+    ["tub count over 1000", { tubs: 1001 }],
+    ["fractional tub count", { tubs: "2.5" }],
+    ["non-numeric tub count", { tubs: "lots" }],
+  ])("rejects %s with 400 before the insert", async (_n, extra) => {
+    const { res, json, insert } = await post({
+      email: "pm@example.com",
+      ...extra,
+    });
+    expect(res.status).toBe(400);
+    expect(json.status).toBe("error");
+    expect(insert).not.toHaveBeenCalled();
+  });
+
   it("treats a duplicate signup as already-on-the-list", async () => {
     const { res, json } = await post(
       { email: "host@example.com" },

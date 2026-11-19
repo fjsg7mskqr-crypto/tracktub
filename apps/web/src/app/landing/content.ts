@@ -7,16 +7,16 @@ export const FAQS: { q: string; a: string }[] = [
     a: "No. The report is a web link. It opens on any phone or computer.",
   },
   {
-    q: "Can a photo come from the camera roll?",
-    a: "No. The app opens the phone’s camera, so each photo is taken during the visit.",
+    q: "Are photos taken during the visit?",
+    a: "On a phone, the app opens the camera, not the photo library, and each photo shows the time it was taken.",
   },
   {
     q: "Can a finished report be changed?",
     a: "No. When the visit is finished, the record locks and can’t be edited in TrackTub.",
   },
   {
-    q: "Do I need to know water chemistry?",
-    a: "No. Each test shows its target range, and anything outside it is marked.",
+    q: "Does it tell me what to add?",
+    a: "No. Each test shows its target range and marks anything outside it. What to add is your call. TrackTub records the readings and what you added.",
   },
   {
     q: "Does a photo show where it was taken?",
@@ -24,7 +24,11 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What if the water was off when we arrived?",
-    a: "The report shows both readings: how the water was found, and how it was left. That is the honest record.",
+    a: "The report shows both readings: as found, and as left. The owner sees the fix, not just the problem.",
+  },
+  {
+    q: "Can I keep all my clients and tubs in one place?",
+    a: "Yes. Each client has their tubs, and each tub keeps its own history: visits, drains and filter dates.",
   },
   {
     q: "What does it cost?",
@@ -37,7 +41,7 @@ export const PHONES = [
     src: "/landing/screen-home.png",
     alt: "Home: today’s route and status board",
     title: "Today’s route",
-    sub: "Who needs you first",
+    sub: "Which tub needs you first",
     offset: false,
   },
   {
@@ -65,7 +69,7 @@ export const PHONES = [
     src: "/landing/screen-reports.png",
     alt: "Reports sent to owners",
     title: "Reports",
-    sub: "See when owners open them",
+    sub: "See when a link is opened",
     offset: false,
   },
 ];
@@ -116,10 +120,10 @@ export const GROUPS = [
     title: "Photos",
     items: [
       {
-        k: "Camera only.",
-        v: "The app opens the camera, not the camera roll.",
+        k: "Camera first.",
+        v: "On a phone, the app opens the camera, not the photo library.",
       },
-      { k: "Three every visit.", v: "Before, after, and cover on." },
+      { k: "Three photo steps.", v: "Before, after, and cover on." },
       {
         k: "Lined up.",
         v: "Last visit’s photo sits next to the step so you can match the angle.",
@@ -129,7 +133,10 @@ export const GROUPS = [
   {
     title: "Water",
     items: [
-      { k: "Four tests.", v: "Alkalinity, pH, hardness and chlorine." },
+      {
+        k: "Four tests.",
+        v: "Alkalinity, pH, hardness and chlorine.",
+      },
       {
         k: "As found and as left.",
         v: "Both readings, so a fix shows as a fix.",
@@ -152,7 +159,7 @@ export const GROUPS = [
     title: "Sharing and privacy",
     items: [
       { k: "One link.", v: "Owners open the report without an app or login." },
-      { k: "Read receipts.", v: "See when each report is opened." },
+      { k: "Open times.", v: "See when a report link is opened." },
       {
         k: "No location.",
         v: "Location data is removed before a photo leaves the phone.",
