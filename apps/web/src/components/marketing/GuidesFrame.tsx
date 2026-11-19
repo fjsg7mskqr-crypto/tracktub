@@ -26,6 +26,7 @@ export function GuidesFrame({ children }: { children: React.ReactNode }) {
         <nav className={styles.footNav} aria-label="Footer">
           <Link href="/guides">Guides</Link>
           <Link href="/">Home</Link>
+          <Link href="/privacy">Privacy</Link>
         </nav>
       </footer>
     </div>

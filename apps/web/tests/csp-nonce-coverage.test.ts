@@ -86,6 +86,7 @@ describe("CSP nonce coverage over prerendered routes (#281)", () => {
       // prerendered it would ship frozen, nonce-less HTML (index.html).
       expect(rels).not.toContain("index.html");
       expect(rels).not.toContain("guides.html");
+      expect(rels).not.toContain("privacy.html");
       // Every guide route (one per content/guides/*.md) must stay dynamic.
       for (const slug of getGuideSlugs()) {
         expect(rels).not.toContain(`guides/${slug}.html`);

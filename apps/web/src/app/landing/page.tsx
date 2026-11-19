@@ -621,7 +621,6 @@ export default function Landing() {
             <Link href="/guides">Guides</Link>
             <a href="https://x.com/tracktub">@tracktub on X</a>
             <a href="/privacy">Privacy</a>
-            <a href="/terms">Terms</a>
             <a href="mailto:tracktubapp@gmail.com">Contact</a>
           </nav>
           <span>Hot tub turnover reports for short-term rentals.</span>
