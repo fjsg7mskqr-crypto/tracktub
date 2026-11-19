@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { WaitlistState } from "./waitlist/route";
 import { track } from "@/lib/analytics";
+import { MAX_TUB_COUNT, WAITLIST_ROLES } from "@/lib/waitlist";
 import styles from "./landing.module.css";
 
 const INITIAL: WaitlistState = { status: "idle" };
@@ -13,12 +14,16 @@ const FAILED: WaitlistState = {
 
 /** POSTs to the stable /landing/waitlist route (not a Server Action — see the
  *  route for why). */
-async function joinWaitlist(email: string): Promise<WaitlistState> {
+async function joinWaitlist(extra: {
+  email: string;
+  role: string;
+  tubs: string;
+}): Promise<WaitlistState> {
   try {
     const res = await fetch("/landing/waitlist", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(extra),
     });
     const state = (await res.json()) as WaitlistState;
     return state?.status ? state : FAILED;
@@ -39,9 +44,15 @@ export function LandingWaitlist({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const email = String(new FormData(e.currentTarget).get("email") ?? "");
+    const data = new FormData(e.currentTarget);
     setPending(true);
-    setState(await joinWaitlist(email));
+    setState(
+      await joinWaitlist({
+        email: String(data.get("email") ?? ""),
+        role: String(data.get("role") ?? ""),
+        tubs: String(data.get("tubs") ?? ""),
+      })
+    );
     setPending(false);
   }
 
@@ -94,6 +105,44 @@ export function LandingWaitlist({
         <button className={styles.btnPrimary} type="submit" disabled={pending}>
           {pending ? "Joining…" : cta}
         </button>
+        <div className={styles.joinOptional}>
+          <div className={styles.joinField}>
+            <label htmlFor="tt-wl-role" className={styles.joinLabel}>
+              I’m a… <span>(optional)</span>
+            </label>
+            <select
+              id="tt-wl-role"
+              name="role"
+              className={styles.joinInput}
+              defaultValue=""
+              disabled={pending}
+            >
+              <option value="">Choose one</option>
+              {WAITLIST_ROLES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.joinField}>
+            <label htmlFor="tt-wl-tubs" className={styles.joinLabel}>
+              How many tubs? <span>(optional)</span>
+            </label>
+            <input
+              id="tt-wl-tubs"
+              name="tubs"
+              className={styles.joinInput}
+              type="number"
+              min={0}
+              max={MAX_TUB_COUNT}
+              step={1}
+              inputMode="numeric"
+              placeholder="e.g. 6"
+              disabled={pending}
+            />
+          </div>
+        </div>
       </form>
       {state.status === "error" && (
         <p role="alert" className={styles.joinErr}>
