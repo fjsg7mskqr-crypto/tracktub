@@ -224,6 +224,12 @@
   font-size: 15px;
   color: var(--mute);
 }
+.trust {
+  margin-top: -6px;
+  font-size: 15px;
+  color: var(--body);
+  max-width: 440px;
+}
 .heroArt {
   flex: 1 1 520px;
   min-width: 0;
@@ -1137,11 +1143,6 @@
   font-size: 18px;
   color: #c9ced8;
 }
-.joinSmall {
-  margin-top: 6px;
-  font-size: 15px;
-  color: #a3a9b8;
-}
 .joinWrap {
   flex: 1 1 400px;
   min-width: 0;
@@ -1161,6 +1162,36 @@
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 10px;
   padding: 14px 16px;
+}
+.joinOptional {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+}
+.joinField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.joinLabel {
+  font-size: 14px;
+  color: #a3a9b8;
+}
+.joinLabel span {
+  opacity: 0.8;
+}
+.joinOptional .joinInput {
+  flex: none;
+}
+.joinOptional select.joinInput option {
+  color: #111827;
+}
+@media (max-width: 520px) {
+  .joinOptional {
+    grid-template-columns: 1fr;
+  }
 }
 .joinInput::placeholder {
   color: #a3a9b8;
