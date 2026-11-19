@@ -54,7 +54,6 @@ describe("/landing (Round 6)", () => {
       "/guides",
       "https://x.com/tracktub",
       "/privacy",
-      "/terms",
       "mailto:tracktubapp@gmail.com",
     ]);
   });
