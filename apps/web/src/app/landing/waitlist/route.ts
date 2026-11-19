@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { normalizeEmail } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 import { rejectBots } from "@/lib/botid";
+import { parseRole, parseTubCount } from "@/lib/waitlist";
 
 export type WaitlistState = {
   status: "idle" | "ok" | "already" | "error";
@@ -39,25 +40,42 @@ export async function POST(request: Request) {
   }
 
   let email: string;
+  let role: ReturnType<typeof parseRole>;
+  let tubCount: ReturnType<typeof parseTubCount>;
   try {
     const body: unknown = await request.json();
-    const raw =
+    const fields =
       typeof body === "object" && body !== null
-        ? (body as { email?: unknown }).email
-        : "";
-    email = normalizeEmail(String(raw ?? ""));
+        ? (body as { email?: unknown; role?: unknown; tubs?: unknown })
+        : {};
+    email = normalizeEmail(String(fields.email ?? ""));
+    // Optional extras: omitted/empty is fine (old payload), a bad value is a 400.
+    role = parseRole(fields.role);
+    tubCount = parseTubCount(fields.tubs);
   } catch {
     return reply(
       { status: "error", message: "Please enter a valid email address." },
       400
     );
   }
+  if (role === undefined || tubCount === undefined) {
+    return reply(
+      {
+        status: "error",
+        message: "Please check the role and tub count and try again.",
+      },
+      400
+    );
+  }
 
   try {
     const supabase = await createClient();
-    const { error } = await supabase
-      .from("waitlist")
-      .insert({ email, source: "landing" });
+    const { error } = await supabase.from("waitlist").insert({
+      email,
+      source: "landing",
+      ...(role ? { role } : {}),
+      ...(tubCount !== null ? { tub_count: tubCount } : {}),
+    });
     if (error) {
       // 23505 = unique_violation — they're already signed up; treat as success.
       if (error.code === "23505") return reply({ status: "already" });

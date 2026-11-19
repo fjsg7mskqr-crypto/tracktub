@@ -15,10 +15,10 @@ import styles from "./landing.module.css";
 export const dynamic = "force-dynamic";
 
 const DESCRIPTION =
-  "Photos and a water test from every turnover, in one link. Hot tub turnover reports for Airbnb and vacation rental hosts. Free for your first property.";
+  "Photos and a water test from every hot tub visit, in one report link for your owners. For property managers and hot tub techs. Free for your first property.";
 
 export const metadata: Metadata = marketingMetadata({
-  title: "Hot tub turnover reports for short-term rentals | TrackTub",
+  title: "Hot tub visit reports for property managers and techs | TrackTub",
   description: DESCRIPTION,
   pathname: "/",
 });
@@ -129,10 +129,14 @@ export default function Landing() {
         <section className={`${styles.wrap} ${styles.hero}`}>
           <div className={styles.heroText}>
             <Swatches />
-            <h1 className={styles.h1}>Know the tub was ready</h1>
+            <h1 className={styles.h1}>Show the tub was ready</h1>
             <p className={styles.lede}>
-              Photos and a water test from every turnover, in one link. For
-              Airbnb and vacation rental hot tubs.
+              Photos and a water test from every visit, in one link your owners
+              can open. For pros who service short-term rental hot tubs.
+            </p>
+            <p className={styles.trust}>
+              Built by a working hot tub tech who services short-term rental
+              tubs.
             </p>
             <div className={styles.row}>
               <a href="#b-join" className={styles.btnPrimary}>
@@ -142,9 +146,7 @@ export default function Landing() {
                 See a report
               </a>
             </div>
-            <p className={styles.fine}>
-              Free for your first property. Join the early access list.
-            </p>
+            <p className={styles.fine}>Free for your first property.</p>
           </div>
           <div className={styles.heroArt}>
             <Photo
@@ -225,10 +227,10 @@ export default function Landing() {
                 <div className={styles.dotL} />
                 <div className={styles.dotR} />
                 <div className={styles.techBar} />
-                <div className={styles.techLabel}>Your tech, 1:52 to 2:14</div>
+                <div className={styles.techLabel}>You, 1:52 to 2:14</div>
                 <div className={styles.openDot} />
                 <div className={styles.openLabel}>
-                  2:31 · You open the report
+                  2:31 · Owner opens the report
                 </div>
               </div>
               <div className={`${styles.clockEnd} ${styles.right}`}>
@@ -241,10 +243,8 @@ export default function Landing() {
 
         <section className={`${styles.wrap} ${styles.stakes}`}>
           <p className={styles.stakesText}>
-            Guests notice the hot tub first.{" "}
-            <span className={styles.mute}>
-              Refunds can come out of your payout.
-            </span>
+            Owners can’t see the work.{" "}
+            <span className={styles.mute}>Guest complaints land on you.</span>
           </p>
         </section>
 
@@ -277,9 +277,9 @@ export default function Landing() {
               >
                 1
               </span>
-              <h3 className={styles.h3}>Tech visits</h3>
+              <h3 className={styles.h3}>You visit</h3>
               <p className={styles.stepP}>
-                Before and after photos, then the water test. The app walks them
+                Before and after photos, then the water test. The app walks you
                 through it.
               </p>
             </div>
@@ -287,9 +287,9 @@ export default function Landing() {
             <div className={styles.step}>
               <div className={`${styles.stepArt} ${styles.stepArt2}`}>
                 <div className={styles.msg}>
-                  <span className={styles.avatar}>A</span>
+                  <span className={styles.avatar}>Y</span>
                   <span className={styles.msgText}>
-                    <span className={styles.msgName}>Alex (hot tub tech)</span>
+                    <span className={styles.msgName}>You, to the owner</span>
                     <span className={styles.msgBody}>
                       Pine Chalet is ready. Here’s the report.
                     </span>
@@ -337,16 +337,18 @@ export default function Landing() {
               >
                 2
               </span>
-              <h3 className={styles.h3}>You get a link</h3>
+              <h3 className={styles.h3}>Send the link</h3>
               <p className={styles.stepP}>
-                Your tech shares the link when the visit is finished. Forward it
-                to the owner.
+                Finish the visit, then send the report. Your owner opens it
+                without an account.
               </p>
             </div>
 
             <div className={styles.step}>
               <div className={`${styles.stepArt} ${styles.stepArt3}`}>
-                <span className={styles.chatFrom}>Guest · Airbnb message</span>
+                <span className={styles.chatFrom}>
+                  Guest · Airbnb message, to your owner
+                </span>
                 <div className={styles.bubbleIn}>
                   The hot tub was cloudy when we arrived. Can we get a refund?
                 </div>
@@ -380,10 +382,10 @@ export default function Landing() {
               >
                 3
               </span>
-              <h3 className={styles.h3}>Proof, if you need it</h3>
+              <h3 className={styles.h3}>Show it if asked</h3>
               <p className={styles.stepP}>
-                A guest complains? Send them the report, or include it with your
-                reply to Airbnb support.
+                A guest complains, or an owner asks? Send the report. It shows
+                what you did and when.
               </p>
             </div>
           </div>
@@ -393,7 +395,8 @@ export default function Landing() {
           <div className={`${styles.wrap} ${styles.center}`}>
             <h2 className={styles.h2Big}>One step at a time</h2>
             <p className={styles.sub}>
-              Real screens from the app your tech uses at the tub.
+              Real screens from the app you use at the tub, across all your
+              clients.
             </p>
           </div>
           <div
@@ -431,7 +434,7 @@ export default function Landing() {
             <div className={styles.reportHead}>
               <h2 className={styles.h2Big}>One link. The whole visit</h2>
               <p className={styles.reportSub}>
-                The owner opens it on any phone. No app, no login. This example
+                Your owner opens it on any phone. No app, no login. This example
                 uses photos from real visits.
               </p>
             </div>
@@ -595,7 +598,7 @@ export default function Landing() {
         </section>
 
         <section id="b-faq" className={styles.faqSec}>
-          <h2 className={styles.h2}>Questions hosts ask</h2>
+          <h2 className={styles.h2}>Questions from pros</h2>
           <Faq />
         </section>
       </main>
@@ -603,14 +606,10 @@ export default function Landing() {
       <section id="b-join" className={styles.join}>
         <div className={`${styles.wrap} ${styles.joinInner}`}>
           <div className={styles.joinCopy}>
-            <h2 className={styles.h2Join}>Stop wondering</h2>
+            <h2 className={styles.h2Join}>Show your work</h2>
             <p className={styles.joinP}>
               Join the early access list. We’ll email you when it’s your turn.
               Free for your first property.
-            </p>
-            <p className={styles.joinSmall}>
-              Built by a working hot tub tech who services short-term rental
-              tubs.
             </p>
           </div>
           <LandingWaitlist />
@@ -623,7 +622,7 @@ export default function Landing() {
             <a href="/privacy">Privacy</a>
             <a href="mailto:tracktubapp@gmail.com">Contact</a>
           </nav>
-          <span>Hot tub turnover reports for short-term rentals.</span>
+          <span>Hot tub visit reports for short-term rentals.</span>
         </footer>
       </section>
     </div>
