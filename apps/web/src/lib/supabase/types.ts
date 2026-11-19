@@ -1337,6 +1337,7 @@ export type Database = {
         Returns: number;
       };
       proof_client_name: { Args: { p_token: string }; Returns: string };
+      proof_record: { Args: { p_token: string }; Returns: Json };
       record_proof_open: {
         Args: { p_share_token: string };
         Returns: undefined;
