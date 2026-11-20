@@ -107,15 +107,22 @@ export default function PrivacyPage() {
             loads only when the link&apos;s exact token matches, and it shows
             the property name and address, the client name, the name of the
             person who recorded the visit (or their email if they have no name),
-            photos, water readings, cleaning steps, and notes. We record that a
-            link was opened and when, without storing the viewer&apos;s IP
-            address in the report-open records.
+            photos, water readings, cleaning steps, and notes. When a person
+            loads a report in their browser, we record that the link was opened
+            and when, without storing the viewer&apos;s IP address in the
+            report-open records. Link previews and automated scanners, and opens
+            by signed-in members of the team that made the report, are not
+            counted. An open means the link was loaded, not that anyone read the
+            report.
           </p>
           <p>
-            Photos are stored in a public Supabase Storage bucket. That means
-            anyone who has an individual photo URL can open that photo, even
-            without the report link. Please share report and photo links
-            carefully.
+            Photos are stored in a private Supabase Storage bucket. They open
+            only through links that expire (about an hour): signed-in team
+            members see them in the app, and a shared report shows them through
+            links created when the report is opened. A photo address copied out
+            of a report stops working once its link expires. Please still share
+            report links carefully, since anyone with a report link can open the
+            report while it is shared.
           </p>
 
           <h2>Retention and your choices</h2>

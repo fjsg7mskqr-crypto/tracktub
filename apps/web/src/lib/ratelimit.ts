@@ -17,7 +17,8 @@ import { NextResponse } from "next/server";
  * by throttling OUR routes (login surface, auth callback, waitlist, proof links)
  * at the edge.
  */
-export type RateLimitBucket = "login" | "callback" | "waitlist" | "proof";
+export type RateLimitBucket =
+  "login" | "callback" | "waitlist" | "proof" | "proof_open";
 
 // Generous windows: a scripted burst trips them; ordinary interactive use never
 // does. Per-IP, sliding window.
@@ -29,6 +30,8 @@ const LIMITS: Record<
   callback: { tokens: 10, window: "60 s" },
   waitlist: { tokens: 5, window: "60 s" },
   proof: { tokens: 30, window: "60 s" },
+  // Per IP + token (the key is built by the route), not per IP alone.
+  proof_open: { tokens: 5, window: "60 s" },
 };
 
 // `undefined` = not yet resolved; `null` = resolved-but-unconfigured (no-op).

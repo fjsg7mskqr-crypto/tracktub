@@ -90,6 +90,8 @@ export type VisitPhoto = {
   id: string;
   kind: PhotoKind;
   storagePath: string;
+  /** Signed, expiring link for display; null if it couldn't be signed. */
+  url: string | null;
   capturedAt: string | null;
 };
 
