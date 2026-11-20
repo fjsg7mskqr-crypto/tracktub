@@ -40,6 +40,11 @@ import {
   recheckSuggestions,
   type OpenItemKind,
 } from "@/components/home/open-items";
+import {
+  EXPIRED_NOTE,
+  PhotoViewer,
+  type ViewerPhoto,
+} from "@/components/photo/PhotoViewer";
 import { AddedList } from "./AddedList";
 import { LeaveForNext, LeftOpen } from "./OpenItems";
 import { NextVisitPicker, dayLabel } from "./NextVisitPicker";
@@ -66,7 +71,11 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [notes, setNotes] = useState(initial.notes);
   const [sheet, setSheet] = useState<ReadingKind | null>(null);
-  const [viewing, setViewing] = useState<PhotoKind | null>(null);
+  // Full-size viewer: this visit's photos, or last visit's single shot.
+  const [viewer, setViewer] = useState<
+    { mode: "mine"; kind: PhotoKind } | { mode: "last"; kind: PhotoKind } | null
+  >(null);
+  const openedFrom = useRef<string | null>(null);
   const [uploading, setUploading] = useState<
     Partial<Record<PhotoKind, string>>
   >({});
@@ -78,6 +87,25 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   const pending = useRef(0);
   const savedNotes = useRef(initial.notes);
   const id = snap.visitId;
+
+  // Return focus to the tile the viewer was last opened from.
+  useEffect(() => {
+    if (viewer === null && openedFrom.current !== null) {
+      document
+        .querySelector<HTMLElement>(`[data-photo-key="${openedFrom.current}"]`)
+        ?.focus();
+      openedFrom.current = null;
+    }
+  }, [viewer]);
+
+  function viewMine(kind: PhotoKind) {
+    openedFrom.current = `mine:${kind}`;
+    setViewer({ mode: "mine", kind });
+  }
+  function viewLast(kind: PhotoKind, from: string) {
+    openedFrom.current = from;
+    setViewer({ mode: "last", kind });
+  }
 
   /** Run one save; the returned snapshot is the new truth. */
   async function run(fn: () => Promise<VisitSnapshot>): Promise<boolean> {
@@ -229,6 +257,29 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
   const photo = (k: PhotoKind) => snap.photos.find((p) => p.kind === k) ?? null;
   const lastShot = (k: PhotoKind) =>
     snap.previous?.photos.find((p) => p.kind === k) ?? null;
+  // This visit's taken photos in on-screen order, for the viewer.
+  const mine = (["before", "after", "cover"] as const).flatMap((k) => {
+    const url = uploading[k] ?? photo(k)?.url ?? null;
+    if (!url) return [];
+    const at = photo(k)?.capturedAt;
+    const shot: ViewerPhoto & { kind: PhotoKind } = {
+      kind: k,
+      label: PHOTO_KINDS[k].label,
+      url,
+      time: uploading[k] ? "Saving…" : at ? formatTime(at) : undefined,
+    };
+    return [shot];
+  });
+  // Reload only loses work that has not landed yet; say so only when true.
+  const allSaved =
+    save.kind !== "saving" &&
+    save.kind !== "error" &&
+    notes === snap.notes &&
+    Object.keys(uploading).length === 0 &&
+    !Object.values(photoFailed).some(Boolean);
+  const expiredNote = allSaved
+    ? "This photo link expired. Reload the page to see it (your visit is saved)."
+    : EXPIRED_NOTE;
   const missing = missingParts(snap);
   const earlier = snap.openItems.filter((i) => i.openedVisitId !== id);
   const leftHere = snap.openItems.filter(
@@ -384,11 +435,15 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
             failed={photoFailed.before}
             lastShot={null}
             onCaptured={(f, at) => void capture("before", f, at)}
-            onViewLast={() => setViewing("before")}
+            onView={() => viewMine("before")}
+            photoKey={"mine:before"}
+            onViewLast={() => undefined}
           />
           <PastTile
             shot={lastShot("after")}
             visitedOn={snap.previous?.visitedOn}
+            onView={() => viewLast("after", "past")}
+            photoKey={"past"}
           />
         </div>
         <p style={hint}>
@@ -487,7 +542,10 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
               failed={photoFailed[k]}
               lastShot={lastShot(k)}
               onCaptured={(f, at) => void capture(k, f, at)}
-              onViewLast={() => setViewing(k)}
+              onView={() => viewMine(k)}
+              photoKey={`mine:${k}`}
+              onViewLast={() => viewLast(k, `thumb:${k}`)}
+              thumbKey={`thumb:${k}`}
             />
           ))}
         </div>
@@ -600,12 +658,46 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
           onClose={() => setSheet(null)}
         />
       )}
-      {viewing && (
-        <LastShotViewer
-          kind={viewing}
-          shot={lastShot(viewing)}
-          visitedOn={snap.previous?.visitedOn}
-          onClose={() => setViewing(null)}
+      {viewer?.mode === "mine" && mine.length > 0 && (
+        <PhotoViewer
+          photos={mine}
+          viewable={mine.map((_, n) => n)}
+          index={Math.max(
+            0,
+            mine.findIndex((m) => m.kind === viewer.kind)
+          )}
+          onIndex={(n) => viewMine(mine[n].kind)}
+          onClose={() => setViewer(null)}
+          expiredNote={expiredNote}
+          renderAction={(n) => (
+            <label className="tt-photo-viewer-retake">
+              <CameraIcon />
+              Retake
+              <CameraInput
+                onFile={(file) => {
+                  const kind = mine[n].kind;
+                  setViewer(null);
+                  void capture(kind, file, new Date().toISOString());
+                }}
+              />
+            </label>
+          )}
+        />
+      )}
+      {viewer?.mode === "last" && lastShot(viewer.kind)?.url && (
+        <PhotoViewer
+          photos={[
+            {
+              label: PHOTO_KINDS[viewer.kind].label,
+              url: lastShot(viewer.kind)?.url ?? null,
+              subtitle: lastVisitLabel(snap.previous?.visitedOn),
+            },
+          ]}
+          viewable={[0]}
+          index={0}
+          onIndex={() => undefined}
+          onClose={() => setViewer(null)}
+          expiredNote={expiredNote}
         />
       )}
     </main>
@@ -814,11 +906,52 @@ const tile: React.CSSProperties = {
   position: "relative",
 };
 
+function lastVisitLabel(visitedOn?: string) {
+  return visitedOn
+    ? `Last visit · ${formatShortDate(visitedOn)}`
+    : "Last visit";
+}
+
+function CameraIcon({ size = 20 }: Readonly<{ size?: number }>) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </svg>
+  );
+}
+
+/** Capture-only file input, hidden inside its <label> so a tap is a direct gesture (iOS). */
+function CameraInput({ onFile }: Readonly<{ onFile: (file: File) => void }>) {
+  return (
+    <input
+      type="file"
+      accept="image/*"
+      capture="environment"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (file) onFile(file);
+      }}
+      style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+    />
+  );
+}
+
 /**
- * One photo step. The whole tile is a <label> around a capture-only file
+ * One photo step. An empty tile is a <label> around a capture-only file
  * input, so a single tap opens the phone camera (iOS allows this because the
- * tap lands on the label itself). Last visit's shot is a separate small
- * thumbnail button — outside the label, so tapping it never opens the camera.
+ * tap lands on the label itself). A taken tile is a button that opens the
+ * full-size viewer, where Retake lives. Last visit's shot is a separate small
+ * thumbnail button, so tapping it never opens the camera.
  */
 function PhotoTile({
   kind,
@@ -827,38 +960,42 @@ function PhotoTile({
   failed,
   lastShot,
   onCaptured,
+  onView,
+  photoKey,
   onViewLast,
-}: {
+  thumbKey,
+}: Readonly<{
   kind: PhotoKind;
   photo: VisitPhoto | null;
   preview?: string;
   failed?: boolean;
   lastShot: VisitPhoto | null;
   onCaptured: (file: File, capturedAt: string) => void;
+  onView: () => void;
+  photoKey: string;
   onViewLast: () => void;
-}) {
+  thumbKey?: string;
+}>) {
   const label = PHOTO_KINDS[kind].label;
   const src = preview ?? photo?.url ?? null;
   const input = (
-    <input
-      type="file"
-      accept="image/*"
-      capture="environment"
-      onChange={(e) => {
-        const file = e.target.files?.[0];
-        e.target.value = "";
-        if (file) onCaptured(file, new Date().toISOString());
-      }}
-      style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+    <CameraInput
+      onFile={(file) => onCaptured(file, new Date().toISOString())}
     />
   );
   return (
     <div style={{ position: "relative" }}>
       {src ? (
-        <label
-          aria-label={`${label} — retake`}
+        <button
+          type="button"
+          data-photo-key={photoKey}
+          aria-label={`View ${label} photo`}
+          onClick={onView}
           style={{
             ...tile,
+            width: "100%",
+            border: 0,
+            font: "inherit",
             background: `#1B2A44 center / cover no-repeat url("${src}")`,
             color: "var(--tt-text)",
             alignItems: "flex-start",
@@ -885,8 +1022,21 @@ function PhotoTile({
                 ? formatTime(photo.capturedAt)
                 : null}
           </span>
-          {input}
-        </label>
+          <svg
+            aria-hidden="true"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ position: "absolute", right: 10, bottom: 10 }}
+          >
+            <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />
+          </svg>
+        </button>
       ) : (
         <label
           style={{
@@ -899,18 +1049,7 @@ function PhotoTile({
             cursor: "pointer",
           }}
         >
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-          >
-            <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-            <circle cx="12" cy="13" r="3.5" />
-          </svg>
+          <CameraIcon size={28} />
           <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
           {input}
         </label>
@@ -945,9 +1084,10 @@ function PhotoTile({
           {input}
         </label>
       )}
-      {lastShot && (
+      {lastShot?.url && (
         <button
           type="button"
+          data-photo-key={thumbKey}
           aria-label={`Last visit's ${label} photo — view`}
           onClick={onViewLast}
           style={{
@@ -958,9 +1098,7 @@ function PhotoTile({
             height: 52,
             borderRadius: 12,
             border: "2px solid rgba(255,255,255,0.6)",
-            background: lastShot.url
-              ? `#131417 center / cover no-repeat url("${lastShot.url}")`
-              : "#131417",
+            background: `#131417 center / cover no-repeat url("${lastShot.url}")`,
             padding: 0,
           }}
         />
@@ -1019,21 +1157,24 @@ function LastShotViewer({
 function PastTile({
   shot,
   visitedOn,
-}: {
+  onView,
+  photoKey,
+}: Readonly<{
   shot: VisitPhoto | null;
   visitedOn?: string;
-}) {
-  return (
-    <div
-      style={{
-        ...tile,
-        background: shot
-          ? shot.url
-            ? `#131417 center / cover no-repeat url("${shot.url}")`
-            : "#131417"
-          : "var(--tt-surface)",
-      }}
-    >
+  onView: () => void;
+  photoKey: string;
+}>) {
+  const style: React.CSSProperties = {
+    ...tile,
+    background: shot
+      ? shot.url
+        ? `#131417 center / cover no-repeat url("${shot.url}")`
+        : "#131417"
+      : "var(--tt-surface)",
+  };
+  const content = (
+    <>
       {shot && (
         <span
           style={{
@@ -1066,6 +1207,42 @@ function PastTile({
           "No earlier photo"
         )}
       </span>
-    </div>
+      {shot?.url && (
+        <svg
+          aria-hidden="true"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#fff"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ position: "absolute", right: 10, bottom: 10 }}
+        >
+          <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />
+        </svg>
+      )}
+    </>
+  );
+  if (!shot?.url) return <div style={style}>{content}</div>;
+  return (
+    <button
+      type="button"
+      data-photo-key={photoKey}
+      aria-label={`View last visit's ${PHOTO_KINDS.after.label} photo`}
+      onClick={onView}
+      style={{
+        ...style,
+        width: "100%",
+        border: 0,
+        font: "inherit",
+        textAlign: "left",
+        alignItems: "flex-start",
+        cursor: "pointer",
+      }}
+    >
+      {content}
+    </button>
   );
 }
