@@ -55,7 +55,23 @@ describe("buildRecord — the mockup visit", () => {
       "After · 10:54 AM",
       "Cover on · 10:56 AM",
     ]);
-    expect(r.photos[0].url).toContain("/storage/v1/object/public/photos/");
+  });
+
+  it("photo urls come from the signed-url map; unsigned ones are null", () => {
+    expect(r.photos.map((p) => p.url)).toEqual([null, null, null]);
+    const row = mockupRow();
+    const signed = buildRecord(
+      row,
+      new Map([
+        ["org/t/before.jpg", "https://x.test/sign/before.jpg?token=a"],
+        ["org/t/cover.jpg", null],
+      ])
+    );
+    expect(signed.photos.map((p) => p.url)).toEqual([
+      "https://x.test/sign/before.jpg?token=a",
+      null,
+      null,
+    ]);
   });
 
   it("lists work done, then the not-drained line", () => {

@@ -24,7 +24,6 @@ import {
   type ReadingField,
   type ReadingKind,
 } from "@/lib/readings";
-import { photoPublicUrl } from "@/lib/supabase/storage";
 import { formatShortDate, formatTime } from "@/lib/time";
 import type { CleaningStepCode } from "@/lib/types";
 import {
@@ -839,7 +838,7 @@ function PhotoTile({
   onViewLast: () => void;
 }) {
   const label = PHOTO_KINDS[kind].label;
-  const src = preview ?? (photo ? photoPublicUrl(photo.storagePath) : null);
+  const src = preview ?? photo?.url ?? null;
   const input = (
     <input
       type="file"
@@ -959,7 +958,9 @@ function PhotoTile({
             height: 52,
             borderRadius: 12,
             border: "2px solid rgba(255,255,255,0.6)",
-            background: `#131417 center / cover no-repeat url("${photoPublicUrl(lastShot.storagePath)}")`,
+            background: lastShot.url
+              ? `#131417 center / cover no-repeat url("${lastShot.url}")`
+              : "#131417",
             padding: 0,
           }}
         />
@@ -1003,7 +1004,7 @@ function LastShotViewer({
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- storage URL, sized by CSS */}
       <img
-        src={photoPublicUrl(shot.storagePath)}
+        src={shot.url ?? undefined}
         alt={`Last visit's ${label} photo`}
         style={{ maxWidth: "100%", maxHeight: "80%", objectFit: "contain" }}
       />
@@ -1027,7 +1028,9 @@ function PastTile({
       style={{
         ...tile,
         background: shot
-          ? `#131417 center / cover no-repeat url("${photoPublicUrl(shot.storagePath)}")`
+          ? shot.url
+            ? `#131417 center / cover no-repeat url("${shot.url}")`
+            : "#131417"
           : "var(--tt-surface)",
       }}
     >

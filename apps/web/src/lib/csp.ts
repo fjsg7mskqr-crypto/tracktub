@@ -120,7 +120,7 @@ export function buildCsp(nonce: string, opts: BuildCspOptions = {}): string {
     "default-src 'self'",
     `script-src 'nonce-${nonce}' 'strict-dynamic' 'self'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    // Photos render straight from Supabase Storage public URLs.
+    // Photos render from Supabase Storage signed URLs (/storage/v1/object/sign/).
     `img-src 'self' data: blob:${imgOrigin ? ` ${imgOrigin}` : ""}`,
     "font-src 'self'",
     // Sentry session replay records via a worker created from a blob: URL.

@@ -3,7 +3,11 @@ import { getCurrentMembership } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getURL } from "@/lib/url";
 import { RecordView } from "@/components/record/RecordView";
-import { buildRecord } from "@/components/record/record-model";
+import { signPhotoUrls } from "@/lib/supabase/storage";
+import {
+  buildRecord,
+  recordPhotoPaths,
+} from "@/components/record/record-model";
 import {
   loadRecordById,
   loadNextDue,
@@ -28,7 +32,10 @@ export default async function RecordPage({
 
   return (
     <RecordView
-      visit={buildRecord(row)}
+      visit={buildRecord(
+        row,
+        await signPhotoUrls(supabase, recordPhotoPaths(row))
+      )}
       nextDue={await loadNextDue(supabase, row)}
       audience="operator"
       shareUrl={row.share_token ? proofUrl(getURL(), row.share_token) : null}

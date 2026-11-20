@@ -3,11 +3,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import ProofPage from "@/app/proof/[token]/page";
 import { fakeSupabase } from "./fake-supabase";
 import { BANNED_WORDS, mockupRow } from "./fixtures";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/supabase/service", () => ({ createServiceClient: vi.fn() }));
+vi.mock("@sentry/nextjs", () => ({
+  captureMessage: vi.fn(),
+  captureException: vi.fn(),
+}));
 vi.mock("@/lib/actions/proofEvent", () => ({ recordProofShare: vi.fn() }));
 vi.stubGlobal(
   "fetch",
@@ -43,6 +49,24 @@ function client(
 
 afterEach(cleanup);
 
+/** A service client whose storage signs every path it is given. */
+function signer() {
+  const createSignedUrls = vi.fn((paths: string[]) =>
+    Promise.resolve({
+      data: paths.map((path) => ({
+        path,
+        signedUrl: `https://x.test/storage/v1/object/sign/photos/${path}?token=t`,
+        error: null,
+      })),
+      error: null,
+    })
+  );
+  vi.mocked(createServiceClient).mockReturnValue({
+    storage: { from: vi.fn(() => ({ createSignedUrls })) },
+  } as never);
+  return createSignedUrls;
+}
+
 describe("/proof/[token]", () => {
   it("renders the record and records NO open during server render", async () => {
     const fake = client(mockupRow());
@@ -56,6 +80,38 @@ describe("/proof/[token]", () => {
       "Cedar Cabin"
     );
     expect(screen.getByText(/record$/).textContent).toBe("TrackTub record");
+  });
+
+  it("shows the photos through signed links, signed in one call", async () => {
+    const sign = signer();
+    client(mockupRow());
+    const { container } = render(await ProofPage(params()));
+    expect(sign).toHaveBeenCalledTimes(1);
+    expect(sign.mock.calls[0][0]).toEqual(
+      expect.arrayContaining(["org/t/before.jpg", "org/t/cover.jpg"])
+    );
+    const srcs = [...container.querySelectorAll("img")].map((i) => i.src);
+    expect(srcs.length).toBeGreaterThan(0);
+    for (const src of srcs) {
+      expect(src).toContain("/storage/v1/object/sign/photos/");
+      expect(src).not.toContain("/object/public/");
+    }
+  });
+
+  it("without the service key: still 200, photos are placeholders", async () => {
+    vi.mocked(createServiceClient).mockReturnValue(null);
+    client(mockupRow());
+    const { container } = render(await ProofPage(params()));
+    expect(container.querySelectorAll("img").length).toBe(0);
+    expect(screen.getAllByText("Photo unavailable").length).toBeGreaterThan(0);
+    expect(screen.getByText("Cedar Cabin")).toBeTruthy();
+  });
+
+  it("a bad token never reaches the signer", async () => {
+    const sign = signer();
+    client(null);
+    await expect(ProofPage(params("nope"))).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(sign).not.toHaveBeenCalled();
   });
 
   it("is the owner view: no operator controls", async () => {

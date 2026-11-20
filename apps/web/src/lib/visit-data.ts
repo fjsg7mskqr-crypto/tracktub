@@ -7,6 +7,7 @@ import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { isJpeg } from "@/lib/compress-photo";
+import { signPhotoUrls } from "@/lib/supabase/storage";
 import {
   READING_FIELDS,
   readingColumn,
@@ -130,6 +131,7 @@ function visitPhotos(rows: PhotoRow[] | null | undefined): VisitPhoto[] {
       id: r.id,
       kind,
       storagePath: r.storage_path,
+      url: null,
       capturedAt: r.captured_at ? new Date(r.captured_at).toISOString() : null,
       createdAt: r.created_at,
     });
@@ -178,13 +180,24 @@ export async function loadVisitSnapshot(
   ]);
   const nv = nextRow.data;
 
+  // One signing call for this visit's photos and last visit's.
+  const photos = visitPhotos(t.photos);
+  const urls = await signPhotoUrls(db, [
+    ...photos.map((p) => p.storagePath),
+    ...(previous?.photos ?? []).map((p) => p.storagePath),
+  ]);
+  const withUrl = (p: VisitPhoto): VisitPhoto => ({
+    ...p,
+    url: urls.get(p.storagePath) ?? null,
+  });
+
   return {
     visitId: t.id,
     propertyId: t.property_id,
     propertyName: one(t.property)?.name ?? "Tub",
     status: t.status,
     openedAt: t.created_at,
-    photos: visitPhotos(t.photos),
+    photos: photos.map(withUrl),
     found,
     foundAt: found
       ? ((water?.found_recorded_at ?? water?.recorded_at ?? null) as
@@ -204,7 +217,10 @@ export async function loadVisitSnapshot(
     notes: t.notes ?? "",
     flag: t.owner_flag ?? null,
     openItems,
-    previous,
+    previous: previous && {
+      ...previous,
+      photos: previous.photos.map(withUrl),
+    },
     // Scheduled for later (still pending) vs. the re-check this very visit
     // answers (shown in the brief at the top).
     nextVisit:
@@ -422,8 +438,8 @@ export async function savePhoto(
   // else, e.g. an unprocessed original that still carries location data.
   if (!(await isJpeg(file))) throw new Error("Photo must be a processed JPEG");
   const { phase, slot } = PHOTO_KINDS[kind];
-  // A fresh path per shot: the bucket is public, so reusing a path would let a
-  // cached copy of the old shot show after a retake.
+  // A fresh path per shot, so a cached copy of the old shot can never show
+  // after a retake.
   const storagePath = `${orgId}/${visitId}/${phase}/${slot}-${crypto.randomUUID()}.jpg`;
 
   const { error: upErr } = await db.storage

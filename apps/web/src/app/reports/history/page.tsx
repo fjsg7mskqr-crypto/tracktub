@@ -40,7 +40,7 @@ export default async function HistoryPage({
   const client = Array.isArray(tub.client) ? tub.client[0] : tub.client;
 
   const rows = historyVisits(tubRecords, period, new Date());
-  const records = rows.map(buildRecord);
+  const records = rows.map((r) => buildRecord(r));
 
   return (
     <div className="tt-record-page">

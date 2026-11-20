@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getURL } from "@/lib/url";
 import { RecordView } from "@/components/record/RecordView";
 import { OpenBeacon } from "@/components/record/OpenBeacon";
+import { signProofPhotos } from "@/lib/proof-photos";
 import { buildRecord } from "@/components/record/record-model";
 import {
   loadRecordByToken,
@@ -37,7 +38,7 @@ export default async function ProofPage({
 
   // Anon can't read `client` (no anon policy, on purpose), so the name comes
   // from a token-checked function. Without it the record renders nameless.
-  const visit = buildRecord(row);
+  const visit = buildRecord(row, await signProofPhotos(row));
   try {
     const { data } = await supabase.rpc("proof_client_name", {
       p_token: token,
