@@ -49,7 +49,9 @@ describe("RecordView", () => {
         shareUrl={URL}
       />
     );
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /send to owner|copy link/i })
+    ).toBeNull();
     expect(
       screen.queryByText("Below is exactly what the owner sees.")
     ).toBeNull();

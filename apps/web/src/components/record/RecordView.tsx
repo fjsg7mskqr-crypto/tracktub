@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { tubPath } from "@/lib/app-routes";
 import type { RecordModel } from "./record-model";
+import { RecordPhotos } from "./RecordPhotos";
 import { RecordShareActions } from "./RecordShareActions";
 import "./record.css";
 
@@ -173,41 +174,14 @@ export function RecordView({
         <section>
           <h2>Photos</h2>
           {visit.photos.length > 0 ? (
-            <div className="tt-record-photos">
-              {visit.photos.map((p, i) => (
-                <figure key={`${i}-${p.label}`}>
-                  {p.url ? (
-                    // Signed, expiring URL that changes every render, so
-                    // next/image's optimiser cache can't help (or leak one).
-                    // eslint-disable-next-line @next/next/no-img-element -- stored photo, not a static asset
-                    <img src={p.url} alt={`${p.label} photo`} loading="lazy" />
-                  ) : (
-                    <div
-                      className="tt-record-text tt-record-muted"
-                      role="img"
-                      aria-label={`${p.label} photo unavailable`}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minHeight: 120,
-                        border: "1px dashed currentColor",
-                      }}
-                    >
-                      Photo unavailable
-                    </div>
-                  )}
-                  <figcaption>
-                    {p.label} · {clock(p.time)}
-                    {p.received ? (
-                      <span className="tt-record-received">
-                        received {clock(p.received)}
-                      </span>
-                    ) : null}
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
+            <RecordPhotos
+              photos={visit.photos.map((p) => ({
+                label: p.label,
+                time: clock(p.time),
+                received: p.received ? clock(p.received) : null,
+                url: p.url,
+              }))}
+            />
           ) : (
             <p className="tt-record-text tt-record-muted">No photos.</p>
           )}
