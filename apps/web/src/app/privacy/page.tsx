@@ -116,10 +116,13 @@ export default function PrivacyPage() {
             report.
           </p>
           <p>
-            Photos are stored in a public Supabase Storage bucket. That means
-            anyone who has an individual photo URL can open that photo, even
-            without the report link. Please share report and photo links
-            carefully.
+            Photos are stored in a private Supabase Storage bucket. They open
+            only through links that expire (about an hour): signed-in team
+            members see them in the app, and a shared report shows them through
+            links created when the report is opened. A photo address copied out
+            of a report stops working once its link expires. Please still share
+            report links carefully, since anyone with a report link can open the
+            report while it is shared.
           </p>
 
           <h2>Retention and your choices</h2>

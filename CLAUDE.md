@@ -85,6 +85,11 @@ tiers share one database, `main` and `prod` are the **same DB** — any schema a
 4. The structural cure is a **separate staging/prod database — issue #45**
    (launch-blocker). Until then, the above is the mitigation.
 
+**Server-only secret (#44):** `SUPABASE_SERVICE_ROLE_KEY` (never `NEXT_PUBLIC_`) must be set in
+Vercel for **Production** and **Preview**. Public reports (`/proof/[token]`) use it, via
+`src/lib/supabase/service.ts`, solely to sign photo links for paths `proof_record(token)` returned.
+Missing → reports still render with "Photo unavailable" (and one Sentry error).
+
 **Env vars (caution):** `NEXT_PUBLIC_SUPABASE_URL` and
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` must be set in Vercel for the **Production** (and
 **Preview**) environments. They are inlined at **build** time, so a **redeploy is

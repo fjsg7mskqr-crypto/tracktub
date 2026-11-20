@@ -21,6 +21,7 @@ const photo = (kind: VisitPhoto["kind"]): VisitPhoto => ({
   id: kind,
   kind,
   storagePath: `x/${kind}`,
+  url: null,
   capturedAt: null,
 });
 
