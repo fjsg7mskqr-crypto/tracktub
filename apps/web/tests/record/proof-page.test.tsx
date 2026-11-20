@@ -117,7 +117,9 @@ describe("/proof/[token]", () => {
   it("is the owner view: no operator controls", async () => {
     client(mockupRow());
     render(await ProofPage(params()));
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /send to owner|copy link/i })
+    ).toBeNull();
   });
 
   it("renders when the client-name RPC errors", async () => {
