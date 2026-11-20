@@ -107,9 +107,13 @@ export default function PrivacyPage() {
             loads only when the link&apos;s exact token matches, and it shows
             the property name and address, the client name, the name of the
             person who recorded the visit (or their email if they have no name),
-            photos, water readings, cleaning steps, and notes. We record that a
-            link was opened and when, without storing the viewer&apos;s IP
-            address in the report-open records.
+            photos, water readings, cleaning steps, and notes. When a person
+            loads a report in their browser, we record that the link was opened
+            and when, without storing the viewer&apos;s IP address in the
+            report-open records. Link previews and automated scanners, and opens
+            by signed-in members of the team that made the report, are not
+            counted. An open means the link was loaded, not that anyone read the
+            report.
           </p>
           <p>
             Photos are stored in a public Supabase Storage bucket. That means

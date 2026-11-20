@@ -220,7 +220,7 @@ describe("Home", () => {
     expect(tiles).toEqual(["Cedar Cabin", "Harbor House"]);
     const cedar = screen.getByRole("article", { name: "Cedar Cabin" });
     expect(cedar.textContent).toContain("on today's route");
-    expect(cedar.textContent).toContain("Host opened report");
+    expect(cedar.textContent).toContain("Report link opened");
     const harbor = screen.getByRole("article", { name: "Harbor House" });
     expect(harbor.textContent).toContain("Balanced");
     expect(

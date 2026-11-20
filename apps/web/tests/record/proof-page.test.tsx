@@ -9,6 +9,10 @@ import { BANNED_WORDS, mockupRow } from "./fixtures";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/actions/proofEvent", () => ({ recordProofShare: vi.fn() }));
+vi.stubGlobal(
+  "fetch",
+  vi.fn(() => Promise.resolve(new Response(null, { status: 204 })))
+);
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
@@ -40,15 +44,14 @@ function client(
 afterEach(cleanup);
 
 describe("/proof/[token]", () => {
-  it("records a view once for a locked turnover", async () => {
+  it("renders the record and records NO open during server render", async () => {
     const fake = client(mockupRow());
     render(await ProofPage(params("tok")));
     expect(fake.rpc).toHaveBeenCalledWith("proof_record", { p_token: "tok" });
     expect(fake.from).not.toHaveBeenCalled(); // anon touches no table
-    const views = fake.rpc.mock.calls.filter(
-      ([name]) => name === "record_share_view"
-    );
-    expect(views).toEqual([["record_share_view", { p_token: "tok" }]]);
+    const names = fake.rpc.mock.calls.map(([name]) => name);
+    expect(names).not.toContain("record_share_view");
+    expect(names).not.toContain("record_proof_open");
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "Cedar Cabin"
     );
@@ -61,13 +64,13 @@ describe("/proof/[token]", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("renders when the view RPC errors", async () => {
+  it("renders when the client-name RPC errors", async () => {
     client(mockupRow(), () => Promise.reject(new Error("network")));
     render(await ProofPage(params()));
     expect(screen.getByText("Cedar Cabin")).toBeTruthy();
   });
 
-  it("renders when the view RPC returns an error", async () => {
+  it("renders when the client-name RPC returns an error", async () => {
     client(mockupRow(), () =>
       Promise.resolve({ data: null, error: { message: "denied" } })
     );
@@ -75,7 +78,7 @@ describe("/proof/[token]", () => {
     expect(screen.getByText("Cedar Cabin")).toBeTruthy();
   });
 
-  it("unknown token → notFound, no view recorded", async () => {
+  it("unknown token → notFound, nothing recorded", async () => {
     const fake = client(null);
     await expect(ProofPage(params())).rejects.toThrow("NEXT_NOT_FOUND");
     expect(notFound).toHaveBeenCalled();

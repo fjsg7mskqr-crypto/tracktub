@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getURL } from "@/lib/url";
 import { RecordView } from "@/components/record/RecordView";
+import { OpenBeacon } from "@/components/record/OpenBeacon";
 import { buildRecord } from "@/components/record/record-model";
 import {
   loadRecordByToken,
@@ -19,7 +20,9 @@ export const metadata: Metadata = {
 // Anon has no table access: the record loads through proof_record(token), the
 // client name through proof_client_name(token). Both return data only for the
 // exact token of a locked, shared visit. Dynamic: it reads per-request data
-// and records the open.
+// (and must, for the CSP nonce). It does NOT record the open: a server render
+// is also what link-preview crawlers and scanners trigger, so <OpenBeacon>
+// records it from the browser once a person has loaded the page.
 export default async function ProofPage({
   params,
 }: {
@@ -31,20 +34,6 @@ export default async function ProofPage({
   const proof = await loadRecordByToken(supabase, token);
   if (!proof) notFound();
   const { row, tubVisits } = proof;
-
-  // Record the open (Reports' "Opened"). share_view is its own append-only
-  // table because turnover_lock_guard rejects updates to a locked turnover.
-  // Counting must never break the page the owner came to read.
-  try {
-    await supabase.rpc("record_share_view", { p_token: token });
-  } catch {
-    /* non-critical */
-  }
-  try {
-    await supabase.rpc("record_proof_open", { p_share_token: token });
-  } catch {
-    /* non-critical — legacy proof_event signal */
-  }
 
   // Anon can't read `client` (no anon policy, on purpose), so the name comes
   // from a token-checked function. Without it the record renders nameless.
@@ -59,11 +48,14 @@ export default async function ProofPage({
   }
 
   return (
-    <RecordView
-      visit={visit}
-      nextDue={await loadNextDue(supabase, row, tubVisits)}
-      audience="owner"
-      shareUrl={proofUrl(getURL(), token)}
-    />
+    <>
+      <OpenBeacon token={token} />
+      <RecordView
+        visit={visit}
+        nextDue={await loadNextDue(supabase, row, tubVisits)}
+        audience="owner"
+        shareUrl={proofUrl(getURL(), token)}
+      />
+    </>
   );
 }
