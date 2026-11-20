@@ -7,7 +7,7 @@
  * #18). Neither a URL nor a JWT contains legitimate whitespace, so removing it
  * is always safe and exactly repairs a wrapped paste.
  */
-function clean(value: string | undefined): string | undefined {
+export function clean(value: string | undefined): string | undefined {
   if (value === undefined) return undefined;
   const stripped = value.replace(/\s/g, "");
   return stripped === "" ? undefined : stripped;

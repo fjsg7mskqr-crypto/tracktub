@@ -13,7 +13,7 @@ import {
 } from "@/lib/readings";
 import { CLEANING_STEPS, PHOTO_SLOT_LABELS, type PhotoSlot } from "@/lib/types";
 import { treatmentLabel } from "@/lib/chemistry";
-import { photoPublicUrl } from "@/lib/supabase/storage";
+import type { PhotoUrls } from "@/lib/supabase/storage";
 import { formatDate, formatShortDate, formatTime } from "@/lib/time";
 
 type ReadingValues = Record<ReadingField, number | null> & {
@@ -98,7 +98,7 @@ export type RecordModel = {
     time: string;
     /** Server receive time, only when it differs meaningfully from `time`. */
     received: string | null;
-    url: string;
+    url: string | null;
   }[];
   added: string[];
   work: { label: string; done: boolean }[];
@@ -205,7 +205,14 @@ export function receivedLabel(
     : `${formatShortDate(receivedAt)}, ${time}`;
 }
 
-export function buildRecord(row: RecordRow): RecordModel {
+/** Storage paths of a record's photos, to sign in one batch. */
+export const recordPhotoPaths = (row: RecordRow): string[] =>
+  row.photos.map((p) => p.storage_path).filter((p): p is string => !!p);
+
+/** `urls` maps storage path → signed URL; a missing or null entry renders as a
+ *  "photo unavailable" placeholder. The history report only counts photos, so
+ *  it passes none. */
+export function buildRecord(row: RecordRow, urls?: PhotoUrls): RecordModel {
   const water = row.water;
   const locked = row.status === "submitted_locked";
   const steps = new Set(row.cleaning_steps ?? []);
@@ -238,7 +245,7 @@ export function buildRecord(row: RecordRow): RecordModel {
             : PHOTO_LABEL[kind],
         time: formatTime(p.captured_at ?? p.received_at),
         received: receivedLabel(p.captured_at, p.received_at),
-        url: photoPublicUrl(p.storage_path as string),
+        url: urls?.get(p.storage_path as string) ?? null,
       }))
   );
   const kinds = new Set(stored.map(photoKind));

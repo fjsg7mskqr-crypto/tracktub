@@ -130,7 +130,7 @@ describe("enforcing nonce-based CSP (built per-request by middleware)", () => {
   it("allowlists the Supabase origin (only) in img-src for Storage photos", () => {
     const csp = buildCsp(TEST_NONCE, {
       supabaseUrl:
-        "https://x.supabase.co/storage/v1/object/public/photos/a.jpg",
+        "https://x.supabase.co/storage/v1/object/sign/photos/a.jpg?token=t",
       isDev: false,
     });
     expect(csp).toContain("img-src 'self' data: blob: https://x.supabase.co;");

@@ -13,7 +13,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rls": "vitest run tests/rls.test.ts tests/visit.rls.test.ts",
+    "test:rls": "vitest run tests/rls.test.ts tests/visit.rls.test.ts tests/photos-private.rls.test.ts",
     "knip": "knip --include files,dependencies,devDependencies,unlisted,unresolved,binaries",
     "promo:status": "bash ../../scripts/promo-status.sh"
   },
@@ -31,7 +31,8 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "server-only": "^0.0.1"
   },
   "overrides": {
     "postcss": "^8.5.10",

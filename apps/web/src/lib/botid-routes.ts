@@ -10,4 +10,5 @@
  */
 export const BOTID_PROTECTED_ROUTES = [
   { path: "/landing/waitlist", method: "POST" },
+  { path: "/proof/*/open", method: "POST" },
 ] as const;
