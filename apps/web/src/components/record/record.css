@@ -357,7 +357,8 @@
   cursor: pointer;
 }
 .tt-photo-viewer-btn:disabled {
-  opacity: 0.3;
+  /* ≥4.5:1 (white icon on dark pill) even when disabled */
+  opacity: 0.6;
   cursor: default;
 }
 .tt-photo-viewer-btn:focus-visible,
