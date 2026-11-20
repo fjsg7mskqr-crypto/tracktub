@@ -71,6 +71,7 @@ describe("BotID wiring", () => {
     // client-protected route without a server check protects nothing.
     const files: Record<string, string> = {
       "/landing/waitlist": "src/app/landing/waitlist/route.ts",
+      "/proof/*/open": "src/app/proof/[token]/open/route.ts",
     };
     for (const { path } of BOTID_PROTECTED_ROUTES) {
       const file = files[path];

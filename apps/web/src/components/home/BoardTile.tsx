@@ -16,7 +16,7 @@ export type TileData = {
   /** "Lakeview Rentals · on today's route". */
   subline: string | null;
   items: OpenItem[];
-  /** "Last visit Oct 31" · "Host opened report". */
+  /** "Last visit Oct 31" · "Report link opened". */
   footer: [string, string] | null;
   draftId: string | null;
   onRoute: boolean;

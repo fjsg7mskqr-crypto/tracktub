@@ -77,7 +77,7 @@ async function loadProfileName(
 const REPORT: Record<ReportState, string> = {
   not_sent: "Report not sent",
   sent: "Sent",
-  opened: "Host opened report",
+  opened: "Report link opened",
 };
 
 function groupBy<T extends { tubId: string }>(

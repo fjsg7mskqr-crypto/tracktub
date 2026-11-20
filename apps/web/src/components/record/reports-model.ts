@@ -1,6 +1,7 @@
 // Reports (spec §10) as data: the Sent list and the history report's window.
 // Sent = the operator sent or copied the link (a share_copied proof_event);
-// Opened = the owner's link was opened at least once (any share_view row).
+// Opened = a person loaded the owner's link at least once (any share_view row;
+// previews, bots and the team's own opens are filtered out when recording).
 
 import { APP_TIME_ZONE, formatShortDate, formatTime } from "@/lib/time";
 
