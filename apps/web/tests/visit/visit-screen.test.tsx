@@ -1,6 +1,15 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -58,6 +67,18 @@ function snap(over: Partial<VisitSnapshot> = {}): VisitSnapshot {
     ...over,
   };
 }
+
+// jsdom has no <dialog> modal support; mimic what browsers do.
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    if (!this.hasAttribute("open")) return;
+    this.removeAttribute("open");
+    this.dispatchEvent(new Event("close"));
+  };
+});
 
 beforeEach(() => {
   for (const fn of Object.values(actions)) fn.mockReset();
@@ -191,67 +212,178 @@ describe("VisitScreen", () => {
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
-  it("a taken photo is still a one-tap retake", () => {
-    render(
-      <VisitScreen
-        initial={snap({
-          photos: [
-            {
-              id: "ph1",
-              kind: "before",
-              storagePath: "u/before.jpg",
-              url: "https://x.test/sign/before.jpg",
-              capturedAt: "2026-10-27T09:45:00.000Z",
-            },
-          ],
-        })}
-      />
+  const shot = (kind: "before" | "after" | "cover") => ({
+    id: `ph-${kind}`,
+    kind,
+    storagePath: `u/${kind}.jpg`,
+    url: `https://x.test/sign/${kind}.jpg`,
+    capturedAt: "2026-10-27T09:45:00.000Z",
+  });
+  const previous = {
+    visitId: "v0",
+    visitedOn: "2026-10-20T09:00:00.000Z",
+    found: null,
+    notes: "",
+    photos: [
+      {
+        id: "ph0",
+        kind: "after" as const,
+        storagePath: "u/old-after.jpg",
+        url: "https://x.test/sign/old-after.jpg",
+        capturedAt: null,
+      },
+    ],
+  };
+  const viewer = () => document.querySelector("dialog.tt-photo-viewer");
+
+  it("a taken tile opens the viewer, not the camera; Retake lives in the viewer", async () => {
+    actions.savePhoto.mockResolvedValue(snap());
+    URL.createObjectURL = vi.fn(() => "blob:x");
+    URL.revokeObjectURL = vi.fn();
+    render(<VisitScreen initial={snap({ photos: [shot("before")] })} />);
+    const tile = screen.getByRole("button", { name: "View Before photo" });
+    expect(tile.closest("label")).toBeNull();
+    expect(tile.querySelector("input")).toBeNull();
+    fireEvent.click(tile);
+    const d = viewer() as HTMLDialogElement;
+    expect(d.open).toBe(true);
+    const retake = screen.getByText("Retake").closest("label")!;
+    const input = retake.querySelector(
+      "input[type=file][capture=environment][accept='image/*']"
+    ) as HTMLInputElement;
+    expect(input).toBeTruthy();
+    fireEvent.change(input, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+    expect(viewer()).toBeNull();
+    await waitFor(() => expect(actions.savePhoto).toHaveBeenCalled());
+    expect((actions.savePhoto.mock.calls[0][0] as FormData).get("kind")).toBe(
+      "before"
     );
-    const retake = screen.getByLabelText("Before — retake");
-    expect(retake.tagName).toBe("LABEL");
-    expect(retake.querySelector("input[capture=environment]")).toBeTruthy();
   });
 
-  it("last visit's shot is a thumbnail that opens large; none when absent", () => {
-    const first = render(<VisitScreen initial={snap()} />);
-    expect(screen.queryByLabelText(/Last visit's .* photo — view/)).toBeNull();
-    first.unmount();
+  it("while uploading, the tile opens the viewer on the preview", async () => {
+    let finish: (v: VisitSnapshot) => void = () => undefined;
+    actions.savePhoto.mockReturnValue(new Promise((r) => (finish = r)));
+    URL.createObjectURL = vi.fn(() => "blob:preview");
+    URL.revokeObjectURL = vi.fn();
+    render(<VisitScreen initial={snap({ photos: [shot("before")] })} />);
+    fireEvent.click(screen.getByRole("button", { name: "View Before photo" }));
+    fireEvent.change(document.querySelector("dialog input") as Element, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+    await waitFor(() => expect(actions.savePhoto).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "View Before photo" }));
+    expect(
+      document.querySelector("img.tt-photo-viewer-img")?.getAttribute("src")
+    ).toBe("blob:preview");
+    expect(viewer()?.textContent).toContain("Saving…");
+    expect(screen.getByText("Retake")).toBeTruthy();
+    await act(async () => finish(snap()));
+  });
+
+  it("empty tiles and the failed row still open the camera directly", () => {
+    render(<VisitScreen initial={snap({ photos: [shot("before")] })} />);
+    const inputs = document.querySelectorAll("input[type=file]");
+    expect(inputs).toHaveLength(2); // after + cover; before is a viewer button
+    for (const input of Array.from(inputs)) {
+      expect(input.closest("label")).toBeTruthy();
+    }
+    expect(viewer()).toBeNull();
+  });
+
+  it("prev/next walk this visit's photos in on-screen order; Esc closes and focus returns", async () => {
     render(
       <VisitScreen
         initial={snap({
-          previous: {
-            visitId: "v0",
-            visitedOn: "2026-10-20T09:00:00.000Z",
-            found: null,
-            notes: "",
-            photos: [
-              {
-                id: "ph0",
-                kind: "after",
-                storagePath: "u/old-after.jpg",
-                url: "https://x.test/sign/old-after.jpg",
-                capturedAt: null,
-              },
-            ],
-          },
+          photos: [shot("cover"), shot("before"), shot("after")],
         })}
       />
     );
-    expect(
-      screen.queryByLabelText("Last visit's Before photo — view")
-    ).toBeNull();
+    const cover = () =>
+      screen.getByRole("button", { name: "View Cover on photo" });
+    fireEvent.click(screen.getByRole("button", { name: "View Before photo" }));
+    const d = viewer() as HTMLDialogElement;
+    expect(d.textContent).toContain("1 of 3");
+    fireEvent.keyDown(d, { key: "ArrowRight" });
+    expect(d.textContent).toContain("2 of 3");
+    expect(d.querySelector("img")?.getAttribute("alt")).toBe(
+      "After · full tub"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+    expect(d.textContent).toContain("3 of 3");
+    // Retake always applies to the photo on screen (the cover, here).
+    actions.savePhoto.mockResolvedValue(
+      snap({ photos: [shot("cover"), shot("before"), shot("after")] })
+    );
+    URL.createObjectURL = vi.fn(() => "blob:x");
+    URL.revokeObjectURL = vi.fn();
+    fireEvent.click(screen.getByRole("button", { name: "Previous photo" }));
+    fireEvent.change(d.querySelector("input") as Element, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+    expect(viewer()).toBeNull();
+    await waitFor(() => expect(actions.savePhoto).toHaveBeenCalled());
+    expect((actions.savePhoto.mock.calls[0][0] as FormData).get("kind")).toBe(
+      "after"
+    );
+    fireEvent.click(cover());
+    act(() => (viewer() as HTMLDialogElement).close()); // what the browser does on Esc
+    expect(viewer()).toBeNull();
+    expect(document.activeElement).toBe(cover());
+  });
+
+  it("last visit's shot (tile and thumbnail) opens the viewer without Retake", () => {
+    render(<VisitScreen initial={snap({ previous })} />);
+    const past = screen.getByRole("button", {
+      name: "View last visit's After · full tub photo",
+    });
+    fireEvent.click(past);
+    expect(viewer()?.textContent).toContain("Last visit · Oct 20");
+    expect(screen.queryByText("Retake")).toBeNull();
+    act(() => (viewer() as HTMLDialogElement).close());
+    expect(document.activeElement).toBe(past);
     const thumb = screen.getByLabelText(
       "Last visit's After · full tub photo — view"
     );
     expect(thumb.closest("label")).toBeNull();
-    expect(screen.getByText(/Side by side/)).toBeTruthy();
     fireEvent.click(thumb);
-    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(viewer()?.textContent).toContain("Last visit · Oct 20");
+    expect(screen.queryByText("Retake")).toBeNull();
+    fireEvent.click(viewer() as Element);
+    expect(viewer()).toBeNull();
+  });
+
+  it("no last-visit controls when there is no earlier photo", () => {
+    render(<VisitScreen initial={snap()} />);
+    expect(screen.queryByLabelText(/Last visit's .* photo — view/)).toBeNull();
     expect(
-      screen.getByAltText("Last visit's After · full tub photo")
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole("dialog"));
-    expect(screen.queryByRole("dialog")).toBeNull();
+      screen.queryByRole("button", { name: /View last visit/ })
+    ).toBeNull();
+  });
+
+  it("expired link: reload note promises a save only when everything is saved", () => {
+    render(<VisitScreen initial={snap({ photos: [shot("before")] })} />);
+    fireEvent.click(screen.getByRole("button", { name: "View Before photo" }));
+    fireEvent.error(document.querySelector("img.tt-photo-viewer-img")!);
+    expect(screen.getByRole("alert").textContent).toContain(
+      "(your visit is saved)"
+    );
+    expect(screen.getByRole("button", { name: "Reload" })).toBeTruthy();
+  });
+
+  it("expired link with unsaved notes uses the neutral wording", () => {
+    render(<VisitScreen initial={snap({ photos: [shot("before")] })} />);
+    fireEvent.change(screen.getByLabelText("Notes"), {
+      target: { value: "typed but not saved yet" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "View Before photo" }));
+    fireEvent.error(document.querySelector("img.tt-photo-viewer-img")!);
+    const note = screen.getByRole("alert").textContent ?? "";
+    expect(note).toContain(
+      "This photo link expired. Reload the page to see it."
+    );
+    expect(note).not.toContain("your visit is saved");
   });
 
   it("finish is enabled with nothing logged and lists what is missing", async () => {
