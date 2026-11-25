@@ -46,7 +46,7 @@ describe.skipIf(!ready)("private photos bucket", () => {
       .select("id")
       .single();
     if (tErr || !tub) throw tErr ?? new Error("property insert failed");
-    const visit = await createDraft(admin, tub.id, userId);
+    const visit = await createDraft(admin, tub.id, userId, null);
     const path = `${org.id}/${visit}/before/full_frame-${randomUUID()}.jpg`;
     const { error: uErr } = await admin.storage
       .from("photos")

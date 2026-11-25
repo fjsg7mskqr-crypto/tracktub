@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Seal } from "@/components/Seal";
 import { Avatar, Badge, Button } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
+import { getTimeZone } from "@/lib/time-zone";
 import { AcceptButton } from "./AcceptButton";
 
 interface InvitePreview {
@@ -124,7 +125,8 @@ export default async function InvitePage({
           </div>
 
           <div className="tiny dim">
-            This invitation expires {formatDateTime(preview.expires_at)}.
+            This invitation expires{" "}
+            {formatDateTime(preview.expires_at, await getTimeZone())}.
           </div>
 
           {user ? (

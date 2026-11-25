@@ -4,42 +4,54 @@ import { careFromVisits, nextDueLine } from "@/components/record/record-model";
 describe("nextDueLine", () => {
   it("picks the earlier of drain and filter", () => {
     expect(
-      nextDueLine({
-        drainedAt: "2026-10-26T14:58:00Z",
-        drainDays: 90,
-        filterAt: "2026-10-01T14:58:00Z",
-        filterDays: 60,
-      })
+      nextDueLine(
+        {
+          drainedAt: "2026-10-26T14:58:00Z",
+          drainDays: 90,
+          filterAt: "2026-10-01T14:58:00Z",
+          filterDays: 60,
+        },
+        "America/Detroit"
+      )
     ).toBe("Filter change due Nov 30");
     expect(
-      nextDueLine({
-        drainedAt: "2026-08-01T14:58:00Z",
-        drainDays: 90,
-        filterAt: "2026-10-01T14:58:00Z",
-        filterDays: 60,
-      })
+      nextDueLine(
+        {
+          drainedAt: "2026-08-01T14:58:00Z",
+          drainDays: 90,
+          filterAt: "2026-10-01T14:58:00Z",
+          filterDays: 60,
+        },
+        "America/Detroit"
+      )
     ).toBe("Drain & refill due Oct 30");
   });
 
   it("uses the care defaults when the tub has no interval", () => {
     expect(
-      nextDueLine({
-        drainedAt: "2026-10-26T14:58:00Z",
-        drainDays: null,
-        filterAt: null,
-        filterDays: null,
-      })
+      nextDueLine(
+        {
+          drainedAt: "2026-10-26T14:58:00Z",
+          drainDays: null,
+          filterAt: null,
+          filterDays: null,
+        },
+        "America/Detroit"
+      )
     ).toBe("Drain & refill due Jan 24");
   });
 
   it("is null with no history", () => {
     expect(
-      nextDueLine({
-        drainedAt: null,
-        drainDays: 90,
-        filterAt: null,
-        filterDays: 60,
-      })
+      nextDueLine(
+        {
+          drainedAt: null,
+          drainDays: 90,
+          filterAt: null,
+          filterDays: 60,
+        },
+        "America/Detroit"
+      )
     ).toBeNull();
   });
 });

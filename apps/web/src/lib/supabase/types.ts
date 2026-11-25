@@ -1120,6 +1120,7 @@ export type Database = {
           status: Database["public"]["Enums"]["turnover_status"];
           submitted_at_server: string;
           submitter_id: string;
+          time_zone: string | null;
           urgent: boolean;
           version: number;
         };
@@ -1138,6 +1139,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["turnover_status"];
           submitted_at_server?: string;
           submitter_id: string;
+          time_zone?: string | null;
           urgent?: boolean;
           version?: number;
         };
@@ -1156,6 +1158,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["turnover_status"];
           submitted_at_server?: string;
           submitter_id?: string;
+          time_zone?: string | null;
           urgent?: boolean;
           version?: number;
         };

@@ -3,7 +3,7 @@
 // Opened = a person loaded the owner's link at least once (any share_view row;
 // previews, bots and the team's own opens are filtered out when recording).
 
-import { APP_TIME_ZONE, formatShortDate, formatTime } from "@/lib/time";
+import { formatShortDate, formatTime } from "@/lib/time";
 
 export type SentEventRow = {
   turnover_id: string;
@@ -25,7 +25,8 @@ export type SentItem = {
 /** One item per record, at its first send, newest first. */
 export function buildSentList(
   events: SentEventRow[],
-  openedIds: Set<string>
+  openedIds: Set<string>,
+  tz: string
 ): SentItem[] {
   const firstSend = new Map<string, SentEventRow>();
   for (const e of events) {
@@ -39,10 +40,11 @@ export function buildSentList(
     .map((e) => ({
       turnoverId: e.turnover_id,
       title: `${e.turnover?.property?.name ?? "—"} · ${formatShortDate(
-        e.turnover?.submitted_at_server ?? null
+        e.turnover?.submitted_at_server ?? null,
+        tz
       )}`,
       to: e.turnover?.property?.client?.name ?? null,
-      sentAt: formatTime(e.occurred_at),
+      sentAt: formatTime(e.occurred_at, tz),
       opened: openedIds.has(e.turnover_id),
     }));
 }
@@ -73,7 +75,7 @@ export function historyVisits<T extends { submitted_at_server: string | null }>(
   visits: T[],
   period: HistoryPeriod,
   now: Date,
-  tz: string = APP_TIME_ZONE
+  tz: string
 ): T[] {
   const locked = visits
     .filter((v): v is T & { submitted_at_server: string } =>

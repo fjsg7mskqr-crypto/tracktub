@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getDeviceTimeZone, getTimeZone } from "@/lib/time-zone";
 import {
   createDraft,
   markNextVisitStarted,
@@ -57,7 +58,12 @@ export async function startVisit(
   const { db, userId } = await requireCapturer(propertyId);
   const existing = await findOpenDraft(db, propertyId, userId);
   if (existing) return { visitId: existing };
-  const visitId = await createDraft(db, propertyId, userId);
+  const visitId = await createDraft(
+    db,
+    propertyId,
+    userId,
+    await getDeviceTimeZone()
+  );
   await markNextVisitStarted(db, propertyId, visitId);
   return { visitId };
 }
@@ -120,7 +126,10 @@ export async function saveNextVisit(
   dueOn: string | null,
   reason: string
 ): Promise<VisitSnapshot> {
-  return write(visitId, (db) => saveNextVisitData(db, visitId, dueOn, reason));
+  const tz = await getTimeZone();
+  return write(visitId, (db) =>
+    saveNextVisitData(db, visitId, dueOn, reason, tz)
+  );
 }
 
 export async function saveFlag(
@@ -175,6 +184,6 @@ export async function finishVisit(
   visitId: string
 ): Promise<{ visitId: string }> {
   const db = await requireVisitCapturer(visitId);
-  await finishVisitData(db, visitId);
+  await finishVisitData(db, visitId, await getDeviceTimeZone());
   return { visitId };
 }

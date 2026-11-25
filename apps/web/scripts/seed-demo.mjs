@@ -141,7 +141,7 @@ async function main() {
 const BOARD_MARK = "Demo care history (home board)";
 
 async function seedHomeBoard({ orgId, operatorId }) {
-  const TZ = process.env.TRACKTUB_TIME_ZONE ?? "America/Detroit";
+  const TZ = "America/Detroit";
   const dayOf = (d) =>
     new Intl.DateTimeFormat("en-CA", {
       timeZone: TZ,

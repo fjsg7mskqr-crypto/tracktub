@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentMembership } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { recordPath } from "@/lib/app-routes";
+import { getTimeZone } from "@/lib/time-zone";
 import { buildRecord } from "@/components/record/record-model";
 import { loadTubRecords } from "@/components/record/load-record";
 import {
@@ -39,8 +40,9 @@ export default async function HistoryPage({
   if (!tub) notFound();
   const client = Array.isArray(tub.client) ? tub.client[0] : tub.client;
 
-  const rows = historyVisits(tubRecords, period, new Date());
-  const records = rows.map((r) => buildRecord(r));
+  const tz = await getTimeZone();
+  const rows = historyVisits(tubRecords, period, new Date(), tz);
+  const records = rows.map((r) => buildRecord(r, tz));
 
   return (
     <div className="tt-record-page">

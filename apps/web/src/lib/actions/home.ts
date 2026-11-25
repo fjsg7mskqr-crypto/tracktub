@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { dayKey } from "@/components/calendar/days";
+import { getTimeZone } from "@/lib/time-zone";
 
 // Home's writes: today's route (hand-added stops) and settling open items.
 // RLS is the gate (route_stop / task = app_can_capture_property); a write that
@@ -27,12 +28,14 @@ export async function addToToday(propertyId: string): Promise<void> {
     .eq("id", propertyId)
     .maybeSingle();
   if (!tub) throw new Error("Tub not found");
-  const { error } = await db
-    .from("route_stop")
-    .upsert(
-      { org_id: tub.org_id, property_id: propertyId, day: dayKey(new Date()) },
-      { onConflict: "property_id,day", ignoreDuplicates: true }
-    );
+  const { error } = await db.from("route_stop").upsert(
+    {
+      org_id: tub.org_id,
+      property_id: propertyId,
+      day: dayKey(new Date(), await getTimeZone()),
+    },
+    { onConflict: "property_id,day", ignoreDuplicates: true }
+  );
   if (error) throw new Error(`Couldn't add to today: ${error.message}`);
   refresh();
 }
@@ -44,7 +47,7 @@ export async function removeFromToday(propertyId: string): Promise<void> {
     .from("route_stop")
     .delete()
     .eq("property_id", propertyId)
-    .eq("day", dayKey(new Date()));
+    .eq("day", dayKey(new Date(), await getTimeZone()));
   if (error) throw new Error(`Couldn't remove from today: ${error.message}`);
   refresh();
 }

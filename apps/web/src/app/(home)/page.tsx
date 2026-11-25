@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentMembership, getSessionUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { APP_TIME_ZONE, formatShortDate, formatTime } from "@/lib/time";
+import { formatShortDate, formatTime } from "@/lib/time";
+import { getTimeZone } from "@/lib/time-zone";
 import { loadTubs } from "@/app/tubs/load";
 import { SectionLabel } from "@/components/tub/SectionLabel";
 import { dayKey, dayParts, daysBetween } from "@/components/calendar/days";
@@ -39,10 +40,10 @@ const card: React.CSSProperties = {
   textDecoration: "none",
 };
 
-function greeting(now: Date): string {
+function greeting(now: Date, tz: string): string {
   const hour = Number(
     new Intl.DateTimeFormat("en-US", {
-      timeZone: APP_TIME_ZONE,
+      timeZone: tz,
       hour: "numeric",
       hourCycle: "h23",
     }).format(now)
@@ -88,13 +89,17 @@ function groupBy<T extends { tubId: string }>(
   return m;
 }
 
-function lastVisitText(visits: readonly HomeVisit[], today: string): string {
+function lastVisitText(
+  visits: readonly HomeVisit[],
+  today: string,
+  tz: string
+): string {
   const newest = visits.reduce<HomeVisit | null>(
     (a, v) => (!a || v.at > a.at ? v : a),
     null
   );
   if (!newest) return "no visits yet";
-  const days = daysBetween(dayKey(newest.at), today);
+  const days = daysBetween(dayKey(newest.at, tz), today);
   return days <= 0
     ? "last visit today"
     : days === 1
@@ -112,11 +117,12 @@ function stopFocus(
     draft: HomeDraft | undefined;
     now: Date;
     today: string;
+    tz: string;
     problem: ReturnType<typeof boardState>["problem"];
     recheck: NextVisit | undefined;
   }
 ): StopFocus {
-  const { visits, items, draft, now, today, problem, recheck } = ctx;
+  const { visits, items, draft, now, today, tz, problem, recheck } = ctx;
   const done = visits.find((v) => v.id === stop.doneVisitId);
   const base = {
     tubId: tub.id,
@@ -130,7 +136,7 @@ function stopFocus(
     return {
       ...base,
       kind: "working",
-      kicker: `${stop.state === "current" ? "Working on" : "In progress"} · started ${formatTime(draft.openedAt)}`,
+      kicker: `${stop.state === "current" ? "Working on" : "In progress"} · started ${formatTime(draft.openedAt, tz)}`,
       chip: { text: `${p.done} of ${p.steps.length} steps`, tone: "info" },
       progress: p.steps,
       subline: tub.clientName,
@@ -142,7 +148,7 @@ function stopFocus(
     return {
       ...base,
       kind: "done",
-      kicker: `Done · ${done ? formatTime(done.at) : ""}`,
+      kicker: `Done · ${done ? formatTime(done.at, tz) : ""}`,
       chip: problem ? { text: problem.chipWithDay, tone: "alert" } : null,
       progress: null,
       subline: tub.clientName,
@@ -158,7 +164,7 @@ function stopFocus(
     subline: [
       tub.clientName,
       recheck ? `Re-check${recheck.reason ? `: ${recheck.reason}` : ""}` : null,
-      lastVisitText(visits, today),
+      lastVisitText(visits, today, tz),
     ]
       .filter(Boolean)
       .join(" · "),
@@ -190,8 +196,9 @@ function SectionHead({ title, aside }: { title: string; aside?: string }) {
 // Stays dynamic: getCurrentMembership() reads the session cookie (CSP nonce).
 export default async function Home() {
   const supabase = await createClient();
+  const tz = await getTimeZone();
   const now = new Date();
-  const today = dayKey(now);
+  const today = dayKey(now, tz);
 
   // The membership check and every read run together (the reads are RLS-
   // scoped); the profile row is found by the same verified user id.
@@ -240,7 +247,7 @@ export default async function Home() {
             letterSpacing: "-0.02em",
           }}
         >
-          {greeting(now)}
+          {greeting(now, tz)}
           {first ? `, ${first}` : ""}
         </h1>
       </div>
@@ -333,11 +340,19 @@ export default async function Home() {
     if (!draftOf.has(d.tubId)) draftOf.set(d.tubId, d);
 
   const scheduled = allScheduled.filter((n) => ids.has(n.tubId));
-  const route = todaysRoute({ tubs, visits, drafts, added, scheduled, now });
+  const route = todaysRoute({
+    tubs,
+    visits,
+    drafts,
+    added,
+    scheduled,
+    now,
+    tz,
+  });
   const focus = focusCard(route);
   const onRoute = new Set(route.map((s) => s.tubId));
   const entries = tubs.map((t) =>
-    boardState(t, visitsOf.get(t.id) ?? [], itemsOf.get(t.id) ?? [], now)
+    boardState(t, visitsOf.get(t.id) ?? [], itemsOf.get(t.id) ?? [], now, tz)
   );
   const byId = new Map(tubs.map((t) => [t.id, t]));
 
@@ -349,6 +364,7 @@ export default async function Home() {
       items: itemsOf.get(s.tubId) ?? [],
       draft: s.draftId ? draftOf.get(s.tubId) : undefined,
       now,
+      tz,
       today,
       problem: entries.find((e) => e.tubId === s.tubId)?.problem ?? null,
       recheck: scheduled.find(
@@ -364,7 +380,8 @@ export default async function Home() {
       (a, v) => (!a || v.at > a.at ? v : a),
       null
     );
-    const visitedToday = newest && dayKey(newest.at) === today ? newest : null;
+    const visitedToday =
+      newest && dayKey(newest.at, tz) === today ? newest : null;
     return {
       entry,
       ring: ringState(tub, own, now),
@@ -372,7 +389,7 @@ export default async function Home() {
         [
           tub.clientName,
           visitedToday
-            ? `visited today ${formatTime(visitedToday.at)}`
+            ? `visited today ${formatTime(visitedToday.at, tz)}`
             : onRoute.has(tub.id)
               ? "on today's route"
               : null,
@@ -384,7 +401,7 @@ export default async function Home() {
         ? [
             visitedToday
               ? "Last visit today"
-              : `Last visit ${formatShortDate(newest.at, APP_TIME_ZONE)}`,
+              : `Last visit ${formatShortDate(newest.at, tz)}`,
             REPORT[newest.report],
           ]
         : null,

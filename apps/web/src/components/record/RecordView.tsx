@@ -76,7 +76,7 @@ export function RecordView({
               {[visit.client, visit.date].filter(Boolean).join(" · ")}
             </p>
             <p className="tt-record-sub">
-              Serviced by {visit.operator} · {visit.span}
+              Serviced by {visit.operator} · {visit.span} {visit.zoneLabel}
             </p>
           </div>
           <div className="tt-record-badges">

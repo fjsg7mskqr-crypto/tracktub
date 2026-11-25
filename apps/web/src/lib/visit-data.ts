@@ -79,13 +79,17 @@ export async function markNextVisitStarted(
 export async function createDraft(
   db: Db,
   propertyId: string,
-  userId: string
+  userId: string,
+  timeZone: string | null
 ): Promise<string> {
   const { data, error } = await db
     .from("turnover")
     .insert({
       property_id: propertyId,
       submitter_id: userId,
+      // Where the visit happened (the device's zone); reports show its times
+      // there. Null when the device hasn't reported one.
+      time_zone: timeZone,
       status: "draft",
       share_token: crypto.randomUUID(),
       cleaning_steps: [],
@@ -523,6 +527,7 @@ export async function saveNextVisit(
   visitId: string,
   dueOn: string | null,
   reason: string,
+  tz: string,
   now: Date = new Date()
 ): Promise<void> {
   const { propertyId, orgId } = await requireDraft(db, visitId);
@@ -536,7 +541,7 @@ export async function saveNextVisit(
     fail("next visit", error);
     return;
   }
-  const day = validDueOn(dueOn, now);
+  const day = validDueOn(dueOn, now, tz);
   if (!day) throw new Error("Pick a date from today on");
   const { error } = await db.from("next_visit").upsert(
     {
@@ -621,11 +626,15 @@ export async function setItemStatus(
  * share token is set in the same update, because turnover_lock_guard refuses
  * every change once the visit is locked (the record links depend on it).
  */
-export async function finishVisit(db: Db, visitId: string): Promise<void> {
+export async function finishVisit(
+  db: Db,
+  visitId: string,
+  timeZone: string | null
+): Promise<void> {
   await requireDraft(db, visitId);
   const { data } = await db
     .from("turnover")
-    .select("share_token")
+    .select("share_token, time_zone")
     .eq("id", visitId)
     .single();
   const { error } = await db
@@ -633,6 +642,8 @@ export async function finishVisit(db: Db, visitId: string): Promise<void> {
     .update({
       status: "submitted_locked",
       share_token: data?.share_token ?? crypto.randomUUID(),
+      // Kept from the start of the visit; filled in here only if it had none.
+      time_zone: data?.time_zone ?? timeZone,
     })
     .eq("id", visitId);
   fail("visit", error);

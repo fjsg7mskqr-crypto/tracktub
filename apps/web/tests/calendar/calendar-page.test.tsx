@@ -7,6 +7,10 @@ import CalendarPage from "@/app/calendar/page";
 import { fakeSupabase } from "../record/fake-supabase";
 import { BANNED_WORDS } from "../record/fixtures";
 
+vi.mock("@/lib/time-zone", () => ({
+  getTimeZone: async () => "America/Detroit",
+  getDeviceTimeZone: async () => null,
+}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getCurrentMembership: vi.fn() }));
 vi.mock("next/navigation", () => ({

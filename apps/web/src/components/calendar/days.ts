@@ -2,13 +2,11 @@
 // visit at 11 pm Detroit must land on the Detroit day). Key arithmetic runs on
 // UTC midnights, which has no DST.
 
-import { APP_TIME_ZONE } from "@/lib/time";
-
 const DAY_MS = 86_400_000;
 const KEY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** The calendar day `d` falls on in `tz`. */
-export function dayKey(d: Date, tz: string = APP_TIME_ZONE): string {
+export function dayKey(d: Date, tz: string): string {
   // en-CA formats as YYYY-MM-DD.
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: tz,

@@ -3,6 +3,7 @@ import { getCurrentMembership } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { BackLink } from "@/components/tub/BackLink";
 import { TubBrief } from "@/components/tub/TubBrief";
+import { getTimeZone } from "@/lib/time-zone";
 import { TubLog } from "@/components/tub/TubLog";
 import { buildBrief } from "@/components/tub/brief";
 import { loadTub, loadTubVisits } from "../load";
@@ -74,7 +75,12 @@ export default async function TubPage({
           now,
         })}
       />
-      <TubLog tubId={tub.id} visits={visits} now={now} />
+      <TubLog
+        tubId={tub.id}
+        visits={visits}
+        now={now}
+        tz={await getTimeZone()}
+      />
     </main>
   );
 }

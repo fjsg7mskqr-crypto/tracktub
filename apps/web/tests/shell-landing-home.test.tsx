@@ -16,7 +16,7 @@ afterEach(cleanup);
 describe("Shell at / (#425)", () => {
   it("renders the landing page without app chrome when / is the landing page", () => {
     render(
-      <Shell landingHome>
+      <Shell landingHome tz="America/Detroit">
         <p>landing</p>
       </Shell>
     );
@@ -26,7 +26,7 @@ describe("Shell at / (#425)", () => {
 
   it("keeps the app shell at / for a signed-in user", () => {
     render(
-      <Shell>
+      <Shell tz="America/Detroit">
         <p>home</p>
       </Shell>
     );

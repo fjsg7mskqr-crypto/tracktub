@@ -8,6 +8,7 @@ import { Analytics } from "@/components/Analytics";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { getURL } from "@/lib/url";
 import { LANDING_HOME_HEADER } from "@/lib/landing-home";
+import { getTimeZone } from "@/lib/time-zone";
 
 // Self-hosted (Fontsource variable builds, latin, OFL — see ./fonts) so the
 // build never fetches from Google Fonts; that fetch flaked CI and blocked a
@@ -76,6 +77,7 @@ export default async function RootLayout({
 }) {
   // Set by the proxy when `/` serves the public landing page for this visitor.
   const landingHome = (await headers()).get(LANDING_HOME_HEADER) === "1";
+  const tz = await getTimeZone();
   return (
     <html
       lang="en"
@@ -83,7 +85,9 @@ export default async function RootLayout({
     >
       <body>
         <Analytics />
-        <Shell landingHome={landingHome}>{children}</Shell>
+        <Shell landingHome={landingHome} tz={tz}>
+          {children}
+        </Shell>
         <VercelAnalytics />
       </body>
     </html>

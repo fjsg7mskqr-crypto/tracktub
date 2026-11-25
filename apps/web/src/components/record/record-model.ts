@@ -14,7 +14,13 @@ import {
 import { CLEANING_STEPS, PHOTO_SLOT_LABELS, type PhotoSlot } from "@/lib/types";
 import { treatmentLabel } from "@/lib/chemistry";
 import type { PhotoUrls } from "@/lib/supabase/storage";
-import { formatDate, formatShortDate, formatTime } from "@/lib/time";
+import {
+  formatDate,
+  formatShortDate,
+  formatTime,
+  formatZoneLabel,
+  resolveTimeZone,
+} from "@/lib/time";
 
 type ReadingValues = Record<ReadingField, number | null> & {
   left_total_alkalinity: number | null;
@@ -40,6 +46,8 @@ export type RecordRow = {
   /** Server time the visit was locked (null while a draft). */
   locked_at: string | null;
   share_token: string | null;
+  /** IANA zone the visit happened in; null for visits before it was recorded. */
+  time_zone?: string | null;
   notes: string | null;
   cleaning_steps: string[] | null;
   owner_flag?: string | null;
@@ -84,6 +92,8 @@ export type RecordModel = {
   date: string;
   operator: string;
   span: string;
+  /** Zone the record's times are in, e.g. "EST" ("PDT" in summer). */
+  zoneLabel: string;
   locked: boolean;
   lockedAt: string | null;
   water: {
@@ -171,11 +181,21 @@ function operatorName(s: RecordRow["submitter"]): string {
   return s?.email || "—";
 }
 
+/** The zone a record's times print in: where the visit happened, else the
+ *  caller's fallback (the device for a signed-in view, Detroit for the public
+ *  report, which can't know the viewer's). */
+export function recordTimeZone(
+  row: Pick<RecordRow, "time_zone">,
+  fallback: string
+): string {
+  return resolveTimeZone(row.time_zone, fallback);
+}
+
 /** "9:42 – 10:58 AM" in one period, "9:42 AM – 1:05 PM" across noon. */
-function timeSpan(start: string, end: string | null): string {
-  const a = formatTime(start);
+function timeSpan(start: string, end: string | null, tz: string): string {
+  const a = formatTime(start, tz);
   if (!end) return `${a} – …`;
-  const b = formatTime(end);
+  const b = formatTime(end, tz);
   const [aTime, aPeriod] = a.split(" ");
   const bPeriod = b.split(" ")[1];
   if (aPeriod && aPeriod === bPeriod) return `${aTime} – ${b}`;
@@ -194,25 +214,32 @@ const RECEIVED_GAP_MS = 5 * 60 * 1000;
  */
 export function receivedLabel(
   capturedAt: string | null,
-  receivedAt: string | null
+  receivedAt: string | null,
+  tz: string
 ): string | null {
   if (!capturedAt || !receivedAt) return null;
   const gap = Math.abs(Date.parse(receivedAt) - Date.parse(capturedAt));
   if (Number.isNaN(gap) || gap <= RECEIVED_GAP_MS) return null;
-  const time = formatTime(receivedAt);
-  return formatDate(receivedAt) === formatDate(capturedAt)
+  const time = formatTime(receivedAt, tz);
+  return formatDate(receivedAt, tz) === formatDate(capturedAt, tz)
     ? time
-    : `${formatShortDate(receivedAt)}, ${time}`;
+    : `${formatShortDate(receivedAt, tz)}, ${time}`;
 }
 
 /** Storage paths of a record's photos, to sign in one batch. */
 export const recordPhotoPaths = (row: RecordRow): string[] =>
   row.photos.map((p) => p.storage_path).filter((p): p is string => !!p);
 
-/** `urls` maps storage path → signed URL; a missing or null entry renders as a
- *  "photo unavailable" placeholder. The history report only counts photos, so
- *  it passes none. */
-export function buildRecord(row: RecordRow, urls?: PhotoUrls): RecordModel {
+/** `fallbackTz` is used only for a visit with no recorded zone (see
+ *  recordTimeZone). `urls` maps storage path → signed URL; a missing or null
+ *  entry renders as a "photo unavailable" placeholder. The history report only
+ *  counts photos, so it passes none. */
+export function buildRecord(
+  row: RecordRow,
+  fallbackTz: string,
+  urls?: PhotoUrls
+): RecordModel {
+  const tz = recordTimeZone(row, fallbackTz);
   const water = row.water;
   const locked = row.status === "submitted_locked";
   const steps = new Set(row.cleaning_steps ?? []);
@@ -243,8 +270,8 @@ export function buildRecord(row: RecordRow, urls?: PhotoUrls): RecordModel {
           kind === "other"
             ? (PHOTO_SLOT_LABELS[p.slot as PhotoSlot] ?? p.slot)
             : PHOTO_LABEL[kind],
-        time: formatTime(p.captured_at ?? p.received_at),
-        received: receivedLabel(p.captured_at, p.received_at),
+        time: formatTime(p.captured_at ?? p.received_at, tz),
+        received: receivedLabel(p.captured_at, p.received_at, tz),
         url: urls?.get(p.storage_path as string) ?? null,
       }))
   );
@@ -282,16 +309,19 @@ export function buildRecord(row: RecordRow, urls?: PhotoUrls): RecordModel {
     propertyId: row.property?.id ?? null,
     client: row.property?.client?.name ?? null,
     address: row.property?.address ?? null,
-    date: formatDate(row.created_at),
+    date: formatDate(row.created_at, tz),
     operator: operatorName(row.submitter),
-    span: timeSpan(row.created_at, locked ? row.locked_at : null),
+    span: timeSpan(row.created_at, locked ? row.locked_at : null, tz),
+    zoneLabel: formatZoneLabel(row.created_at, tz),
     locked,
-    lockedAt: locked ? formatTime(row.locked_at) : null,
+    lockedAt: locked ? formatTime(row.locked_at, tz) : null,
     water: {
       foundAt: foundLogged
-        ? formatTime(water?.found_recorded_at ?? water?.recorded_at ?? null)
+        ? formatTime(water?.found_recorded_at ?? water?.recorded_at ?? null, tz)
         : null,
-      leftAt: leftLogged ? formatTime(water?.left_recorded_at ?? null) : null,
+      leftAt: leftLogged
+        ? formatTime(water?.left_recorded_at ?? null, tz)
+        : null,
       lines,
       any: foundLogged || leftLogged,
     },
@@ -331,12 +361,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * filter change, projected from the last one plus the tub's interval (or the
  * care defaults). Null when neither has happened yet.
  */
-export function nextDueLine(care: {
-  drainedAt: string | null;
-  drainDays: number | null;
-  filterAt: string | null;
-  filterDays: number | null;
-}): string | null {
+export function nextDueLine(
+  care: {
+    drainedAt: string | null;
+    drainDays: number | null;
+    filterAt: string | null;
+    filterDays: number | null;
+  },
+  tz: string
+): string | null {
   const due = [
     {
       label: "Drain & refill due",
@@ -355,5 +388,5 @@ export function nextDueLine(care: {
       on: new Date(Date.parse(d.from as string) + d.days * DAY_MS),
     }))
     .sort((a, b) => a.on.getTime() - b.on.getTime());
-  return due[0] ? `${due[0].label} ${formatShortDate(due[0].on)}` : null;
+  return due[0] ? `${due[0].label} ${formatShortDate(due[0].on, tz)}` : null;
 }

@@ -5,7 +5,8 @@ import { getURL } from "@/lib/url";
 import { RecordView } from "@/components/record/RecordView";
 import { OpenBeacon } from "@/components/record/OpenBeacon";
 import { signProofPhotos } from "@/lib/proof-photos";
-import { buildRecord } from "@/components/record/record-model";
+import { DEFAULT_TIME_ZONE } from "@/lib/time";
+import { buildRecord, recordTimeZone } from "@/components/record/record-model";
 import {
   loadRecordByToken,
   loadNextDue,
@@ -38,7 +39,11 @@ export default async function ProofPage({
 
   // Anon can't read `client` (no anon policy, on purpose), so the name comes
   // from a token-checked function. Without it the record renders nameless.
-  const visit = buildRecord(row, await signProofPhotos(row));
+  // The report's times are in the zone the visit happened in, not the
+  // viewer's (an owner in another state must read the tech's clock). Visits
+  // from before the zone was recorded fall back to Detroit.
+  const tz = recordTimeZone(row, DEFAULT_TIME_ZONE);
+  const visit = buildRecord(row, DEFAULT_TIME_ZONE, await signProofPhotos(row));
   try {
     const { data } = await supabase.rpc("proof_client_name", {
       p_token: token,
@@ -53,7 +58,7 @@ export default async function ProofPage({
       <OpenBeacon token={token} />
       <RecordView
         visit={visit}
-        nextDue={await loadNextDue(supabase, row, tubVisits)}
+        nextDue={await loadNextDue(supabase, row, tubVisits, tz)}
         audience="owner"
         shareUrl={proofUrl(getURL(), token)}
       />
