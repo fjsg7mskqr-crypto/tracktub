@@ -577,6 +577,8 @@ describe.skipIf(!ready)("RLS isolation", () => {
       expect(rec.photos).toHaveLength(1);
       expect(rec.property?.name).toBe("Proof Test Property");
       expect(rec.tub_visits).toHaveLength(1); // the locked visit, not the draft
+      // The report prints the visit's times in the zone it happened in.
+      expect(rec).toHaveProperty("time_zone");
     });
 
     it("proof_record returns nothing for a wrong, short or null token", async () => {

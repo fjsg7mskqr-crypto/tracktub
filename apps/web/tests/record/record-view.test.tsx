@@ -14,11 +14,32 @@ const FOOTER =
   "Photos are captured with the TrackTub camera. Photo times come from the phone that took them; each photo also carries the time our server received it. The record was locked when submitted and can't be edited.";
 const URL = "https://tracktub.com/proof/7Kq2tok";
 
+const TZ = "America/Detroit";
+
+describe("RecordView zone label", () => {
+  afterEach(cleanup);
+  it("shows the visit's zone on the span line", () => {
+    render(
+      <RecordView
+        visit={buildRecord(mockupRow({ time_zone: "America/Los_Angeles" }), TZ)}
+        audience="owner"
+      />
+    );
+    expect(screen.getByText(/Serviced by .*6:42 – 7:58 AM PDT/)).toBeTruthy();
+  });
+  it("shows Eastern for an old visit with no zone", () => {
+    render(
+      <RecordView visit={buildRecord(mockupRow(), TZ)} audience="owner" />
+    );
+    expect(screen.getByText(/9:42 – 10:58 AM EDT/)).toBeTruthy();
+  });
+});
+
 describe("RecordView", () => {
   it("shows a photo's receive time only when it differs from the phone time", () => {
     const row = mockupRow();
     row.photos[0] = { ...row.photos[0], received_at: "2026-10-26T15:30:00Z" };
-    render(<RecordView visit={buildRecord(row)} audience="owner" />);
+    render(<RecordView visit={buildRecord(row, TZ)} audience="owner" />);
     expect(screen.getAllByText(/^received /)).toHaveLength(1);
     expect(screen.getByText("received 11:30")).toBeTruthy();
   });
@@ -26,7 +47,7 @@ describe("RecordView", () => {
   it("operator view has Send / Copy and the owner-preview note", () => {
     render(
       <RecordView
-        visit={buildRecord(mockupRow())}
+        visit={buildRecord(mockupRow(), TZ)}
         audience="operator"
         shareUrl={URL}
       />
@@ -44,7 +65,7 @@ describe("RecordView", () => {
   it("owner view has no operator controls", () => {
     render(
       <RecordView
-        visit={buildRecord(mockupRow())}
+        visit={buildRecord(mockupRow(), TZ)}
         audience="owner"
         shareUrl={URL}
       />
@@ -60,7 +81,7 @@ describe("RecordView", () => {
   it("prints the record facts", () => {
     render(
       <RecordView
-        visit={buildRecord(mockupRow())}
+        visit={buildRecord(mockupRow(), TZ)}
         audience="owner"
         shareUrl={URL}
       />
@@ -70,7 +91,7 @@ describe("RecordView", () => {
       screen.getByText("Lakeview Rentals · Mon Oct 26, 2026")
     ).toBeTruthy();
     expect(
-      screen.getByText("Serviced by Ethan N. · 9:42 – 10:58 AM")
+      screen.getByText("Serviced by Ethan N. · 9:42 – 10:58 AM EDT")
     ).toBeTruthy();
     expect(screen.getByText("Locked 10:58")).toBeTruthy();
     expect(screen.getByText("Found 9:45")).toBeTruthy();
@@ -91,13 +112,16 @@ describe("RecordView", () => {
 
   it("hides the owner flag when there is none and shows it when set", () => {
     const { unmount } = render(
-      <RecordView visit={buildRecord(mockupRow())} audience="owner" />
+      <RecordView visit={buildRecord(mockupRow(), TZ)} audience="owner" />
     );
     expect(screen.queryByText("For the owner")).toBeNull();
     unmount();
     render(
       <RecordView
-        visit={buildRecord(mockupRow({ owner_flag: "Cover strap fraying" }))}
+        visit={buildRecord(
+          mockupRow({ owner_flag: "Cover strap fraying" }),
+          TZ
+        )}
         audience="owner"
       />
     );
@@ -106,7 +130,7 @@ describe("RecordView", () => {
   });
 
   it("empty visit renders, marked partial", () => {
-    render(<RecordView visit={buildRecord(emptyRow())} audience="owner" />);
+    render(<RecordView visit={buildRecord(emptyRow(), TZ)} audience="owner" />);
     expect(screen.getByText("Partial")).toBeTruthy();
     expect(
       screen.getByText(
@@ -121,7 +145,7 @@ describe("RecordView", () => {
   it("shows next due when known", () => {
     render(
       <RecordView
-        visit={buildRecord(mockupRow())}
+        visit={buildRecord(mockupRow(), TZ)}
         audience="owner"
         nextDue="Drain due Jan 24"
       />
@@ -134,7 +158,7 @@ describe("RecordView", () => {
       for (const audience of ["operator", "owner"] as const) {
         const html = renderToStaticMarkup(
           <RecordView
-            visit={buildRecord(row)}
+            visit={buildRecord(row, TZ)}
             audience={audience}
             shareUrl={URL}
             nextDue="Drain due Jan 24"

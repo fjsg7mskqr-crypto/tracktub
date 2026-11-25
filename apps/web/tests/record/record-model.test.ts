@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { buildRecord, receivedLabel } from "@/components/record/record-model";
 import { emptyRow, mockupRow } from "./fixtures";
 
+const TZ = "America/Detroit";
+
 describe("buildRecord — the mockup visit", () => {
-  const r = buildRecord(mockupRow());
+  const r = buildRecord(mockupRow(), TZ);
 
   it("heads the record with tub, client, date, operator and span", () => {
     expect(r.tub).toBe("Cedar Cabin");
@@ -17,7 +19,8 @@ describe("buildRecord — the mockup visit", () => {
     expect(r.locked).toBe(true);
     expect(r.lockedAt).toBe("10:58 AM");
     const started = buildRecord(
-      mockupRow({ submitted_at_server: "2026-10-26T13:42:00Z" })
+      mockupRow({ submitted_at_server: "2026-10-26T13:42:00Z" }),
+      TZ
     );
     expect(started.lockedAt).toBe("10:58 AM");
   });
@@ -62,6 +65,7 @@ describe("buildRecord — the mockup visit", () => {
     const row = mockupRow();
     const signed = buildRecord(
       row,
+      TZ,
       new Map([
         ["org/t/before.jpg", "https://x.test/sign/before.jpg?token=a"],
         ["org/t/cover.jpg", null],
@@ -94,9 +98,53 @@ describe("buildRecord — the mockup visit", () => {
   });
 });
 
+describe("buildRecord — time zone", () => {
+  it("prints times in the zone the visit happened in, with its label", () => {
+    const r = buildRecord(mockupRow({ time_zone: "America/Los_Angeles" }), TZ);
+    expect(r.span).toBe("6:42 – 7:58 AM");
+    expect(r.zoneLabel).toBe("PDT");
+    expect(r.lockedAt).toBe("7:58 AM");
+    expect(r.date).toBe("Mon Oct 26, 2026");
+  });
+
+  it("the visit's zone beats the viewer's", () => {
+    const r = buildRecord(
+      mockupRow({ time_zone: "America/Detroit" }),
+      "America/Los_Angeles"
+    );
+    expect(r.span).toBe("9:42 – 10:58 AM");
+    expect(r.zoneLabel).toBe("EDT");
+  });
+
+  it("falls back to the caller's zone when the visit has none", () => {
+    expect(buildRecord(mockupRow(), "America/Denver").zoneLabel).toBe("MDT");
+    expect(buildRecord(mockupRow({ time_zone: null }), TZ).zoneLabel).toBe(
+      "EDT"
+    );
+  });
+
+  it("ignores a stored zone that isn't a real one", () => {
+    const r = buildRecord(mockupRow({ time_zone: "Mars/Olympus" }), TZ);
+    expect(r.zoneLabel).toBe("EDT");
+    expect(r.span).toBe("9:42 – 10:58 AM");
+  });
+
+  it("uses EST in winter", () => {
+    const r = buildRecord(
+      mockupRow({
+        created_at: "2026-12-14T15:00:00Z",
+        locked_at: "2026-12-14T16:10:00Z",
+        time_zone: "America/Detroit",
+      }),
+      TZ
+    );
+    expect(r.zoneLabel).toBe("EST");
+  });
+});
+
 describe("buildRecord — edge cases", () => {
   it("empty visit renders dashes and lists everything missing", () => {
-    const r = buildRecord(emptyRow());
+    const r = buildRecord(emptyRow(), TZ);
     expect(r.water.any).toBe(false);
     expect(r.water.foundAt).toBeNull();
     for (const l of r.water.lines) {
@@ -119,7 +167,8 @@ describe("buildRecord — edge cases", () => {
 
   it("a drained visit has no not-drained line", () => {
     const r = buildRecord(
-      mockupRow({ cleaning_steps: ["drained_refilled", "water_topped"] })
+      mockupRow({ cleaning_steps: ["drained_refilled", "water_topped"] }),
+      TZ
     );
     expect(r.work).toEqual([
       { label: "Drained & refilled", done: true },
@@ -128,14 +177,14 @@ describe("buildRecord — edge cases", () => {
   });
 
   it("a draft is not locked", () => {
-    const r = buildRecord(mockupRow({ status: "draft" }));
+    const r = buildRecord(mockupRow({ status: "draft" }), TZ);
     expect(r.locked).toBe(false);
     expect(r.lockedAt).toBeNull();
     expect(r.span).toBe("9:42 AM – …");
   });
 
   it("a span across noon shows both periods", () => {
-    const r = buildRecord(mockupRow({ locked_at: "2026-10-26T17:05:00Z" }));
+    const r = buildRecord(mockupRow({ locked_at: "2026-10-26T17:05:00Z" }), TZ);
     expect(r.span).toBe("9:42 AM – 1:05 PM");
   });
 
@@ -145,18 +194,18 @@ describe("buildRecord — edge cases", () => {
     [{ full_name: null, email: "e@x.com" }, "e@x.com"],
     [null, "—"],
   ])("operator %j → %s", (submitter, expected) => {
-    expect(buildRecord(mockupRow({ submitter })).operator).toBe(expected);
+    expect(buildRecord(mockupRow({ submitter }), TZ).operator).toBe(expected);
   });
 
   it("missing client and property degrade to null / dash", () => {
-    const r = buildRecord(mockupRow({ property: null }));
+    const r = buildRecord(mockupRow({ property: null }), TZ);
     expect(r.tub).toBe("—");
     expect(r.client).toBeNull();
   });
 
   it("a partial reading still counts as logged", () => {
     const water = { ...mockupRow().water!, ph: null, total_alkalinity: null };
-    const r = buildRecord(mockupRow({ water }));
+    const r = buildRecord(mockupRow({ water }), TZ);
     expect(r.partial).toEqual([]);
     expect(r.water.lines[1].found).toBe("—");
   });
@@ -182,7 +231,8 @@ describe("buildRecord — edge cases", () => {
             created_at: "2026-10-26T13:43:00Z",
           },
         ],
-      })
+      }),
+      TZ
     );
     expect(r.photos.map((p) => `${p.label} · ${p.time}`)).toEqual([
       "Issue photo · 9:50 AM",
@@ -192,9 +242,12 @@ describe("buildRecord — edge cases", () => {
 
   it("shows the owner flag when set", () => {
     expect(
-      buildRecord(mockupRow({ owner_flag: "Cover strap fraying" })).ownerFlag
+      buildRecord(mockupRow({ owner_flag: "Cover strap fraying" }), TZ)
+        .ownerFlag
     ).toBe("Cover strap fraying");
-    expect(buildRecord(mockupRow({ owner_flag: "  " })).ownerFlag).toBeNull();
+    expect(
+      buildRecord(mockupRow({ owner_flag: "  " }), TZ).ownerFlag
+    ).toBeNull();
   });
 });
 
@@ -207,28 +260,30 @@ describe("receivedLabel — when to show the server receive time", () => {
     ["exactly 5 minutes later", "2026-10-26T14:05:00Z"],
     ["5 minutes earlier", "2026-10-26T13:55:00Z"],
   ])("hidden when %s", (_, received) => {
-    expect(receivedLabel(phone, received)).toBeNull();
+    expect(receivedLabel(phone, received, TZ)).toBeNull();
   });
 
   it("shown past 5 minutes either way", () => {
-    expect(receivedLabel(phone, "2026-10-26T14:05:01Z")).toBe("10:05 AM");
-    expect(receivedLabel(phone, "2026-10-26T13:30:00Z")).toBe("9:30 AM");
+    expect(receivedLabel(phone, "2026-10-26T14:05:01Z", TZ)).toBe("10:05 AM");
+    expect(receivedLabel(phone, "2026-10-26T13:30:00Z", TZ)).toBe("9:30 AM");
   });
 
   it("adds the date when the receive day differs", () => {
-    expect(receivedLabel(phone, "2026-10-27T15:10:00Z")).toBe(
+    expect(receivedLabel(phone, "2026-10-27T15:10:00Z", TZ)).toBe(
       "Oct 27, 11:10 AM"
     );
   });
 
   it("hidden without a phone time (the photo already shows server time)", () => {
-    expect(receivedLabel(null, "2026-10-26T14:30:00Z")).toBeNull();
+    expect(receivedLabel(null, "2026-10-26T14:30:00Z", TZ)).toBeNull();
   });
 
   it("flows into the record's photos", () => {
     const row = mockupRow();
     row.photos[0] = { ...row.photos[0], received_at: "2026-10-26T15:30:00Z" };
-    const cover = buildRecord(row).photos.find((p) => p.label === "Cover on");
+    const cover = buildRecord(row, TZ).photos.find(
+      (p) => p.label === "Cover on"
+    );
     expect(cover?.received).toBe("11:30 AM");
   });
 });

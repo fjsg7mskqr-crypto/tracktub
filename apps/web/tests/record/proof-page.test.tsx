@@ -82,6 +82,18 @@ describe("/proof/[token]", () => {
     expect(screen.getByText(/record$/).textContent).toBe("TrackTub record");
   });
 
+  it("prints times in the zone the visit happened in, labelled", async () => {
+    client(mockupRow({ time_zone: "America/Los_Angeles" }));
+    render(await ProofPage(params("tok")));
+    expect(screen.getByText(/6:42 – 7:58 AM PDT/)).toBeTruthy();
+  });
+
+  it("a visit with no recorded zone reads in Detroit time", async () => {
+    client(mockupRow());
+    render(await ProofPage(params("tok")));
+    expect(screen.getByText(/9:42 – 10:58 AM EDT/)).toBeTruthy();
+  });
+
   it("shows the photos through signed links, signed in one call", async () => {
     const sign = signer();
     client(mockupRow());

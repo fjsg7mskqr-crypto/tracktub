@@ -39,11 +39,13 @@ function setup(blank: string[] = []) {
         : `https://img.test/${p.storage_path}`,
     ])
   );
-  render(<RecordView visit={buildRecord(row, urls)} audience="owner" />);
+  render(<RecordView visit={buildRecord(row, TZ, urls)} audience="owner" />);
   return screen.getAllByRole("button", { name: /^View .* photo full size$/ });
 }
 
 const viewer = () => document.querySelector("dialog.tt-photo-viewer");
+
+const TZ = "America/Detroit";
 
 describe("report photo viewer", () => {
   it("opens the tapped photo uncropped in a modal dialog", () => {

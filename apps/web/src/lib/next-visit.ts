@@ -30,7 +30,7 @@ export type NextVisitPickId = (typeof NEXT_VISIT_PICKS)[number]["id"];
 export function pickDate(
   pick: NextVisitPickId,
   now: Date,
-  tz?: string
+  tz: string
 ): string | null {
   const p = NEXT_VISIT_PICKS.find((x) => x.id === pick);
   if (!p || p.days === null) return null;
@@ -41,7 +41,7 @@ export function pickDate(
 export function pickFor(
   dueOn: string | null,
   now: Date,
-  tz?: string
+  tz: string
 ): NextVisitPickId {
   if (!dueOn) return "none";
   for (const p of NEXT_VISIT_PICKS)
@@ -57,7 +57,7 @@ export function cleanReason(reason: string | null | undefined): string {
 export function validDueOn(
   value: string | null | undefined,
   now: Date,
-  tz?: string
+  tz: string
 ): string | null {
   const key = parseDayKey(value);
   if (!key || key < dayKey(now, tz)) return null;

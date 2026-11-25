@@ -27,8 +27,11 @@ function startsWithAny(pathname: string, prefixes: string[]): boolean {
 export function Shell({
   children,
   landingHome = false,
+  tz,
 }: {
   children: React.ReactNode;
+  /** The request's time zone (the device's), for the signed-in app. */
+  tz: string;
   /** `/` serves the public landing page for this visitor (see middleware). */
   landingHome?: boolean;
 }) {
@@ -41,5 +44,5 @@ export function Shell({
   )
     return <>{children}</>;
 
-  return <AppShell>{children}</AppShell>;
+  return <AppShell tz={tz}>{children}</AppShell>;
 }

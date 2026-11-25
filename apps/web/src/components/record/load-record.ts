@@ -12,7 +12,7 @@ type Client = SupabaseClient<Database>;
 /** Everything the record prints, for one turnover, read by a signed-in member
  *  (RLS-scoped). The public report does NOT use this: anon has no table access
  *  and loads through proof_record(token) — see loadRecordByToken. */
-export const RECORD_SELECT = `id, status, created_at, submitted_at_server, locked_at, share_token, notes, cleaning_steps, owner_flag,
+export const RECORD_SELECT = `id, status, created_at, submitted_at_server, locked_at, share_token, time_zone, notes, cleaning_steps, owner_flag,
   property:property(id, name, address, drain_interval_days, filter_interval_days, client:client(name)),
   submitter:profile(full_name, email),
   photos:photo(slot, phase, storage_path, captured_at, received_at, created_at),
@@ -107,7 +107,8 @@ export async function loadTubRecords(
 export async function loadNextDue(
   supabase: Client,
   row: RecordRow,
-  visits?: CareVisit[]
+  visits: CareVisit[] | undefined,
+  tz: string
 ): Promise<string | null> {
   if (!row.property) return null;
   let list = visits;
@@ -119,11 +120,14 @@ export async function loadNextDue(
       .eq("status", "submitted_locked");
     list = Array.isArray(data) ? data : [];
   }
-  return nextDueLine({
-    ...careFromVisits(list),
-    drainDays: row.property.drain_interval_days ?? null,
-    filterDays: row.property.filter_interval_days ?? null,
-  });
+  return nextDueLine(
+    {
+      ...careFromVisits(list),
+      drainDays: row.property.drain_interval_days ?? null,
+      filterDays: row.property.filter_interval_days ?? null,
+    },
+    tz
+  );
 }
 
 export const proofUrl = (origin: string, token: string) =>

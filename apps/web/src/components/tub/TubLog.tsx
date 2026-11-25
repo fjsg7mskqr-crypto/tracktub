@@ -20,14 +20,14 @@ const rail: React.CSSProperties = {
   flex: "none",
 };
 
-function span(v: LogVisit): string {
-  const start = formatTime(v.at);
+function span(v: LogVisit, tz: string): string {
+  const start = formatTime(v.at, tz);
   const end = visitEnd(v);
-  const endText = end && end > v.at ? formatTime(end) : null;
+  const endText = end && end > v.at ? formatTime(end, tz) : null;
   return endText && endText !== start ? `${start} – ${endText}` : start;
 }
 
-function PastVisit({ v }: { v: LogVisit }) {
+function PastVisit({ v, tz }: { v: LogVisit; tz: string }) {
   const partial = isPartial(v);
   return (
     <div style={{ display: "flex", gap: 14 }}>
@@ -58,7 +58,7 @@ function PastVisit({ v }: { v: LogVisit }) {
         }}
       >
         <span style={{ fontSize: 13, color: "var(--tt-text-3)" }}>
-          {formatShortDate(v.at)} · {span(v)} ·{" "}
+          {formatShortDate(v.at, tz)} · {span(v, tz)} ·{" "}
           <span
             style={{ color: partial ? "var(--tt-due-text)" : "var(--tt-ok)" }}
           >
@@ -82,11 +82,11 @@ const card: React.CSSProperties = {
   gap: 8,
 };
 
-function OpenVisit({ v, now }: { v: LogVisit; now: Date }) {
+function OpenVisit({ v, now, tz }: { v: LogVisit; now: Date; tz: string }) {
   const day =
-    formatShortDate(v.at) === formatShortDate(now)
+    formatShortDate(v.at, tz) === formatShortDate(now, tz)
       ? "Today"
-      : formatShortDate(v.at);
+      : formatShortDate(v.at, tz);
   const missing = stillToLog(v);
   return (
     <>
@@ -111,7 +111,7 @@ function OpenVisit({ v, now }: { v: LogVisit; now: Date }) {
         <h3
           style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#A9C9FF" }}
         >
-          {day} · visit open since {formatTime(v.at)}
+          {day} · visit open since {formatTime(v.at, tz)}
         </h3>
       </div>
       <div style={{ display: "flex", gap: 14 }}>
@@ -131,7 +131,7 @@ function OpenVisit({ v, now }: { v: LogVisit; now: Date }) {
           {draftEntries(v).map((e, i) => (
             <div key={`${i}-${e.title}`} style={card}>
               <span style={{ fontSize: 12, color: "var(--tt-text-3)" }}>
-                {e.at ? `${formatTime(e.at)} · ${e.title}` : e.title}
+                {e.at ? `${formatTime(e.at, tz)} · ${e.title}` : e.title}
               </span>
               {e.chips && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -219,8 +219,10 @@ export function TubLog({
   tubId,
   visits,
   now,
+  tz,
 }: {
   tubId: string;
+  tz: string;
   /** Any order; the Log sorts them. */
   visits: readonly LogVisit[];
   now: Date;
@@ -248,13 +250,13 @@ export function TubLog({
       )}
       <div style={{ marginBottom: past.length > 0 ? 24 : 0 }}>
         {open ? (
-          <OpenVisit v={open} now={now} />
+          <OpenVisit v={open} now={now} tz={tz} />
         ) : (
           <StartVisitButton tubId={tubId} />
         )}
       </div>
       {past.map((v) => (
-        <PastVisit key={v.id} v={v} />
+        <PastVisit key={v.id} v={v} tz={tz} />
       ))}
     </section>
   );

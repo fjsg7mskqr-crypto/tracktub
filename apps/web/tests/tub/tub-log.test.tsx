@@ -29,7 +29,9 @@ function lv(id: string, over: Partial<LogVisit>): LogVisit {
 
 describe("TubLog", () => {
   it("no visits: 'No visits yet' + Start visit", () => {
-    const { container } = render(<TubLog tubId="t1" visits={[]} now={NOW} />);
+    const { container } = render(
+      <TubLog tz="America/Detroit" tubId="t1" visits={[]} now={NOW} />
+    );
     expect(screen.getByText("No visits yet")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Start visit" })).toBeTruthy();
     expect(container.textContent).not.toMatch(/NaN|Invalid Date/);
@@ -38,6 +40,7 @@ describe("TubLog", () => {
   it("past visits link to their record, newest first", () => {
     render(
       <TubLog
+        tz="America/Detroit"
         tubId="t1"
         visits={[
           lv("oct6", { at: new Date("2026-10-06T18:00:00Z") }),
@@ -61,6 +64,7 @@ describe("TubLog", () => {
   it("an open visit shows its entries, Still to log and Continue visit", () => {
     render(
       <TubLog
+        tz="America/Detroit"
         tubId="t1"
         visits={[
           lv("a", {}),
@@ -90,6 +94,7 @@ describe("TubLog", () => {
   it("the open visit stays pinned above past visits", () => {
     render(
       <TubLog
+        tz="America/Detroit"
         tubId="t1"
         visits={[
           lv("a", { at: new Date("2026-10-20T18:00:00Z") }),

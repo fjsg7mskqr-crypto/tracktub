@@ -28,7 +28,8 @@ describe("buildSentList", () => {
         event("a", "2026-10-26T15:02:00Z"),
         event("b", "2026-10-27T12:00:00Z", "Pine Ridge", null),
       ],
-      new Set(["a"])
+      new Set(["a"]),
+      "America/Detroit"
     );
     expect(list).toEqual([
       {
@@ -58,13 +59,14 @@ describe("buildSentList", () => {
             turnover: null,
           },
         ],
-        new Set()
+        new Set(),
+        "America/Detroit"
       )
     ).toEqual([]);
   });
 
   it("empty → empty", () => {
-    expect(buildSentList([], new Set())).toEqual([]);
+    expect(buildSentList([], new Set(), "America/Detroit")).toEqual([]);
   });
 });
 
@@ -90,7 +92,7 @@ describe("historyVisits", () => {
       ),
       v(null),
     ];
-    const out = historyVisits(visits, "last6", now);
+    const out = historyVisits(visits, "last6", now, "America/Detroit");
     expect(out).toHaveLength(6);
     expect(out[0].iso).toBe("2026-10-17T12:00:00Z");
     expect(out[5].iso).toBe("2026-10-12T12:00:00Z");
@@ -102,15 +104,17 @@ describe("historyVisits", () => {
       v("2026-01-01T03:00:00Z"), // Dec 31, 10:00 PM Detroit
       v("2025-08-01T12:00:00Z"),
     ];
-    expect(historyVisits(visits, "season", now).map((x) => x.iso)).toEqual([
-      "2026-01-01T06:00:00Z",
-    ]);
+    expect(
+      historyVisits(visits, "season", now, "America/Detroit").map((x) => x.iso)
+    ).toEqual(["2026-01-01T06:00:00Z"]);
   });
 
   it("season has no cap", () => {
     const visits = Array.from({ length: 9 }, (_, i) =>
       v(`2026-0${i + 1}-15T12:00:00Z`)
     );
-    expect(historyVisits(visits, "season", now)).toHaveLength(9);
+    expect(
+      historyVisits(visits, "season", now, "America/Detroit")
+    ).toHaveLength(9);
   });
 });

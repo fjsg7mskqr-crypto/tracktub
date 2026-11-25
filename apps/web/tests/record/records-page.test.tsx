@@ -8,6 +8,11 @@ import RecordPage from "@/app/records/[id]/page";
 import { fakeSupabase } from "./fake-supabase";
 import { mockupRow } from "./fixtures";
 
+const device = vi.hoisted(() => ({ tz: "America/Detroit" }));
+vi.mock("@/lib/time-zone", () => ({
+  getTimeZone: async () => device.tz,
+  getDeviceTimeZone: async () => null,
+}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getCurrentMembership: vi.fn() }));
 vi.mock("@/lib/actions/proofEvent", () => ({ recordProofShare: vi.fn() }));
@@ -75,6 +80,22 @@ describe("/records/[id]", () => {
     ).toBeTruthy();
     expect(screen.getByText("For the owner")).toBeTruthy();
     expect(screen.getByText("Cover strap fraying")).toBeTruthy();
+  });
+
+  it("times a visit with no recorded zone in the device's zone, labelled", async () => {
+    device.tz = "America/Los_Angeles";
+    withRow(mockupRow());
+    render(await RecordPage(params()));
+    expect(screen.getByText(/6:42 – 7:58 AM PDT/)).toBeTruthy();
+    device.tz = "America/Detroit";
+  });
+
+  it("times a visit in the zone it happened in, whatever the device", async () => {
+    device.tz = "America/Los_Angeles";
+    withRow(mockupRow({ time_zone: "America/Detroit" }));
+    render(await RecordPage(params()));
+    expect(screen.getByText(/9:42 – 10:58 AM EDT/)).toBeTruthy();
+    device.tz = "America/Detroit";
   });
 
   it("no share token", async () => {

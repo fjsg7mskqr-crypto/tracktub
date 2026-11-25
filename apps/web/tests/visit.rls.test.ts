@@ -92,10 +92,10 @@ describe.skipIf(!ready)("visit data", () => {
     const tub = await newTub("Idempotent");
     const first =
       (await findOpenDraft(db, tub, userId)) ??
-      (await createDraft(db, tub, userId));
+      (await createDraft(db, tub, userId, null));
     const second =
       (await findOpenDraft(db, tub, userId)) ??
-      (await createDraft(db, tub, userId));
+      (await createDraft(db, tub, userId, null));
     expect(second).toBe(first);
     const { data } = await admin
       .from("turnover")
@@ -107,7 +107,7 @@ describe.skipIf(!ready)("visit data", () => {
 
   it("fresh draft snapshot is empty", async () => {
     const tub = await newTub("Fresh");
-    const id = await createDraft(db, tub, userId);
+    const id = await createDraft(db, tub, userId, null);
     const s = await loadVisitSnapshot(db, id);
     expect(s).toMatchObject({
       visitId: id,
@@ -152,7 +152,7 @@ describe.skipIf(!ready)("visit data", () => {
       .update({ status: "submitted_locked" })
       .eq("id", old.id);
 
-    const id = await createDraft(db, tub, userId);
+    const id = await createDraft(db, tub, userId, null);
     const s = await loadVisitSnapshot(db, id);
     expect(s.previous?.visitId).toBe(old.id);
     expect(s.productSuggestions[0]).toEqual({
@@ -185,7 +185,7 @@ describe.skipIf(!ready)("visit data", () => {
 
   it("reload restores every entry type", async () => {
     const tub = await newTub("Reload");
-    const id = await createDraft(db, tub, userId);
+    const id = await createDraft(db, tub, userId, null);
     const reload = () => loadVisitSnapshot(db, id);
 
     await savePhoto(db, id, "before", jpeg(), "2026-10-27T09:43:00.000Z");
@@ -247,7 +247,7 @@ describe.skipIf(!ready)("visit data", () => {
 
   it("logReading stores null for unset rows", async () => {
     const tub = await newTub("Nulls");
-    const id = await createDraft(db, tub, userId);
+    const id = await createDraft(db, tub, userId, null);
     await logReading(db, id, "found", { ...blank, total_alkalinity: 90 });
     await logReading(db, id, "left", { ...blank, ph: 7.5 });
     const { data } = await admin
@@ -270,7 +270,7 @@ describe.skipIf(!ready)("visit data", () => {
 
   it("retaking a photo keeps one row per kind", async () => {
     const tub = await newTub("Retake");
-    const id = await createDraft(db, tub, userId);
+    const id = await createDraft(db, tub, userId, null);
     await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:00:00.000Z");
     await savePhoto(db, id, "cover", jpeg(), "2026-10-27T10:05:00.000Z");
     const { data } = await admin
@@ -285,7 +285,7 @@ describe.skipIf(!ready)("visit data", () => {
 
   it("clearing the flag clears urgent", async () => {
     const tub = await newTub("Flag");
-    const id = await createDraft(db, tub, userId);
+    const id = await createDraft(db, tub, userId, null);
     await saveFlag(db, id, "Leak by pump");
     let { data } = await admin
       .from("turnover")
@@ -310,7 +310,7 @@ describe.skipIf(!ready)("visit data", () => {
       .select("id, share_token")
       .single();
     expect(t?.share_token).toBeNull();
-    await finishVisit(db, t!.id);
+    await finishVisit(db, t!.id, null);
     const { data } = await admin
       .from("turnover")
       .select("status, share_token")
@@ -320,9 +320,53 @@ describe.skipIf(!ready)("visit data", () => {
     expect(data?.share_token).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  it("records the device's zone when the visit starts and keeps it at finish", async () => {
+    const tub = await newTub("Zone kept");
+    const id = await createDraft(db, tub, userId, "America/Los_Angeles");
+    await finishVisit(db, id, "America/Chicago");
+    const { data } = await admin
+      .from("turnover")
+      .select("time_zone")
+      .eq("id", id)
+      .single();
+    expect(data?.time_zone).toBe("America/Los_Angeles");
+  });
+
+  it("fills the zone in at finish only when the visit had none", async () => {
+    const tub = await newTub("Zone filled");
+    const id = await createDraft(db, tub, userId, null);
+    await finishVisit(db, id, "America/Denver");
+    const { data } = await admin
+      .from("turnover")
+      .select("time_zone")
+      .eq("id", id)
+      .single();
+    expect(data?.time_zone).toBe("America/Denver");
+  });
+
+  it("a visit with no reported zone stays null", async () => {
+    const tub = await newTub("Zone null");
+    const id = await createDraft(db, tub, userId, null);
+    await finishVisit(db, id, null);
+    const { data } = await admin
+      .from("turnover")
+      .select("time_zone")
+      .eq("id", id)
+      .single();
+    expect(data?.time_zone).toBeNull();
+  });
+
+  it("refuses an empty or over-long zone", async () => {
+    const tub = await newTub("Zone bad");
+    await expect(createDraft(db, tub, userId, "")).rejects.toThrow();
+    await expect(
+      createDraft(db, tub, userId, "x".repeat(65))
+    ).rejects.toThrow();
+  });
+
   it("a retake deletes the old photo file", async () => {
     const tub = await newTub("Retake");
-    const id = await createDraft(db, tub, userId);
+    const id = await createDraft(db, tub, userId, null);
     await savePhoto(db, id, "before", jpeg(), "2026-11-08T09:00:00.000Z");
     await savePhoto(db, id, "before", jpeg(), "2026-11-08T09:05:00.000Z");
     const { data: files } = await admin.storage
@@ -340,7 +384,7 @@ describe.skipIf(!ready)("visit data", () => {
 
   it("photo files are limited to people with access to the tub", async () => {
     const tub = await newTub("Storage scope");
-    const id = await createDraft(db, tub, userId);
+    const id = await createDraft(db, tub, userId, null);
     await savePhoto(db, id, "before", jpeg(), "2026-11-08T09:00:00.000Z");
     const { data: row } = await admin
       .from("photo")
@@ -397,7 +441,7 @@ describe.skipIf(!ready)("visit data", () => {
       // signed in can delete or replace its evidence.
       const { data: own } = await db.storage.from("photos").list(folder);
       expect(own).toHaveLength(1);
-      await finishVisit(db, id);
+      await finishVisit(db, id, null);
       const { data: removed } = await db.storage.from("photos").remove([path]);
       expect(removed ?? []).toHaveLength(0);
       const late = await db.storage
@@ -414,8 +458,8 @@ describe.skipIf(!ready)("visit data", () => {
 
   it("finish locks an empty visit as partial", async () => {
     const tub = await newTub("Empty finish");
-    const id = await createDraft(db, tub, userId);
-    await finishVisit(db, id);
+    const id = await createDraft(db, tub, userId, null);
+    await finishVisit(db, id, null);
     const s = await loadVisitSnapshot(db, id);
     expect(s.status).toBe("submitted_locked");
     expect(isPartial(s)).toBe(true);
@@ -428,7 +472,7 @@ describe.skipIf(!ready)("visit data", () => {
 
     it("a client cannot set photo.received_at", async () => {
       const tub = await newTub("Received forge");
-      const id = await createDraft(db, tub, userId);
+      const id = await createDraft(db, tub, userId, null);
       const { data: row, error } = await db
         .from("photo")
         .insert({
@@ -462,7 +506,7 @@ describe.skipIf(!ready)("visit data", () => {
 
     it("a retake restamps photo.received_at", async () => {
       const tub = await newTub("Received retake");
-      const id = await createDraft(db, tub, userId);
+      const id = await createDraft(db, tub, userId, null);
       const read = async () =>
         (
           await admin
@@ -484,7 +528,7 @@ describe.skipIf(!ready)("visit data", () => {
 
     it("locking stamps turnover.locked_at; a client cannot set it", async () => {
       const tub = await newTub("Locked at");
-      const id = await createDraft(db, tub, userId);
+      const id = await createDraft(db, tub, userId, null);
       const read = async () =>
         (await admin.from("turnover").select("locked_at").eq("id", id).single())
           .data?.locked_at;
@@ -496,7 +540,7 @@ describe.skipIf(!ready)("visit data", () => {
       expect(error).toBeNull();
       expect(await read()).toBeNull();
 
-      await finishVisit(db, id);
+      await finishVisit(db, id, null);
       expect(recent(await read())).toBe(true);
 
       const { data: forged, error: fErr } = await db
@@ -519,9 +563,15 @@ describe.skipIf(!ready)("visit data", () => {
 
     it("scheduling replaces the tub's pending one; None clears it", async () => {
       const tub = await newTub("Next visit replace");
-      const v = await createDraft(db, tub, userId);
-      await saveNextVisit(db, v, soon(2), "  Re-check foaming ");
-      await saveNextVisit(db, v, soon(7), "");
+      const v = await createDraft(db, tub, userId, null);
+      await saveNextVisit(
+        db,
+        v,
+        soon(2),
+        "  Re-check foaming ",
+        "America/Detroit"
+      );
+      await saveNextVisit(db, v, soon(7), "", "America/Detroit");
       const mine = (await loadNextVisits(db)).filter((n) => n.tubId === tub);
       expect(mine).toEqual([{ tubId: tub, dueOn: soon(7), reason: "" }]);
       expect((await loadVisitSnapshot(db, v)).nextVisit).toEqual({
@@ -529,7 +579,7 @@ describe.skipIf(!ready)("visit data", () => {
         reason: "",
       });
 
-      await saveNextVisit(db, v, null, "");
+      await saveNextVisit(db, v, null, "", "America/Detroit");
       expect((await loadNextVisits(db)).some((n) => n.tubId === tub)).toBe(
         false
       );
@@ -538,27 +588,37 @@ describe.skipIf(!ready)("visit data", () => {
 
     it("refuses a past or malformed date", async () => {
       const tub = await newTub("Next visit past");
-      const v = await createDraft(db, tub, userId);
-      await expect(saveNextVisit(db, v, "2020-01-01", "")).rejects.toThrow();
-      await expect(saveNextVisit(db, v, "soon", "")).rejects.toThrow();
+      const v = await createDraft(db, tub, userId, null);
+      await expect(
+        saveNextVisit(db, v, "2020-01-01", "", "America/Detroit")
+      ).rejects.toThrow();
+      await expect(
+        saveNextVisit(db, v, "soon", "", "America/Detroit")
+      ).rejects.toThrow();
     });
 
     it("can't be scheduled from a locked visit", async () => {
       const tub = await newTub("Next visit locked");
-      const v = await createDraft(db, tub, userId);
-      await finishVisit(db, v);
-      await expect(saveNextVisit(db, v, soon(2), "")).rejects.toThrow(
-        "Visit is locked"
-      );
+      const v = await createDraft(db, tub, userId, null);
+      await finishVisit(db, v, null);
+      await expect(
+        saveNextVisit(db, v, soon(2), "", "America/Detroit")
+      ).rejects.toThrow("Visit is locked");
     });
 
     it("starting the next visit marks it done and carries the reason into the brief", async () => {
       const tub = await newTub("Next visit start");
-      const first = await createDraft(db, tub, userId);
-      await saveNextVisit(db, first, soon(3), "Re-check foaming");
-      await finishVisit(db, first);
+      const first = await createDraft(db, tub, userId, null);
+      await saveNextVisit(
+        db,
+        first,
+        soon(3),
+        "Re-check foaming",
+        "America/Detroit"
+      );
+      await finishVisit(db, first, null);
 
-      const second = await createDraft(db, tub, userId);
+      const second = await createDraft(db, tub, userId, null);
       await markNextVisitStarted(db, tub, second);
 
       // No longer upcoming or overdue anywhere...
@@ -574,7 +634,13 @@ describe.skipIf(!ready)("visit data", () => {
       });
 
       // Scheduling again from this visit starts a fresh pending one.
-      await saveNextVisit(db, second, soon(7), "Still foaming");
+      await saveNextVisit(
+        db,
+        second,
+        soon(7),
+        "Still foaming",
+        "America/Detroit"
+      );
       const after = await loadVisitSnapshot(db, second);
       expect(after.nextVisit).toEqual({
         dueOn: soon(7),
@@ -583,9 +649,9 @@ describe.skipIf(!ready)("visit data", () => {
       expect(after.scheduledHere).toBeNull();
 
       // Clearing doesn't touch an answered one.
-      const third = await createDraft(db, tub, userId);
+      const third = await createDraft(db, tub, userId, null);
       await markNextVisitStarted(db, tub, third);
-      await saveNextVisit(db, third, null, "");
+      await saveNextVisit(db, third, null, "", "America/Detroit");
       expect((await loadVisitSnapshot(db, third)).scheduledHere).not.toBeNull();
     });
   });

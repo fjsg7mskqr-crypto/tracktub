@@ -16,6 +16,17 @@ describe("days", () => {
     expect(dayKey(new Date("2026-10-27T15:00:00Z"), TZ)).toBe("2026-10-27");
   });
 
+  it("an instant at 02:00 UTC is yesterday in Los Angeles and Detroit", () => {
+    const at = new Date("2026-10-27T02:00:00Z");
+    expect(dayKey(at, "UTC")).toBe("2026-10-27");
+    expect(dayKey(at, "America/Detroit")).toBe("2026-10-26");
+    expect(dayKey(at, "America/Los_Angeles")).toBe("2026-10-26");
+    // 05:00 UTC: past midnight in Detroit (EDT) but not yet in Los Angeles.
+    const later = new Date("2026-10-27T05:00:00Z");
+    expect(dayKey(later, "America/Detroit")).toBe("2026-10-27");
+    expect(dayKey(later, "America/Los_Angeles")).toBe("2026-10-26");
+  });
+
   it("addDays crosses months and DST", () => {
     expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
     expect(addDays("2026-11-01", 7)).toBe("2026-11-08");

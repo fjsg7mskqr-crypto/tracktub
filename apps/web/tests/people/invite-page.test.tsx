@@ -4,6 +4,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { createClient } from "@/lib/supabase/server";
 import InvitePage from "@/app/invite/[token]/page";
 
+vi.mock("@/lib/time-zone", () => ({
+  getTimeZone: async () => "America/Detroit",
+  getDeviceTimeZone: async () => null,
+}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/actions/invite", () => ({ acceptInviteAction: vi.fn() }));
 vi.mock("next/navigation", () => ({

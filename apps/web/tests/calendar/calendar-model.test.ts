@@ -33,6 +33,18 @@ function visit(
   return { id: `v${++n}`, tubId, at, cleaningSteps: steps, found, sent };
 }
 
+describe("calendarItems in the request zone", () => {
+  it("buckets a visit on the day, and times it, in the device zone", () => {
+    // 01:30 UTC Oct 28: 9:30 pm Oct 27 in Detroit, 6:30 pm Oct 27 in LA.
+    const v = visit("cedar", new Date("2026-10-28T01:30:00Z"), [], null, true);
+    const la = calendarItems([CEDAR], [v], NOW, "America/Los_Angeles");
+    expect(la.get("2026-10-27")?.[0].what).toContain("6:30 PM");
+    const utc = calendarItems([CEDAR], [v], NOW, "UTC");
+    expect(utc.get("2026-10-28")?.[0].what).toContain("1:30 AM");
+    expect(utc.get("2026-10-27")).toBeUndefined();
+  });
+});
+
 describe("calendarItems", () => {
   it("a visit at 11 pm Detroit lands on the Detroit day", () => {
     const v = visit("cedar", new Date("2026-10-27T03:30:00Z"), [], null, true);

@@ -25,6 +25,7 @@ import {
   type ReadingKind,
 } from "@/lib/readings";
 import { formatShortDate, formatTime } from "@/lib/time";
+import { useTimeZone } from "@/components/app/TimeZone";
 import type { CleaningStepCode } from "@/lib/types";
 import {
   PHOTO_KINDS,
@@ -66,6 +67,7 @@ type SaveState =
 
 /** Screen 6: the visit, one scrolling page left open for the whole job. */
 export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
+  const tz = useTimeZone();
   const router = useRouter();
   const [snap, setSnap] = useState(initial);
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
@@ -266,7 +268,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
       kind: k,
       label: PHOTO_KINDS[k].label,
       url,
-      time: uploading[k] ? "Saving…" : at ? formatTime(at) : undefined,
+      time: uploading[k] ? "Saving…" : at ? formatTime(at, tz) : undefined,
     };
     return [shot];
   });
@@ -346,7 +348,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
           Visit in progress
         </h1>
         <p style={{ margin: 0, fontSize: 15, color: "var(--tt-text-2)" }}>
-          Opened {formatTime(snap.openedAt)}. Leave it open while you work —
+          Opened {formatTime(snap.openedAt, tz)}. Leave it open while you work —
           everything saves as you go.
         </p>
       </div>
@@ -410,7 +412,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
           >
             Last visit&apos;s note
             <span style={{ fontWeight: 400, color: "var(--tt-text-3)" }}>
-              {` · ${formatShortDate(snap.previous.visitedOn)}`}
+              {` · ${formatShortDate(snap.previous.visitedOn, tz)}`}
             </span>
           </h3>
           <p
@@ -690,7 +692,7 @@ export function VisitScreen({ initial }: { initial: VisitSnapshot }) {
             {
               label: PHOTO_KINDS[viewer.kind].label,
               url: lastShot(viewer.kind)?.url ?? null,
-              subtitle: lastVisitLabel(snap.previous?.visitedOn),
+              subtitle: lastVisitLabel(snap.previous?.visitedOn, tz),
             },
           ]}
           viewable={[0]}
@@ -716,6 +718,7 @@ const hint: React.CSSProperties = {
 };
 
 function SaveIndicator({ state }: { state: SaveState }) {
+  const tz = useTimeZone();
   const base: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
@@ -746,7 +749,9 @@ function SaveIndicator({ state }: { state: SaveState }) {
       >
         <path d="M5 12l5 5 9-10" />
       </svg>
-      {state.kind === "saved" ? `Saved ${formatTime(state.at)}` : "All saved"}
+      {state.kind === "saved"
+        ? `Saved ${formatTime(state.at, tz)}`
+        : "All saved"}
     </span>
   );
 }
@@ -837,6 +842,7 @@ function ReadingCard({
   at: string | null;
   onEdit: () => void;
 }) {
+  const tz = useTimeZone();
   return (
     <div
       style={{
@@ -850,7 +856,7 @@ function ReadingCard({
     >
       {at && (
         <span style={{ fontSize: 12, color: "var(--tt-text-3)" }}>
-          Logged {formatTime(at)}
+          Logged {formatTime(at, tz)}
         </span>
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -906,9 +912,9 @@ const tile: React.CSSProperties = {
   position: "relative",
 };
 
-function lastVisitLabel(visitedOn?: string) {
+function lastVisitLabel(visitedOn: string | undefined, tz: string) {
   return visitedOn
-    ? `Last visit · ${formatShortDate(visitedOn)}`
+    ? `Last visit · ${formatShortDate(visitedOn, tz)}`
     : "Last visit";
 }
 
@@ -976,6 +982,7 @@ function PhotoTile({
   onViewLast: () => void;
   thumbKey?: string;
 }>) {
+  const tz = useTimeZone();
   const label = PHOTO_KINDS[kind].label;
   const src = preview ?? photo?.url ?? null;
   const input = (
@@ -1019,7 +1026,7 @@ function PhotoTile({
             {preview
               ? "Saving…"
               : photo?.capturedAt
-                ? formatTime(photo.capturedAt)
+                ? formatTime(photo.capturedAt, tz)
                 : null}
           </span>
           <svg
@@ -1119,6 +1126,7 @@ function LastShotViewer({
   visitedOn?: string;
   onClose: () => void;
 }) {
+  const tz = useTimeZone();
   if (!shot) return null;
   const label = PHOTO_KINDS[kind].label;
   return (
@@ -1148,7 +1156,7 @@ function LastShotViewer({
       />
       <span style={{ fontSize: 14, color: "#C4C8CF" }}>
         Last visit · {label}
-        {visitedOn ? ` · ${formatShortDate(visitedOn)}` : ""} — tap to close
+        {visitedOn ? ` · ${formatShortDate(visitedOn, tz)}` : ""} — tap to close
       </span>
     </div>
   );
@@ -1165,6 +1173,7 @@ function PastTile({
   onView: () => void;
   photoKey: string;
 }>) {
+  const tz = useTimeZone();
   const style: React.CSSProperties = {
     ...tile,
     background: shot
@@ -1202,7 +1211,7 @@ function PastTile({
         }}
       >
         {shot && visitedOn ? (
-          <>{formatShortDate(visitedOn)} · after</>
+          <>{formatShortDate(visitedOn, tz)} · after</>
         ) : (
           "No earlier photo"
         )}

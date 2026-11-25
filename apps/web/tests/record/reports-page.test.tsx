@@ -8,6 +8,10 @@ import HistoryPage from "@/app/reports/history/page";
 import { fakeSupabase } from "./fake-supabase";
 import { BANNED_WORDS, emptyRow, mockupRow } from "./fixtures";
 
+vi.mock("@/lib/time-zone", () => ({
+  getTimeZone: async () => "America/Detroit",
+  getDeviceTimeZone: async () => null,
+}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ getCurrentMembership: vi.fn() }));
 vi.mock("next/navigation", () => ({

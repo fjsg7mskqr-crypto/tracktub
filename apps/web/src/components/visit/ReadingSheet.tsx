@@ -10,6 +10,7 @@ import {
 } from "@/lib/readings";
 import type { ReadingValues, VisitSnapshot } from "@/lib/visit";
 import { formatTime } from "@/lib/time";
+import { useTimeZone } from "@/components/app/TimeZone";
 import {
   accept,
   bump,
@@ -48,6 +49,7 @@ export function ReadingSheet({
   onLog: (kind: ReadingKind, values: ReadingValues) => Promise<void>;
   onClose: () => void;
 }) {
+  const tz = useTimeZone();
   const [kind, setKind] = useState<ReadingKind>(initialKind);
   const [sheets, setSheets] = useState<Record<ReadingKind, SheetState>>(() => ({
     found: initSheet(snapshot.found, snapshot.previous?.found ?? null),
@@ -159,7 +161,7 @@ export function ReadingSheet({
             Log a reading
           </h2>
           <span style={{ fontSize: 13, color: "var(--tt-text-3)" }}>
-            {formatTime(new Date())} · {snapshot.propertyName}
+            {formatTime(new Date(), tz)} · {snapshot.propertyName}
           </span>
         </div>
 

@@ -14,6 +14,7 @@ import {
 } from "@/components/calendar/calendar-view";
 import { dayKey, dayParts } from "@/components/calendar/days";
 import { loadCareData } from "@/components/calendar/load";
+import { getTimeZone } from "@/lib/time-zone";
 
 const DOT = { due: "var(--tt-due)", logged: "var(--tt-brand)" } as const;
 
@@ -64,8 +65,9 @@ export default async function CalendarPage({
   searchParams: Promise<{ view?: string; d?: string }>;
 }) {
   const q = await searchParams;
+  const tz = await getTimeZone();
   const now = new Date();
-  const today = dayKey(now);
+  const today = dayKey(now, tz);
   const range = calendarRange(parseView(q.view), q.d, today);
   const isMonth = range.view === "month";
 
@@ -75,7 +77,7 @@ export default async function CalendarPage({
     loadCareData(supabase),
   ]);
   if (!membership) redirect("/login");
-  const byDay = calendarItems(tubs, visits, now, undefined, scheduled);
+  const byDay = calendarItems(tubs, visits, now, tz, scheduled);
   const shown = range.cells.flatMap((k) => (k ? (byDay.get(k) ?? []) : []));
 
   return (

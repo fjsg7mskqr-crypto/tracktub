@@ -4,7 +4,7 @@
 
 import { careDue, type DueItem } from "@/lib/care-due";
 import { READING_FIELDS, READING_TARGETS } from "@/lib/readings";
-import { formatTime, APP_TIME_ZONE } from "@/lib/time";
+import { formatTime } from "@/lib/time";
 import { foundStreak, type HistoryVisit } from "@/lib/tub-history";
 import type { NextVisit } from "@/lib/next-visit";
 import { recordPath, tubPath } from "@/lib/app-routes";
@@ -59,7 +59,7 @@ export function calendarItems(
   tubs: readonly CareTub[],
   visits: readonly LoggedVisit[],
   now: Date,
-  tz: string = APP_TIME_ZONE,
+  tz: string,
   scheduled: readonly NextVisit[] = []
 ): Map<string, CalItem[]> {
   const today = dayKey(now, tz);
@@ -150,7 +150,7 @@ export function attentionList(
   tubs: readonly CareTub[],
   visits: readonly LoggedVisit[],
   now: Date,
-  tz: string = APP_TIME_ZONE
+  tz: string
 ): AttentionItem[] {
   const today = dayKey(now, tz);
   const history = byTub(visits);
@@ -220,7 +220,7 @@ export function weekCounts(
     opened: readonly { turnover_id: string; opened_at: string }[];
   },
   now: Date,
-  tz: string = APP_TIME_ZONE
+  tz: string
 ): { logged: number; sent: number; opened: number } {
   const start = weekStart(dayKey(now, tz));
   const end = addDays(start, 6);

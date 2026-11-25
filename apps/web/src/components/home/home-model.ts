@@ -4,7 +4,7 @@
 
 import { careDue } from "@/lib/care-due";
 import { READING_FIELDS, READING_TARGETS } from "@/lib/readings";
-import { APP_TIME_ZONE, formatShortDate, formatTime } from "@/lib/time";
+import { formatShortDate, formatTime } from "@/lib/time";
 import { readingLogged, type PhotoKind } from "@/lib/visit";
 import {
   DUE_SOON_DAYS,
@@ -152,7 +152,7 @@ export function tubProblem(
   tub: HomeTub | CareTub,
   visits: readonly HomeVisit[],
   now: Date,
-  tz: string = APP_TIME_ZONE
+  tz: string
 ): Problem | null {
   const last = byTime(visits)[0];
   if (last) {
@@ -243,7 +243,7 @@ export function boardState(
   visits: readonly HomeVisit[],
   items: readonly OpenItem[],
   now: Date,
-  tz: string = APP_TIME_ZONE
+  tz: string
 ): BoardEntry {
   const problem = tubProblem(tub, visits, now, tz);
   const open = itemsChip(items);
@@ -306,9 +306,9 @@ export function todaysRoute(input: {
   /** Re-checks scheduled from a visit's finish step. */
   scheduled?: readonly NextVisit[];
   now: Date;
-  tz?: string;
+  tz: string;
 }): RouteStop[] {
-  const { tubs, visits, drafts, added, now, tz = APP_TIME_ZONE } = input;
+  const { tubs, visits, drafts, added, now, tz } = input;
   const scheduled = input.scheduled ?? [];
   const today = dayKey(now, tz);
   const draftOf = new Map<string, HomeDraft>();

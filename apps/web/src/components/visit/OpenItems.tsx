@@ -7,6 +7,7 @@ import {
   type RecheckSuggestion,
 } from "@/components/home/open-items";
 import { formatShortDate } from "@/lib/time";
+import { useTimeZone } from "@/components/app/TimeZone";
 import type { VisitOpenItem } from "@/lib/visit";
 
 type Status = "settled" | "open" | "dismissed";
@@ -89,6 +90,7 @@ function Remove({ label, onClick }: { label: string; onClick: () => void }) {
 }
 
 function ItemText({ item }: { item: VisitOpenItem }) {
+  const tz = useTimeZone();
   const settled = item.status === "settled";
   return (
     <span
@@ -115,7 +117,7 @@ function ItemText({ item }: { item: VisitOpenItem }) {
           item.note,
           settled
             ? "settled this visit"
-            : `left ${formatShortDate(item.openedAt)}`,
+            : `left ${formatShortDate(item.openedAt, tz)}`,
         ]
           .filter(Boolean)
           .join(" · ")}

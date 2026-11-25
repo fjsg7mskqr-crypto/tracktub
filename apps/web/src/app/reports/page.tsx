@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentMembership } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { recordPath } from "@/lib/app-routes";
+import { getTimeZone } from "@/lib/time-zone";
 import {
   PERIOD_LABELS,
   buildSentList,
@@ -65,7 +66,7 @@ export default async function ReportsPage({
       .filter((e) => (e.turnover?.views ?? []).length > 0)
       .map((e) => e.turnover_id)
   );
-  const sent = buildSentList(sentRows, opened);
+  const sent = buildSentList(sentRows, opened, await getTimeZone());
 
   return (
     <main

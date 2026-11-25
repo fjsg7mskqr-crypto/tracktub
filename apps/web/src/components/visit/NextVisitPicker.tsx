@@ -1,5 +1,6 @@
 "use client";
 
+import { useTimeZone } from "@/components/app/TimeZone";
 import { useState } from "react";
 import { dayKey, dayParts } from "@/components/calendar/days";
 import {
@@ -52,10 +53,11 @@ export function NextVisitPicker({
   value: { dueOn: string; reason: string } | null;
   onSave: (dueOn: string | null, reason: string) => void;
 }) {
+  const tz = useTimeZone();
   const [now] = useState(() => new Date());
-  const today = dayKey(now);
+  const today = dayKey(now, tz);
   const [pick, setPick] = useState<NextVisitPickId>(
-    pickFor(value?.dueOn ?? null, now)
+    pickFor(value?.dueOn ?? null, now, tz)
   );
   const [date, setDate] = useState(value?.dueOn ?? "");
   const [reason, setReason] = useState(value?.reason ?? "");
@@ -64,10 +66,10 @@ export function NextVisitPicker({
     setPick(next);
     if (next === "none") return onSave(null, "");
     if (next === "date") return date ? onSave(date, reason) : undefined;
-    onSave(pickDate(next, now), reason);
+    onSave(pickDate(next, now, tz), reason);
   }
 
-  const dueOn = pick === "date" ? date : pickDate(pick, now);
+  const dueOn = pick === "date" ? date : pickDate(pick, now, tz);
 
   return (
     <section
